@@ -1,6 +1,6 @@
 # alwaysOnDashboard — Product Vision
 
-> Status: brainstorm / vision draft. Last updated 2026-06-17. This is a living document; nothing here is locked until moved into the Linear structure and the build decisions log.
+> Status: brainstorm / vision draft. Last updated 2026-06-18. This is a living document. The work to resolve everything below now lives in **Linear** (team `AOD`, project "Product definition") and follows [`engineering-process.md`](engineering-process.md). Decisions and open questions are cross-linked to their `AOD-N` issues; nothing is locked until its issue closes.
 
 ## One-line pitch
 
@@ -105,14 +105,16 @@ This is a strong candidate for the **Phase 2 "AI SaaS MVP"** build. It exercises
 
 ## Decisions made
 
-- **v1 service set:** Linear, Google Calendar, Claude usage, Weather, Clock. (2026-06-17)
-- **Layout engine:** free-form drag-and-resize, not a fixed grid. Customization is a core product value. (2026-06-17)
-- **Auth is required** (per-user token storage, billing entitlements, multi-device sync). Clerk is NOT a requirement — it was an assumption. Leading candidate is **Supabase** (auth + Postgres + functions in one) to minimize vendors/cost for a solo MVP; alternative is Clerk + Cloudflare Workers + Neon. (2026-06-17)
+- **v1 service set:** Linear, Google Calendar, Claude usage, Weather, Clock. (2026-06-17) — [AOD-6](https://linear.app/thexap/issue/AOD-6)
+- **Layout engine:** free-form drag-and-resize, not a fixed grid. Customization is a core product value. (2026-06-17) — [AOD-7](https://linear.app/thexap/issue/AOD-7)
+- **Auth is required** (per-user token storage, billing entitlements, multi-device sync). Clerk is NOT a requirement, it was an assumption. Leading candidate is **Supabase** (auth + Postgres + functions in one) to minimize vendors/cost for a solo MVP; alternative is Clerk + Cloudflare Workers + Neon. (2026-06-17) — vendor pick tracked in [AOD-2](https://linear.app/thexap/issue/AOD-2)
 
 ## Open questions
 
-1. **Name.** "alwaysOnDashboard" is the codename. Marketing/brand name TBD — brainstorm in progress (candidates: Tessera, Pane, Mosaic, Facet, Vela, Vantage, Orbit, Lume). Needs domain + App Store + trademark availability check before committing.
-2. **Backend/auth stack final pick.** Supabase (consolidated) vs Clerk + Cloudflare Workers + Neon. Confirm before scaffolding.
-3. **Billing.** RevenueCat confirmed? Free/Pro tier boundaries (how many free services on free tier?).
-4. **v1 widget set.** Which specific widgets are worth mounting on a wall day one?
-5. **Privacy story.** Users hand over tokens to many services; the privacy/security posture is a feature and a marketing point. Define it early.
+Each maps to a `type:decision` issue in Linear. Resolve it there, then mirror the one-line outcome back into "Decisions made" above.
+
+1. **Name.** "alwaysOnDashboard" is the codename. Marketing/brand name TBD, brainstorm in progress (candidates: Tessera, Pane, Mosaic, Facet, Vela, Vantage, Orbit, Lume). Needs domain + App Store + trademark availability check before committing. → [AOD-1](https://linear.app/thexap/issue/AOD-1)
+2. **Backend/auth stack final pick.** Supabase (consolidated) vs Clerk + Cloudflare Workers + Neon. Confirm before scaffolding. → [AOD-2](https://linear.app/thexap/issue/AOD-2)
+3. **Billing.** RevenueCat confirmed? Free/Pro tier boundaries (how many free services on free tier?). → [AOD-3](https://linear.app/thexap/issue/AOD-3)
+4. **v1 widget set.** Which specific widgets are worth mounting on a wall day one? → [AOD-4](https://linear.app/thexap/issue/AOD-4)
+5. **Privacy story.** Users hand over tokens to many services; the privacy/security posture is a feature and a marketing point. Define it early. → [AOD-5](https://linear.app/thexap/issue/AOD-5)
