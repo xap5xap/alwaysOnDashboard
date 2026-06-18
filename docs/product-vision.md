@@ -83,10 +83,13 @@ On the Fire HD 8 specifically: the app runs as a normal Android app; Kiosk Mode 
 
 ## Monetization
 
-- **Model:** freemium subscription. Subscription (not one-time) because every connected service implies ongoing backend + API cost.
-- **Free tier:** a small number of connected services (e.g. 2-3), basic widgets, one dashboard.
-- **Pro (monthly / annual):** unlimited services, all widgets, Kiosk Mode, multiple dashboards/layouts, themes, faster refresh intervals, premium widget packs (flights, finance).
-- **Billing:** RevenueCat is the standard for cross-platform mobile IAP (handles both App Store and Play Store subscriptions + entitlements).
+> **Locked** in [AOD-3](https://linear.app/thexap/issue/AOD-3) (2026-06-18). Freemium subscription; the tier boundaries and price below are the decided v1 values. Enforcement (entitlement to feature mapping, server-authoritative vs client-side checks) is specified in [AOD-12](https://linear.app/thexap/issue/AOD-12).
+
+- **Model:** freemium subscription (not one-time): every connected service implies ongoing backend + API cost, and the biggest cost driver, continuous live and kiosk refresh, sits in Pro.
+- **Free tier:** 2 connected services (Clock is always free and does not count toward the limit), the standard widgets of those services, 1 dashboard, and a 15-minute foreground refresh floor.
+- **Pro:** $5.99/mo or $39.99/yr (about 44% off, ~$3.33/mo), with a 7-day free trial. Unlimited connected services, all widgets, Kiosk Mode, multiple dashboards/layouts, themes, live refresh (down to per-widget floors, e.g. 60s), and premium widget packs (flights, finance).
+- **Kiosk Mode is Pro-only**, sold with the free trial so users can experience it before paying. It is the flagship feature and the single biggest per-user cost driver, so it anchors Pro.
+- **Billing:** RevenueCat (free up to $2,500 monthly tracked revenue, then 1%); one SDK over App Store + Play subscriptions, entitlements, and webhooks. Store commission is about 15% for a solo dev under $1M/yr (Apple Small Business Program; Google Play subscription rate), so plan on keeping ~85% of gross.
 
 ## Tech direction (proposed, not locked)
 
@@ -107,6 +110,7 @@ This is a strong candidate for the **Phase 2 "AI SaaS MVP"** build. It exercises
 - **Layout engine:** free-form drag-and-resize, not a fixed grid. Customization is a core product value. (2026-06-17) — [AOD-7](https://linear.app/thexap/issue/AOD-7)
 - **Auth is required** (per-user token storage, billing entitlements, multi-device sync). Clerk is NOT a requirement, it was an assumption. **Vendor locked: Supabase**, resolved in [AOD-2](https://linear.app/thexap/issue/AOD-2). (2026-06-17, vendor locked 2026-06-18)
 - **Backend + auth + database stack:** Supabase, one platform (Postgres + Row-Level Security, Auth, Edge Functions, Vault) chosen over Clerk + Cloudflare Workers + Neon. $0 on the free tier through the build, about $25/mo Pro at launch; fewest vendors and lowest cost for a solo MVP. Pricing verified on supabase.com. Unblocks the OAuth broker spec ([AOD-9](https://linear.app/thexap/issue/AOD-9)). (2026-06-18) — [AOD-2](https://linear.app/thexap/issue/AOD-2)
+- **Billing + Free/Pro tiers:** RevenueCat (free up to $2,500 monthly tracked revenue, then 1%). Free = 2 connected services (Clock always free) + 1 dashboard + 15-minute refresh floor; Pro = $5.99/mo or $39.99/yr (7-day trial) for unlimited services, all widgets, Kiosk Mode, multiple dashboards, themes, live refresh, and premium packs. Kiosk Mode is Pro-only. Store commission ~15% (solo dev under $1M/yr; Apple Small Business Program + Google Play subscription rate); unit economics clear with about 5 monthly subs against Supabase's ~$25/mo. Resolves Open Q3; unblocks the entitlement model spec ([AOD-12](https://linear.app/thexap/issue/AOD-12)). Pricing verified 2026-06-18 (revenuecat.com, developer.apple.com). (2026-06-18) — [AOD-3](https://linear.app/thexap/issue/AOD-3)
 
 ## Open questions
 
@@ -114,6 +118,6 @@ Each maps to a `type:decision` issue in Linear. Resolve it there, then mirror th
 
 1. **Name.** "alwaysOnDashboard" is the codename. Marketing/brand name TBD, brainstorm in progress (candidates: Tessera, Pane, Mosaic, Facet, Vela, Vantage, Orbit, Lume). Needs domain + App Store + trademark availability check before committing. → [AOD-1](https://linear.app/thexap/issue/AOD-1)
 2. ~~**Backend/auth stack final pick.** Supabase (consolidated) vs Clerk + Cloudflare Workers + Neon.~~ **Resolved 2026-06-18: Supabase.** See *Decisions made* above and [AOD-2](https://linear.app/thexap/issue/AOD-2).
-3. **Billing.** RevenueCat confirmed? Free/Pro tier boundaries (how many free services on free tier?). → [AOD-3](https://linear.app/thexap/issue/AOD-3)
+3. ~~**Billing.** RevenueCat confirmed? Free/Pro tier boundaries (how many free services on free tier?).~~ **Resolved 2026-06-18: RevenueCat; Free = 2 services / 1 dashboard / 15-min refresh, Kiosk + premium packs Pro; Pro $5.99/mo or $39.99/yr.** See *Decisions made* above and [AOD-3](https://linear.app/thexap/issue/AOD-3).
 4. **v1 widget set.** Which specific widgets are worth mounting on a wall day one? → [AOD-4](https://linear.app/thexap/issue/AOD-4)
 5. **Privacy story.** Users hand over tokens to many services; the privacy/security posture is a feature and a marketing point. Define it early. → [AOD-5](https://linear.app/thexap/issue/AOD-5)
