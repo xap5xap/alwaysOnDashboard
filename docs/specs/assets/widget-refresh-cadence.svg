@@ -1,0 +1,56 @@
+<svg width="100%" viewBox="0 0 680 270" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Two-layer refresh cadence and cross-device coalescing</title>
+  <desc>Two devices, a foreground phone and a kiosk tablet, each run their own device cadence and call the proxy with the same request key. The proxy cache, keyed by user, service, widget, and params with a TTL of cacheTtlSeconds, hits the provider at most once per TTL, so one cached response serves every device. The device interval is the freshness target; the cache TTL is the provider-facing rate limit.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .bt{font-size:14px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:12px;fill:#4a4a4a;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-neutral{fill:#f5f5f5;stroke:#c4c4c4;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="679" height="269" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+
+  <!-- return path: one cached response serves every device -->
+  <path d="M415 118 V58 H128 V80" class="edge" marker-end="url(#arrow)"/>
+  <text x="300" y="50" text-anchor="middle" class="ts">one cached response serves every device</text>
+
+  <!-- devices -->
+  <rect x="40" y="80" width="175" height="58" rx="8" class="bg-neutral"/>
+  <text x="52" y="106" class="bt">Device A</text>
+  <text x="52" y="124" class="bs">foreground</text>
+  <rect x="40" y="190" width="175" height="58" rx="8" class="bg-neutral"/>
+  <text x="52" y="216" class="bt">Device B</text>
+  <text x="52" y="234" class="bs">kiosk display</text>
+
+  <text x="258" y="101" text-anchor="middle" class="ts">device cadence</text>
+
+  <!-- device -> cache (same key) -->
+  <path d="M215 109 H270 V152 H300" class="edge" marker-end="url(#arrow)"/>
+  <path d="M215 219 H270 V176 H300" class="edge" marker-end="url(#arrow)"/>
+  <text x="270" y="168" text-anchor="middle" class="ts">same key</text>
+
+  <!-- proxy cache -->
+  <rect x="300" y="118" width="235" height="92" rx="8" class="bg-blue"/>
+  <text x="312" y="146" class="bt">Proxy cache (AOD-9)</text>
+  <text x="312" y="167" class="bs">key: user+service+widget+params</text>
+  <text x="312" y="187" class="bs">TTL = cacheTtlSeconds (AOD-10)</text>
+  <text x="417" y="229" text-anchor="middle" class="ts">provider hit at most once per TTL</text>
+
+  <!-- cache <-> provider -->
+  <path d="M535 158 H560" class="edge" marker-end="url(#arrow)"/>
+  <text x="547" y="150" text-anchor="middle" class="ts">miss</text>
+  <path d="M560 176 H535" class="edge" marker-end="url(#arrow)"/>
+  <text x="547" y="194" text-anchor="middle" class="ts">store</text>
+
+  <rect x="560" y="128" width="80" height="72" rx="8" class="bg-neutral"/>
+  <text x="572" y="160" class="bt">Provider</text>
+  <text x="572" y="178" class="bs">Linear</text>
+</svg>
