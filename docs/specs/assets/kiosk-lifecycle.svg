@@ -1,0 +1,88 @@
+<svg width="100%" viewBox="0 0 760 460" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Kiosk Mode lifecycle</title>
+  <desc>The app launches into an Inactive state where it behaves as a normal app and the screen may sleep. Entering Kiosk Mode (after an entitlement check) turns keep-awake on, sets the cadence profile to kiosk, mounts the wall layout under the wall-mount profile, and attempts OS screen pinning. While Active the screen stays on and widgets auto-refresh on the live foreground cadence. Inside Active the display alternates between Day (dim level near zero) and Night (dim curve applied), driven only by the clock; these transitions change AmbientContext but never leave the Active state. A long-press-plus-PIN gesture exits back to Inactive, turning keep-awake off and restoring the foreground profile.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .bt{font-size:14px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:12px;fill:#4a4a4a;}
+    .btn{font-size:14px;font-weight:600;fill:#f2f3fa;}
+    .bsn{font-size:12px;fill:#c9ccdd;}
+    .note{font-size:12px;fill:#4a4a4a;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .container{fill:none;stroke:#c0c0c0;stroke-width:0.8;stroke-dasharray:4 4;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-night{fill:#2c2f48;stroke:#6b6f92;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="759" height="459" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+
+  <!-- legend -->
+  <rect x="40" y="29" width="12" height="12" rx="3" class="bg-gray"/>
+  <text x="57" y="39" class="ts">kiosk inactive</text>
+  <rect x="190" y="29" width="12" height="12" rx="3" class="bg-green"/>
+  <text x="207" y="39" class="ts">active: day</text>
+  <rect x="300" y="29" width="12" height="12" rx="3" class="bg-night"/>
+  <text x="317" y="39" class="ts">active: night (dimmed)</text>
+
+  <!-- start -->
+  <circle cx="85" cy="86" r="5" fill="#7a7a7a"/>
+  <path d="M85 91 V116" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Inactive -->
+  <rect x="35" y="116" width="150" height="68" rx="8" class="bg-gray"/>
+  <text x="49" y="142" class="bt">Inactive</text>
+  <text x="49" y="160" class="bs">normal app;</text>
+  <text x="49" y="177" class="bs">screen may sleep</text>
+
+  <!-- Active container -->
+  <rect x="250" y="100" width="480" height="258" rx="10" class="container"/>
+  <text x="268" y="124" class="cap">Active: screen kept awake (expo-keep-awake), CadenceProfile = kiosk</text>
+
+  <!-- Day -->
+  <rect x="300" y="150" width="175" height="74" rx="8" class="bg-green"/>
+  <text x="314" y="177" class="bt">Day</text>
+  <text x="314" y="195" class="bs">dimLevel approaches 0</text>
+  <text x="314" y="212" class="bs">live cadence (AOD-10)</text>
+
+  <!-- Night -->
+  <rect x="520" y="244" width="185" height="74" rx="8" class="bg-night"/>
+  <text x="534" y="271" class="btn">Night</text>
+  <text x="534" y="289" class="bsn">dim curve applied</text>
+  <text x="534" y="306" class="bsn">overlay + backlight down</text>
+
+  <!-- enter -->
+  <path d="M185 150 H262 V188 H300" class="edge" marker-end="url(#arrow)"/>
+  <text x="214" y="143" class="ts">enter kiosk</text>
+
+  <!-- day -> night -->
+  <path d="M460 224 V282 H520" class="edge" marker-end="url(#arrow)"/>
+  <text x="470" y="258" class="ts">to night</text>
+
+  <!-- night -> day -->
+  <path d="M555 244 V232 H388 V224" class="edge" marker-end="url(#arrow)"/>
+  <text x="430" y="218" class="ts">to day</text>
+
+  <!-- self loops -->
+  <path d="M340 150 C337 134 383 134 380 150" class="edge" marker-end="url(#arrow)"/>
+  <text x="360" y="130" text-anchor="middle" class="ts">tick</text>
+  <path d="M560 318 C557 334 603 334 600 318" class="edge" marker-end="url(#arrow)"/>
+  <text x="580" y="348" text-anchor="middle" class="ts">tick</text>
+
+  <!-- exit -->
+  <path d="M250 330 H120 V184" class="edge" marker-end="url(#arrow)"/>
+  <text x="150" y="346" class="ts">exit: gesture + PIN</text>
+
+  <!-- notes -->
+  <text x="40" y="392" class="note">Enter: check entitlement (AOD-12), keep-awake on, CadenceProfile = kiosk, mount the wall layout under the</text>
+  <text x="40" y="409" class="note">wall-mount profile, attempt OS screen pinning (best effort; see the pinning matrix).</text>
+  <text x="40" y="431" class="note">Exit: long-press a corner and enter the PIN, then keep-awake off, CadenceProfile = foreground, release pinning.</text>
+  <text x="40" y="448" class="note">Day and night change only AmbientContext (phase, dimLevel); the kiosk run state stays Active across them.</text>
+</svg>

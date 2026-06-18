@@ -1,0 +1,82 @@
+<svg width="100%" viewBox="0 0 720 470" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Day/night schedule to AmbientContext</title>
+  <desc>AOD-11 computes the ambient signal that AOD-10 consumes. The device clock, the kiosk schedule (either fixed day and night times, or solar sunrise and sunset derived from location and date), and a dim curve (day dim, night dim, transition minutes) all feed a computeAmbient function. It returns an AmbientContext object holding phase and dimLevel, which is the AOD-10 type and is not redefined here. That AmbientContext drives two outputs: AOD-10's host dim overlay and useAmbient hook (per-pixel darkening, host chrome), and an expo-brightness backlight target that is applied only in kiosk mode for real light reduction.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .bt{font-size:14px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:12px;fill:#4a4a4a;}
+    .bsn{font-size:12px;fill:#c9ccdd;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .container{fill:none;stroke:#c0c0c0;stroke-width:0.8;stroke-dasharray:4 4;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1;}
+    .bg-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-night{fill:#2c2f48;stroke:#6b6f92;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="719" height="469" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="40" y="34" class="cap">Day/night schedule to AmbientContext (AOD-11 computes; AOD-10 consumes)</text>
+
+  <!-- inputs -->
+  <rect x="40" y="64" width="160" height="54" rx="8" class="bg-gray"/>
+  <text x="54" y="90" class="bt">Device clock</text>
+  <text x="54" y="107" class="bs">local timezone</text>
+
+  <!-- schedule container -->
+  <rect x="250" y="52" width="230" height="120" rx="10" class="container"/>
+  <text x="266" y="73" class="cap">schedule (AOD-11)</text>
+  <rect x="300" y="84" width="130" height="30" rx="6" class="bg-gray"/>
+  <text x="365" y="103" text-anchor="middle" class="bs">schedule.mode</text>
+  <rect x="262" y="126" width="96" height="36" rx="6" class="bg-green"/>
+  <text x="271" y="148" class="bs">fixed times</text>
+  <rect x="372" y="126" width="100" height="36" rx="6" class="bg-green"/>
+  <text x="381" y="142" class="bs">solar:</text>
+  <text x="381" y="156" class="bs">sun + location</text>
+  <path d="M325 114 V126" class="edge" marker-end="url(#arrow)"/>
+  <path d="M408 114 V126" class="edge" marker-end="url(#arrow)"/>
+
+  <rect x="520" y="64" width="170" height="54" rx="8" class="bg-gray"/>
+  <text x="534" y="88" class="bs">dim curve:</text>
+  <text x="534" y="105" class="bs">dayDim, nightDim, transition</text>
+
+  <!-- compute -->
+  <rect x="250" y="222" width="230" height="64" rx="8" class="bg-green"/>
+  <text x="264" y="250" class="bt">computeAmbient()</text>
+  <text x="264" y="268" class="bs">(now, schedule, curve)</text>
+
+  <!-- ambient context -->
+  <rect x="235" y="322" width="260" height="62" rx="8" class="bg-amber"/>
+  <text x="249" y="350" class="bt">AmbientContext</text>
+  <text x="249" y="368" class="bs">{ phase, dimLevel }  AOD-10 type</text>
+
+  <!-- outputs -->
+  <rect x="60" y="410" width="280" height="52" rx="8" class="bg-gray"/>
+  <text x="74" y="434" class="bs">AOD-10 dim overlay + useAmbient() hook</text>
+  <text x="74" y="450" class="bs">(per-pixel darkening, host chrome)</text>
+
+  <rect x="390" y="410" width="290" height="52" rx="8" class="bg-night"/>
+  <text x="404" y="434" class="bsn">expo-brightness backlight target</text>
+  <text x="404" y="450" class="bsn">(kiosk only; real light reduction)</text>
+
+  <!-- edges into compute -->
+  <path d="M120 118 V250 H250" class="edge" marker-end="url(#arrow)"/>
+  <text x="128" y="200" class="ts">clock</text>
+  <path d="M365 172 V222" class="edge" marker-end="url(#arrow)"/>
+  <text x="372" y="200" class="ts">boundaries</text>
+  <path d="M605 118 V250 H480" class="edge" marker-end="url(#arrow)"/>
+  <text x="560" y="200" class="ts">curve</text>
+
+  <!-- compute -> ambient -->
+  <path d="M365 286 V322" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- ambient -> outputs -->
+  <path d="M300 384 V398 H200 V410" class="edge" marker-end="url(#arrow)"/>
+  <path d="M430 384 V398 H535 V410" class="edge" marker-end="url(#arrow)"/>
+</svg>
