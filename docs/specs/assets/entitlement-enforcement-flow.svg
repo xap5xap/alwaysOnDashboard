@@ -1,0 +1,80 @@
+<svg width="100%" viewBox="0 0 760 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>RevenueCat to server-authoritative entitlement state</title>
+  <desc>A user buys Pro through the app and RevenueCat resolves a single pro entitlement. RevenueCat hands the client a CustomerInfo object, which the app uses only for UX gating (instant locks, disabled add buttons, the kiosk gate) and which is never the boundary. RevenueCat also sends a webhook event carrying entitlement_ids, expiration_at_ms, and an id to a Supabase Edge Function, which verifies the configured Authorization header and deduplicates on the event id. The function writes the authoritative tier, current_period_end, and status into an entitlements row in Postgres under row-level security, granting on purchase and renewal and revoking on expiration or refund. The AOD-9 proxy and the connect-service, add-widget, create-dashboard, set-refresh, and enter-kiosk paths resolve entitlements from that row and refuse over-limit operations. If a webhook is missed, the server reconciles by calling the RevenueCat REST subscribers endpoint.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .bt{font-size:14px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:12px;fill:#4a4a4a;}
+    .bsn{font-size:12px;fill:#c9ccdd;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .dedge{fill:none;stroke:#9a9a9a;stroke-width:1.4;stroke-dasharray:5 4;}
+    .container{fill:none;stroke:#c0c0c0;stroke-width:0.8;stroke-dasharray:4 4;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1;}
+    .bg-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="759" height="599" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="40" y="34" class="cap">RevenueCat to server-authoritative entitlement state (the server is the only line of trust)</text>
+
+  <!-- App -->
+  <rect x="90" y="58" width="250" height="52" rx="8" class="bg-gray"/>
+  <text x="104" y="84" class="bt">App: user buys Pro</text>
+  <text x="104" y="102" class="bs">monthly / annual / 7-day trial (store offer)</text>
+
+  <!-- RevenueCat -->
+  <rect x="90" y="148" width="250" height="58" rx="8" class="bg-blue"/>
+  <text x="104" y="174" class="bt">RevenueCat</text>
+  <text x="104" y="192" class="bs">single pro entitlement; 1 offering, 2 packages</text>
+  <path d="M215 110 V148" class="edge" marker-end="url(#arrow)"/>
+  <text x="224" y="133" class="ts">purchase via SDK</text>
+
+  <!-- Client (UX only) -->
+  <rect x="440" y="150" width="270" height="72" rx="8" class="bg-gray"/>
+  <text x="454" y="174" class="bt">Client: CustomerInfo</text>
+  <text x="454" y="192" class="bs">active[pro]: instant locks + kiosk gate</text>
+  <text x="454" y="210" class="bs">UX only, never the boundary</text>
+  <path d="M340 178 H440" class="edge" marker-end="url(#arrow)"/>
+  <text x="390" y="170" text-anchor="middle" class="ts">SDK</text>
+
+  <!-- Server container -->
+  <rect x="56" y="250" width="648" height="308" rx="10" class="container"/>
+  <text x="72" y="272" class="cap">Supabase backend (AOD-2 / AOD-9)</text>
+
+  <!-- Webhook EF -->
+  <rect x="90" y="292" width="250" height="66" rx="8" class="bg-green"/>
+  <text x="104" y="318" class="bt">Edge Function: revenuecat-webhook</text>
+  <text x="104" y="336" class="bs">verify Authorization header</text>
+  <text x="104" y="352" class="bs">dedup on event.id (idempotent)</text>
+  <path d="M215 206 V292" class="edge" marker-end="url(#arrow)"/>
+  <text x="224" y="236" class="ts">webhook event:</text>
+  <text x="224" y="252" class="ts">entitlement_ids, expiration_at_ms, id</text>
+
+  <!-- entitlements row -->
+  <rect x="90" y="398" width="250" height="66" rx="8" class="bg-amber"/>
+  <text x="104" y="424" class="bt">entitlements (Postgres + RLS)</text>
+  <text x="104" y="442" class="bs">tier, current_period_end, status</text>
+  <text x="104" y="458" class="bs">keyed to auth.uid()</text>
+  <path d="M215 358 V398" class="edge" marker-end="url(#arrow)"/>
+  <text x="224" y="382" class="ts">grant / revoke</text>
+
+  <!-- proxy + paths -->
+  <rect x="90" y="496" width="580" height="52" rx="8" class="bg-blue"/>
+  <text x="104" y="520" class="bt">proxy + connect / add-widget / create-dashboard / set-refresh / enter-kiosk</text>
+  <text x="104" y="538" class="bs">read entitlement state; refuse over-limit operations</text>
+  <path d="M215 464 V496" class="edge" marker-end="url(#arrow)"/>
+  <text x="224" y="484" class="ts">resolveEntitlements(tier)</text>
+
+  <!-- reconcile (dashed) proxy -> RevenueCat -->
+  <path d="M660 496 V240 H320 V206" class="dedge" marker-end="url(#arrow)"/>
+  <text x="470" y="232" class="ts">reconcile: REST GET /subscribers</text>
+  <text x="470" y="246" class="ts">(when a webhook is missed)</text>
+</svg>

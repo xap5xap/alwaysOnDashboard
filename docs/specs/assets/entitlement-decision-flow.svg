@@ -1,0 +1,86 @@
+<svg width="100%" viewBox="0 0 720 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Entitlement check at an enforcement point: client gate is UX, server gate is truth</title>
+  <desc>A user attempts a gated action such as connecting a third service, adding a premium widget, creating a second dashboard, setting a faster refresh, or entering kiosk mode. First a client check reads the entitlements resolved from CustomerInfo: if it does not allow the action the host shows a lock and an upgrade prompt with a 7-day free trial call to action, and if the user subscribes the RevenueCat purchase triggers a webhook that updates the server state and the check runs again. If the client allows the action the request is sent to an Edge Function, where a server check reads the persisted entitlement state. If a stale or tampered client slips through, the server returns 403 over_limit and the client re-syncs CustomerInfo; only when the server check passes is the operation performed.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .tl{font-size:12px;font-weight:600;fill:#3a3a3a;}
+    .bt{font-size:14px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:12px;fill:#4a4a4a;}
+    .bsn{font-size:12px;fill:#c9ccdd;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .dedge{fill:none;stroke:#9a9a9a;stroke-width:1.4;stroke-dasharray:5 4;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1;}
+    .bg-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-night{fill:#2c2f48;stroke:#6b6f92;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="719" height="559" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="40" y="34" class="cap">Enforcement point: the client gate is UX, the server gate is truth</text>
+
+  <!-- START -->
+  <rect x="170" y="58" width="420" height="58" rx="8" class="bg-gray"/>
+  <text x="184" y="84" class="bt">User attempts a gated action</text>
+  <text x="184" y="102" class="bs">3rd service, premium widget, 2nd dashboard, faster refresh, kiosk</text>
+
+  <!-- CGATE -->
+  <rect x="270" y="152" width="220" height="56" rx="8" class="bg-amber"/>
+  <text x="284" y="178" class="bt">Client check (CustomerInfo)</text>
+  <text x="284" y="196" class="bs">does the tier allow it?</text>
+  <path d="M380 116 V152" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- UPSELL -->
+  <rect x="60" y="150" width="180" height="64" rx="8" class="bg-blue"/>
+  <text x="74" y="176" class="bt">Lock + upgrade prompt</text>
+  <text x="74" y="194" class="bs">7-day free trial CTA</text>
+  <path d="M270 180 H240" class="edge" marker-end="url(#arrow)"/>
+  <text x="255" y="172" text-anchor="middle" class="tl">no</text>
+
+  <!-- REQ -->
+  <rect x="300" y="252" width="160" height="46" rx="8" class="bg-gray"/>
+  <text x="314" y="280" class="bs">Send request to Edge Function</text>
+  <path d="M380 208 V252" class="edge" marker-end="url(#arrow)"/>
+  <text x="390" y="234" class="tl">yes</text>
+
+  <!-- SGATE -->
+  <rect x="270" y="336" width="220" height="56" rx="8" class="bg-amber"/>
+  <text x="284" y="362" class="bt">Server check (persisted)</text>
+  <text x="284" y="380" class="bs">does the tier allow it?</text>
+  <path d="M380 298 V336" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- REFUSE -->
+  <rect x="520" y="336" width="170" height="64" rx="8" class="bg-night"/>
+  <text x="534" y="362" class="bsn">403 over_limit</text>
+  <text x="534" y="380" class="bsn">re-syncs CustomerInfo</text>
+  <path d="M490 364 H520" class="edge" marker-end="url(#arrow)"/>
+  <text x="505" y="356" text-anchor="middle" class="tl">no</text>
+
+  <!-- ALLOW -->
+  <rect x="300" y="442" width="160" height="50" rx="8" class="bg-green"/>
+  <text x="314" y="472" class="bt">Perform the operation</text>
+  <path d="M380 392 V442" class="edge" marker-end="url(#arrow)"/>
+  <text x="390" y="420" class="tl">yes</text>
+
+  <!-- RC2 purchase -->
+  <rect x="60" y="280" width="180" height="64" rx="8" class="bg-blue"/>
+  <text x="74" y="306" class="bt">RevenueCat purchase</text>
+  <text x="74" y="324" class="bs">webhook updates server state</text>
+  <path d="M150 214 V280" class="edge" marker-end="url(#arrow)"/>
+  <text x="158" y="250" class="ts">subscribe / trial</text>
+
+  <!-- RC2 -> CGATE re-check loop -->
+  <path d="M60 312 H30 V140 H300 V152" class="edge" marker-end="url(#arrow)"/>
+  <text x="40" y="130" class="ts">re-check after purchase</text>
+
+  <!-- REFUSE -> CGATE re-sync loop (dashed) -->
+  <path d="M605 336 V128 H440 V152" class="dedge" marker-end="url(#arrow)"/>
+  <text x="450" y="120" class="ts">re-sync, retry</text>
+</svg>
