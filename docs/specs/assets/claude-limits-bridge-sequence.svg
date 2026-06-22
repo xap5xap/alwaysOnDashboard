@@ -1,0 +1,97 @@
+<svg width="100%" viewBox="0 0 850 545" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Bridge push cycle and widget read cycle for the Claude limits widget</title>
+  <desc>Two decoupled cycles share one stored sample. In the push cycle, every few minutes the usage bridge on the machine POSTs the session and weekly figures with its bridge token to the bridge-ingest Edge Function, which verifies the token, derives the user, deduplicates, and upserts the latest sample row in Postgres under row-level security, then acknowledges. In the read cycle, the widget host calls the proxy with the service id, widget type, config, and the user's session token; the proxy verifies the token, sees the device_push auth class, selects the latest sample for that user, service, and widget, and returns normalized data with no provider call, which the host renders. The widget never knows it is push-fed because the host uses the same proxy contract as any widget.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .hd{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .hds{font-size:11px;fill:#6a6a6a;}
+    .foot{font-size:12px;font-style:italic;fill:#5b5b5b;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .dedge{fill:none;stroke:#a8a8a8;stroke-width:1.4;stroke-dasharray:5 4;}
+    .lifeline{fill:none;stroke:#c4c4c4;stroke-width:1;stroke-dasharray:4 4;}
+    .hbox{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .hbox-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .hbox-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1;}
+    .hbox-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .band-push{fill:#f7f9fc;stroke:#e2e9f3;stroke-width:1;}
+    .band-read{fill:#f7fbf8;stroke:#e2efe6;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="849" height="544" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+
+  <!-- phase bands -->
+  <rect x="24" y="90" width="802" height="150" rx="8" class="band-push"/>
+  <text x="40" y="108" class="cap">Push cycle: device to backend (every N minutes)</text>
+  <rect x="24" y="252" width="802" height="244" rx="8" class="band-read"/>
+  <text x="40" y="270" class="cap">Read cycle: widget host, the normal widget path</text>
+
+  <!-- lifelines -->
+  <path d="M95 78 V508" class="lifeline"/>
+  <path d="M265 78 V508" class="lifeline"/>
+  <path d="M435 78 V508" class="lifeline"/>
+  <path d="M605 78 V508" class="lifeline"/>
+  <path d="M775 78 V508" class="lifeline"/>
+
+  <!-- headers -->
+  <rect x="30" y="44" width="130" height="34" rx="7" class="hbox"/>
+  <text x="95" y="60" text-anchor="middle" class="hd">Usage bridge</text>
+  <text x="95" y="73" text-anchor="middle" class="hds">(machine)</text>
+
+  <rect x="200" y="44" width="130" height="34" rx="7" class="hbox-green"/>
+  <text x="265" y="60" text-anchor="middle" class="hd">bridge-ingest</text>
+  <text x="265" y="73" text-anchor="middle" class="hds">Edge Function</text>
+
+  <rect x="370" y="44" width="130" height="34" rx="7" class="hbox-amber"/>
+  <text x="435" y="60" text-anchor="middle" class="hd">claude_limit_</text>
+  <text x="435" y="73" text-anchor="middle" class="hds">samples (RLS)</text>
+
+  <rect x="540" y="44" width="130" height="34" rx="7" class="hbox"/>
+  <text x="605" y="60" text-anchor="middle" class="hd">Widget host</text>
+  <text x="605" y="73" text-anchor="middle" class="hds">(app)</text>
+
+  <rect x="710" y="44" width="130" height="34" rx="7" class="hbox-blue"/>
+  <text x="775" y="60" text-anchor="middle" class="hd">proxy</text>
+  <text x="775" y="73" text-anchor="middle" class="hds">Edge Function</text>
+
+  <!-- push messages -->
+  <text x="180" y="126" text-anchor="middle" class="ts">POST samples + bridge token</text>
+  <path d="M95 134 H265" class="edge" marker-end="url(#arrow)"/>
+
+  <path d="M265 160 h36 v16 h-36" class="edge" marker-end="url(#arrow)"/>
+  <text x="308" y="172" class="ts">verify token, dedup</text>
+
+  <text x="350" y="192" text-anchor="middle" class="ts">upsert latest sample (service role)</text>
+  <path d="M265 200 H435" class="edge" marker-end="url(#arrow)"/>
+
+  <text x="350" y="218" text-anchor="middle" class="ts">ok</text>
+  <path d="M435 226 H265" class="dedge" marker-end="url(#arrow)"/>
+
+  <!-- read messages -->
+  <text x="690" y="288" text-anchor="middle" class="ts">proxy(service, widget, config) + JWT</text>
+  <path d="M605 296 H775" class="edge" marker-end="url(#arrow)"/>
+
+  <path d="M775 322 h36 v16 h-36" class="edge" marker-end="url(#arrow)"/>
+  <text x="771" y="318" text-anchor="end" class="ts">verify JWT, device_push</text>
+
+  <text x="605" y="354" text-anchor="middle" class="ts">select latest sample (user, service, widget)</text>
+  <path d="M775 362 H435" class="edge" marker-end="url(#arrow)"/>
+
+  <text x="605" y="382" text-anchor="middle" class="ts">latest session + weekly figures</text>
+  <path d="M435 390 H775" class="dedge" marker-end="url(#arrow)"/>
+
+  <text x="690" y="414" text-anchor="middle" class="ts">normalized data, no provider call</text>
+  <path d="M775 422 H605" class="dedge" marker-end="url(#arrow)"/>
+
+  <path d="M605 448 h36 v16 h-36" class="edge" marker-end="url(#arrow)"/>
+  <text x="648" y="460" class="ts">render(data, config, size)</text>
+
+  <!-- footer -->
+  <text x="40" y="524" class="foot">The widget never knows it is push-fed: the host calls the same proxy(...) contract as any widget.</text>
+</svg>

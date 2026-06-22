@@ -1,0 +1,101 @@
+<svg width="100%" viewBox="0 0 800 590" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Personal-engine push path for the Claude limits widget</title>
+  <desc>On the user's own machine, Claude Code feeds a usage bridge that extracts the session and weekly limit bars from /usage. The bridge makes an authenticated HTTPS POST of those figures, with a per-user bridge token, to a Supabase Edge Function called bridge-ingest, which verifies the token, derives the user, deduplicates, and upserts the latest sample into a per-user row-level-security-protected table named claude_limit_samples. On the app client side the claude limits widget is an ordinary service and widget definition; the widget host calls the same proxy(serviceId, widgetType, config) contract used by every widget, plus the user's session token. For this device_push service the proxy returns the latest stored sample instead of calling an external provider. The standard pull path to external providers for oauth2, api_key, admin_key, and platform_key services is unchanged.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:12px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:12px;fill:#5b5b5b;}
+    .bt{font-size:14px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:12px;fill:#4a4a4a;}
+    .btf{font-size:14px;font-weight:600;fill:#a8a8a8;}
+    .bsf{font-size:12px;fill:#bdbdbd;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .dedge{fill:none;stroke:#a8a8a8;stroke-width:1.4;stroke-dasharray:5 4;}
+    .container{fill:none;stroke:#c0c0c0;stroke-width:0.8;stroke-dasharray:4 4;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1;}
+    .bg-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-faded{fill:#f4f4f4;stroke:#dadada;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="799" height="589" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="40" y="32" class="cap">Personal-engine push path: the client seam is reused; only the server gains a push source</text>
+
+  <!-- Machine container -->
+  <rect x="48" y="52" width="346" height="168" rx="10" class="container"/>
+  <text x="64" y="74" class="cap">User's machine (personal-engine, single trusted device)</text>
+  <rect x="68" y="86" width="306" height="48" rx="8" class="bg-gray"/>
+  <text x="82" y="108" class="bt">Claude Code</text>
+  <text x="82" y="126" class="bs">subscription, e.g. Max 20x</text>
+  <path d="M221 134 V150" class="edge" marker-end="url(#arrow)"/>
+  <rect x="68" y="150" width="306" height="62" rx="8" class="bg-gray"/>
+  <text x="82" y="172" class="bt">Usage bridge (/usage adapter)</text>
+  <text x="82" y="190" class="bs">version-pinned, swappable</text>
+  <text x="82" y="206" class="bs">extracts session + weekly bars</text>
+
+  <!-- Client container -->
+  <rect x="432" y="52" width="320" height="168" rx="10" class="container"/>
+  <text x="448" y="74" class="cap">App client (registry seam reused 100%)</text>
+  <rect x="448" y="86" width="288" height="48" rx="8" class="bg-gray"/>
+  <text x="462" y="108" class="bt">claude_limits widget</text>
+  <text x="462" y="126" class="bs">normal Service + Widget def</text>
+  <path d="M592 134 V150" class="edge" marker-end="url(#arrow)"/>
+  <rect x="448" y="150" width="288" height="62" rx="8" class="bg-blue"/>
+  <text x="462" y="172" class="bt">Widget host</text>
+  <text x="462" y="190" class="bs">proxy(serviceId, widgetType,</text>
+  <text x="462" y="206" class="bs">config) - same as any widget</text>
+
+  <!-- Server container -->
+  <rect x="48" y="258" width="704" height="312" rx="10" class="container"/>
+  <text x="64" y="280" class="cap">Supabase backend (AOD-9): the only line of trust</text>
+
+  <!-- bridge-ingest -->
+  <rect x="68" y="298" width="306" height="70" rx="8" class="bg-green"/>
+  <text x="82" y="322" class="bt">Edge Function: bridge-ingest</text>
+  <text x="82" y="340" class="bs">verify bridge token, derive user</text>
+  <text x="82" y="356" class="bs">idempotent (AOD-12 precedent)</text>
+
+  <!-- external provider (faded, untouched) -->
+  <rect x="432" y="298" width="240" height="70" rx="8" class="bg-faded"/>
+  <text x="446" y="322" class="btf">external provider</text>
+  <text x="446" y="340" class="bsf">oauth2 / api_key / admin_key /</text>
+  <text x="446" y="356" class="bsf">platform_key (standard pull)</text>
+
+  <!-- samples table -->
+  <rect x="68" y="408" width="306" height="70" rx="8" class="bg-amber"/>
+  <text x="82" y="432" class="bt">claude_limit_samples (PG + RLS)</text>
+  <text x="82" y="450" class="bs">latest session + weekly figures</text>
+  <text x="82" y="466" class="bs">per-user, keyed to auth.uid()</text>
+
+  <!-- proxy read path -->
+  <rect x="432" y="408" width="306" height="70" rx="8" class="bg-blue"/>
+  <text x="446" y="432" class="bt">proxy read path</text>
+  <text x="446" y="450" class="bs">device_push: return latest sample</text>
+  <text x="446" y="466" class="bs">(no provider call)</text>
+
+  <!-- bridge -> ingest -->
+  <path d="M221 212 V298" class="edge" marker-end="url(#arrow)"/>
+  <text x="229" y="246" class="ts">POST samples + token</text>
+
+  <!-- host -> proxy (dog-leg around the untouched provider) -->
+  <path d="M592 212 V232 H706 V408" class="edge" marker-end="url(#arrow)"/>
+  <text x="600" y="248" class="ts">proxy(...) + user JWT</text>
+
+  <!-- ingest -> samples -->
+  <path d="M221 368 V408" class="edge" marker-end="url(#arrow)"/>
+  <text x="229" y="392" class="ts">upsert (service role, RLS)</text>
+
+  <!-- proxy -> samples (device_push read) -->
+  <path d="M432 443 H374" class="edge" marker-end="url(#arrow)"/>
+  <text x="403" y="436" text-anchor="middle" class="ts">read latest</text>
+
+  <!-- proxy -> provider (dashed: unchanged pull branch) -->
+  <path d="M520 408 V368" class="dedge" marker-end="url(#arrow)"/>
+  <text x="540" y="392" class="ts">other services: pull (unchanged)</text>
+</svg>
