@@ -1,6 +1,8 @@
 # Spec: Service to Widget to Layout Registry Contract
 
 > Status: draft for review, 2026-06-18. Tracked by [AOD-8](https://linear.app/thexap/issue/AOD-8) (`type:spec`). Defines the core extensibility seam of the product. Stays consistent with the OAuth/token model in [AOD-9](https://linear.app/thexap/issue/AOD-9): the server-side half of the registry described here is the same registry AOD-9 section 6.1 introduces, and the auth-class taxonomy is shared. Builds on the locked decisions in [AOD-6](https://linear.app/thexap/issue/AOD-6) (v1 service set) and [AOD-7](https://linear.app/thexap/issue/AOD-7) (free-form layout).
+>
+> Amended 2026-06-22 ([AOD-13](https://linear.app/thexap/issue/AOD-13)): added the `platform_key` auth class to the `AuthClass` taxonomy (§5) for platform-owned-key services like Weather, per [AOD-4](https://linear.app/thexap/issue/AOD-4). The registry seam, the two-halves model, and the invariants are unchanged.
 
 ## 1. Purpose and scope
 
@@ -26,7 +28,7 @@ This spec fixes the interfaces (`ServiceDefinition`, `WidgetDefinition`, `Widget
 | Repo `CLAUDE.md` / vision | The three-layer model and the design rule (new service = registry entry, zero layout/dashboard edits). | The contract is built to make this rule mechanically true; section 11 proves it. |
 | [AOD-7](https://linear.app/thexap/issue/AOD-7) | Layout is free-form drag-and-resize, not a fixed grid. Persist arbitrary position and size per instance. | `WidgetInstance.rect` carries a free-form rect; `WidgetDefinition.supportedSizes` declares size classes. |
 | [AOD-6](https://linear.app/thexap/issue/AOD-6) | v1 service set: Linear, Google Calendar, Claude/Anthropic usage, Weather, Clock. | These populate the registry. Linear is the running example; GitHub (a non-v1 follow-up) is the worked add-a-service example. |
-| [AOD-9](https://linear.app/thexap/issue/AOD-9) | Auth-class taxonomy (`oauth2` / `api_key` / `admin_key` / `none`); a server-side service registry (section 6.1) with a per-widget endpoint allow-list; the connection `status` enum; the `proxy` data path. | The service definition carries the auth class; the server half of the registry is AOD-9's registry; instance resolution consumes AOD-9's connection status and proxy. |
+| [AOD-9](https://linear.app/thexap/issue/AOD-9) | Auth-class taxonomy (`oauth2` / `api_key` / `admin_key` / `platform_key` / `none`); a server-side service registry (section 6.1) with a per-widget endpoint allow-list; the connection `status` enum; the `proxy` data path. | The service definition carries the auth class; the server half of the registry is AOD-9's registry; instance resolution consumes AOD-9's connection status and proxy. |
 
 Provider URLs and endpoint paths in the examples below are illustrative and confirmed when each integration is wired, per AOD-9 section 11. The contract is their shape, not their current values.
 
@@ -69,7 +71,7 @@ A service is one logical thing, but its description splits across two locations 
 | **Client-facing** | The app bundle (`ServiceDefinition` + `WidgetDefinition[]`) | Identity, auth class, title, supported sizes, refresh interval, config schema, the render component. | What the user sees and arranges: Settings, the widget picker, the layout, the rendered card. | Safe to ship. Contains no secrets and no provider URLs. |
 | **Server-side** | The Edge broker (`ServiceBackendConfig`, AOD-9 section 6.1) | Auth class, OAuth URLs, API base, auth header style, and the widget-to-endpoint allow-list. | How data is fetched: the broker's connect, refresh, proxy, and disconnect paths. | Never shipped to the device. The allow-list is what makes AOD-9 goal 5 (no open relay) hold. |
 
-The `authClass` appears in both halves and must agree. The client needs it to render the right connect affordance (an OAuth button, an API-key form, or nothing for Clock); the server needs it to run the matching credential flow. Everything secret or relay-sensitive (client secrets, tokens, concrete endpoints) stays in the server half. Everything visual (titles, sizes, the render component) stays in the client half. They join on `id`.
+The `authClass` appears in both halves and must agree. The client needs it to render the right connect affordance (an OAuth button, an API-key form, a location form for a platform-owned-key service like Weather, or nothing for Clock); the server needs it to run the matching credential flow. Everything secret or relay-sensitive (client secrets, tokens, platform provider keys, concrete endpoints) stays in the server half. Everything visual (titles, sizes, the render component) stays in the client half. They join on `id`.
 
 This is the same split AOD-9 relies on: AOD-9's broker has "one code path per credential class, not one per service," driven by the server half declared here.
 
@@ -80,7 +82,7 @@ Shared primitives used throughout:
 ```typescript
 type ServiceId = string;     // stable slug, e.g. "linear", "google_calendar", "github"
 type WidgetTypeId = string;  // stable slug, unique within a service, e.g. "my_issues"
-type AuthClass = "oauth2" | "api_key" | "admin_key" | "none";  // the AOD-9 taxonomy
+type AuthClass = "oauth2" | "api_key" | "admin_key" | "platform_key" | "none";  // the AOD-9 taxonomy
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type IconRef = string;       // asset key resolved by the app's icon set
 ```
@@ -117,6 +119,9 @@ interface ServiceBackendConfig {
 
   apiBase?: string;          // proxy target base; present for every class except "none"
   authHeaderStyle?: string;  // "bearer", "x-api-key", ...
+  // For "platform_key" (e.g. Weather) the attached key is a platform secret read
+  // from Edge env (AOD-9 §5.4), not a per-user credential; the user supplies only a
+  // location, carried as the connection config (AOD-9 §5.1), not in this type.
 
   // The allow-list: each widget type maps to the single endpoint the proxy may
   // call for it. The proxy only ever calls apiBase + an allow-listed path, never
@@ -252,6 +257,8 @@ These are the guarantees the generic engine enforces by reading the registry. Th
        .flatMap(s => s.widgets);
    }
    ```
+
+   Only `authClass: "none"` (Clock) is exempt from the connected-only rule. A `platform_key` service like Weather is **not** exempt: it has a real connection (the user's location, AOD-9 §5.1) and its widgets become addable only once that connection exists, exactly like the credentialed classes. The predicate above already captures this, since `platform_key !== "none"`.
 
 3. **Disconnect removes widgets.** When a user disconnects a service, every instance with that `serviceId` is removed from every layout. This is the product rule ("disconnect a service and its widgets disappear"). It is distinct from a transient credential problem: a `reauth_required` or `error` connection (AOD-9 status enum) is not a disconnect; the instance is retained and the host renders a generic reconnect prompt. Whether the orphaned instance row is deleted eagerly at disconnect or filtered lazily on load is a persistence detail aligned with the AOD-5 hard-delete versus soft-retire posture; either way the user-visible invariant holds: a widget is shown only while its parent service is connected.
 
@@ -403,7 +410,7 @@ This spec and AOD-9 describe one registry from two sides. The reconciliation:
 
 | Concept | This spec (AOD-8) | AOD-9 |
 |---|---|---|
-| Auth taxonomy | `AuthClass = oauth2 \| api_key \| admin_key \| none` on `ServiceDefinition` and `ServiceBackendConfig` | Section 4 credential classes; the broker has one path per class |
+| Auth taxonomy | `AuthClass = oauth2 \| api_key \| admin_key \| platform_key \| none` on `ServiceDefinition` and `ServiceBackendConfig` | Section 4 credential classes; the broker has one path per class |
 | Server registry | `ServiceBackendConfig` (section 5.2) | Section 6.1 service registry |
 | Endpoint allow-list | `ServiceBackendConfig.endpoints` (widget type to method + path) | Section 6.1 `widgets` allow-list; the basis of goal 5 (no open relay) |
 | Data path | `proxy(serviceId, widgetType, config)` in section 9 resolution | Section 9 proxied call; returns normalized widget data |
@@ -441,6 +448,7 @@ The issue's acceptance criteria, mapped to where they are met:
 ## 15. References
 
 - [AOD-8](https://linear.app/thexap/issue/AOD-8): this spec's tracking issue.
+- [AOD-13](https://linear.app/thexap/issue/AOD-13): added the `platform_key` auth class (§5) for platform-owned-key services like Weather, per AOD-4.
 - [AOD-9](https://linear.app/thexap/issue/AOD-9): OAuth broker and per-user token model. Owns the server half's mechanics; shares the auth taxonomy and the section 6.1 registry.
 - [AOD-10](https://linear.app/thexap/issue/AOD-10): widget model interior. Gated by this spec.
 - [AOD-7](https://linear.app/thexap/issue/AOD-7): free-form layout decision.
