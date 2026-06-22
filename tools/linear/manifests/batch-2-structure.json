@@ -1,0 +1,40 @@
+{
+  "_note": "Batch 2 of the AOD Linear restructure: structure. Creates the v1.1 initiative, the 6 new deliverable projects + v1.1 Backlog, links projects to initiatives, and creates 11 milestones with done-when descriptions. 'alwaysOnDashboard v1' is create-initiative'd first (idempotent reuse) so links resolve it by name. Product definition is already linked to v1, so it is untouched. Run: node /Users/xavierperez/tools/linear-migration/migrate.mjs tools/linear/manifests/batch-2-structure.json",
+  "team": "AOD",
+  "operations": [
+    { "op": "create-initiative", "name": "alwaysOnDashboard v1" },
+    { "op": "create-initiative", "name": "alwaysOnDashboard v1.1", "status": "Planned", "description": "Placeholder for the second shippable version. Home for deferred widgets/services and post-v1 ideas, so v1 progress stays clean (playbook section 2: give v1.1 a stable place to grow into)." },
+
+    { "op": "create-project", "name": "Design System", "description": "Brand identity, design tokens, component library, app IA, and core screen mockups. Front-loaded in Foundation; the visual foundation all build UI depends on." },
+    { "op": "create-project", "name": "Platform & App Shell", "description": "Supabase backend (auth, OAuth broker, token model, proxy, entitlement webhook) plus the Expo app shell (router, registry runtime, widget host, layout engine) and the first vertical slice." },
+    { "op": "create-project", "name": "Integrations", "description": "The v1 services on the registry seam (Linear, Google Calendar, Claude usage, Weather, Clock) and the widgets they publish." },
+    { "op": "create-project", "name": "Billing & Entitlements", "description": "RevenueCat wiring, server-authoritative entitlement enforcement at the six seams, and the paywall and upsell UX." },
+    { "op": "create-project", "name": "Kiosk Mode", "description": "The flagship always-on feature: kiosk runtime, wall-mount profile, day/night ambient driver, and exit guard. Pro-gated." },
+    { "op": "create-project", "name": "Launch & Store Submission", "description": "App Store and Play listings, privacy labels, screenshots, submission, and subscription go-live." },
+    { "op": "create-project", "name": "v1.1 Backlog", "description": "Deferred widgets and services (flights, finance, Spotify, GitHub), the personal-engine pack, and post-v1 ideas. Lives under the v1.1 initiative to keep v1 progress clean." },
+
+    { "op": "link-project-initiative", "project": "Design System", "initiative": "alwaysOnDashboard v1" },
+    { "op": "link-project-initiative", "project": "Platform & App Shell", "initiative": "alwaysOnDashboard v1" },
+    { "op": "link-project-initiative", "project": "Integrations", "initiative": "alwaysOnDashboard v1" },
+    { "op": "link-project-initiative", "project": "Billing & Entitlements", "initiative": "alwaysOnDashboard v1" },
+    { "op": "link-project-initiative", "project": "Kiosk Mode", "initiative": "alwaysOnDashboard v1" },
+    { "op": "link-project-initiative", "project": "Launch & Store Submission", "initiative": "alwaysOnDashboard v1" },
+    { "op": "link-project-initiative", "project": "v1.1 Backlog", "initiative": "alwaysOnDashboard v1.1" },
+
+    { "op": "create-milestone", "project": "Design System", "name": "DS-M1 Brand & Tokens", "description": "Done when: brand identity (wordmark, palette, voice) is approved and the token set (color, type ramp, spacing, radii, dark theme) is defined in Figma and exportable to code. Hard-sequenced before DS-M2." },
+    { "op": "create-milestone", "project": "Design System", "name": "DS-M2 Components & Core Screens", "description": "Done when: the component library (cards, buttons, inputs, toggles, drawers, skeletons, badges, lock overlays) exists, the app IA/navigation map is set, and every cross-cutting surface (settings, widget picker, dashboard editor, onboarding, kiosk, paywall) has an approved mockup. Blocked by DS-M1." },
+
+    { "op": "create-milestone", "project": "Platform & App Shell", "name": "PS-M1 Backend platform", "description": "Done when: Supabase project, schema (connections, oauth_transactions, entitlements, layouts, instances) under RLS, and the OAuth broker edge functions exist; a test user completes a server-side OAuth round-trip and a token is stored encrypted in Vault and refreshed." },
+    { "op": "create-milestone", "project": "Platform & App Shell", "name": "PS-M2 App shell", "description": "Done when: the Expo + expo-router scaffold renders an empty dashboard, the client-side registry runtime resolves a stub widget through the widget host state machine, the free-form layout engine persists position and size, and Settings opens. Blocked by PS-M1." },
+    { "op": "create-milestone", "project": "Platform & App Shell", "name": "PS-M3 First vertical slice (Linear My Issues)", "description": "Done when: the Phase 1 gate is met. A user signs in, connects Linear via OAuth, adds My Issues, and watches it auto-refresh on the Fire HD 8. Blocked by PS-M2 and Design System DS-M1." },
+
+    { "op": "create-milestone", "project": "Integrations", "name": "I-M1 Calendar & Weather", "description": "Done when: Google Calendar (OAuth) and Weather (platform key, AOD-13) connect and their v1 widgets (Next Event, Today's Agenda, Current + Forecast) render and refresh. Parallel after Platform & App Shell." },
+    { "op": "create-milestone", "project": "Integrations", "name": "I-M2 Claude usage", "description": "Done when: Spend MTD and Daily Spend Sparkline render from the Anthropic Admin API through the proxy. Includes the AOD-14 personal-engine Claude limits widget (non-blocking)." },
+    { "op": "create-milestone", "project": "Integrations", "name": "I-M3 Clock & widget polish", "description": "Done when: Clock + Date (no-auth) ships and the on-demand refresh affordance (AOD-15) plus all lifecycle states (fresh, stale, error, needs-config, disconnected) are complete across the eight v1 widgets." },
+
+    { "op": "create-milestone", "project": "Billing & Entitlements", "name": "B-M1 Entitlement core", "description": "Done when: the entitlements table, server tier resolver, and the secured idempotent RevenueCat webhook exist; a Pro entitlement flips server-side and the six enforcement seams (connect, add-widget, create-dashboard, refresh-floor, kiosk, theme) enforce correctly; a reconciliation pull covers missed webhooks." },
+    { "op": "create-milestone", "project": "Billing & Entitlements", "name": "B-M2 Paywall & upsell", "description": "Done when: the paywall (monthly/annual, 7-day trial), lock overlays, per-trigger upsell prompts, and the non-destructive downgrade/freeze dialog are built; a free user hitting any gate sees the right prompt and can complete a sandbox trial-to-Pro purchase. Blocked by B-M1." },
+
+    { "op": "create-milestone", "project": "Kiosk Mode", "name": "K-M1 Kiosk runtime", "description": "Done when: kiosk runs unattended on the Fire HD 8 for 24h, with keep-awake, kiosk cadence profile, wall-mount profile (dark, larger type, high contrast), day/night dimming via the ambient driver, and exit gesture plus PIN, all gated to Pro via canUseKiosk (AOD-12). Blocked by Platform & App Shell, Billing B-M1, and Design System." }
+  ]
+}

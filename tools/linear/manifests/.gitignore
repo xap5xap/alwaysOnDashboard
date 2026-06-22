@@ -1,0 +1,2 @@
+# Migration output files are throwaway (the manifest is the committed audit trail).
+*-output.json

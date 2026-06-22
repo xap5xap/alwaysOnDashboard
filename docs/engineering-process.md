@@ -120,6 +120,22 @@ Exactly one `type:` per issue. Colon prefix is mandatory (playbook's single high
 
 ---
 
+## Linear tooling (MCP vs SDK)
+
+Two ways we write to Linear, chosen by scale:
+
+- **A few creates or edits:** the Linear MCP directly. Cheaper for small changes.
+- **Bulk writes (restructure, build-backlog seed, dependency wiring):** the shared SDK migration tool with a JSON manifest. About 85 percent less context than MCP at scale, and the manifest is the committed audit trail.
+
+The tool is team-agnostic and shared across Xavier's projects (the team comes from each manifest):
+
+- Writes: `/Users/xavierperez/tools/linear-migration/migrate.mjs`
+- Reads: `/Users/xavierperez/tools/linear-helpers/*.mjs` (pass `LINEAR_TEAM_KEY=AOD`)
+
+It uses one `thexap` Personal API key that covers every team in the workspace. AOD manifests live in [`tools/linear/manifests/`](../tools/linear/manifests/) (committed); `*-output.json` is gitignored. Always surface a manifest for approval before running it (playbook section 11). Full how-and-where: [`tools/linear/README.md`](../tools/linear/README.md).
+
+---
+
 ## ADR convention
 
 A closed `type:decision` issue **is** the architecture decision record. No separate `docs/adr/` files unless a decision is weighty enough to warrant standalone narrative. Issue body template:

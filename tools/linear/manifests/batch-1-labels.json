@@ -1,0 +1,35 @@
+{
+  "_note": "Batch 1 of the AOD Linear restructure: create the build-phase label taxonomy. 25 new labels (type, area, risk, from, MoSCoW). Existing labels (area:product/brand/kiosk/billing/integrations/app/backend, type:decision/spec/tech-task/bug) are NOT recreated. create-label is idempotent (reuses same-name). Run: node /Users/xavierperez/tools/linear-migration/migrate.mjs tools/linear/manifests/batch-1-labels.json",
+  "team": "AOD",
+  "operations": [
+    { "op": "create-label", "name": "type:design", "color": "#F2994A", "description": "Design work: UX flows and visual/screen mockups. Output is Figma plus a handoff spec." },
+    { "op": "create-label", "name": "type:user-story", "color": "#4CB782", "description": "Externally meaningful unit of user value. Has acceptance criteria and a MoSCoW label." },
+    { "op": "create-label", "name": "type:spike", "color": "#F2C94C", "description": "Time-boxed investigation. Output is a doc or decision, not shippable code." },
+    { "op": "create-label", "name": "type:migration", "color": "#D4A15A", "description": "Data or schema migration. Often risky, often gated." },
+    { "op": "create-label", "name": "type:validation-followup", "color": "#95A2B3", "description": "Captured during dogfooding or validation; may become a spec amendment." },
+
+    { "op": "create-label", "name": "area:design-system", "color": "#EC6FA8", "description": "Design tokens, component library, app IA, core screen mockups." },
+    { "op": "create-label", "name": "area:onboarding", "color": "#F2C94C", "description": "First-run experience and connect-service flow." },
+    { "op": "create-label", "name": "area:layout", "color": "#5E6AD2", "description": "Free-form dashboard editor: place, resize, arrange widget instances." },
+    { "op": "create-label", "name": "area:auth", "color": "#0E7C7B", "description": "User accounts and sign-in (distinct from the OAuth broker in area:backend)." },
+    { "op": "create-label", "name": "area:integrations:linear", "color": "#26B5CE", "description": "Linear service and its widgets." },
+    { "op": "create-label", "name": "area:integrations:calendar", "color": "#26B5CE", "description": "Google Calendar service and its widgets." },
+    { "op": "create-label", "name": "area:integrations:claude", "color": "#26B5CE", "description": "Claude / Anthropic usage service and its widgets." },
+    { "op": "create-label", "name": "area:integrations:weather", "color": "#26B5CE", "description": "Weather service (platform-owned key) and its widgets." },
+    { "op": "create-label", "name": "area:integrations:clock", "color": "#26B5CE", "description": "Clock / Date ambient widget (no connection needed)." },
+
+    { "op": "create-label", "name": "risk:low", "color": "#4CB782", "description": "Low delivery risk (implicit default; set only when a view needs it)." },
+    { "op": "create-label", "name": "risk:medium", "color": "#F2994A", "description": "Medium delivery risk." },
+    { "op": "create-label", "name": "risk:high", "color": "#EB5757", "description": "High delivery risk; needs extra scrutiny (per-provider OAuth, billing webhook, kiosk pinning, encryption)." },
+
+    { "op": "create-label", "name": "from:vision", "color": "#4EA7FC", "description": "Originated in product-vision.md." },
+    { "op": "create-label", "name": "from:dogfood", "color": "#26B5CE", "description": "Surfaced from Xavier's daily kiosk use (AOD's validation source)." },
+    { "op": "create-label", "name": "from:build", "color": "#95A2B3", "description": "Surfaced during engineering." },
+    { "op": "create-label", "name": "from:store-review", "color": "#BB87FC", "description": "Surfaced during App Store / Play review." },
+
+    { "op": "create-label", "name": "must", "color": "#EB5757", "description": "MoSCoW: required for v1. On type:user-story only." },
+    { "op": "create-label", "name": "should", "color": "#F2994A", "description": "MoSCoW: important but not vital for v1. On type:user-story only." },
+    { "op": "create-label", "name": "could", "color": "#F2C94C", "description": "MoSCoW: desirable, opportunistic. On type:user-story only." },
+    { "op": "create-label", "name": "wont", "color": "#95A2B3", "description": "MoSCoW: explicitly deferred (e.g., to v1.1). On type:user-story only." }
+  ]
+}
