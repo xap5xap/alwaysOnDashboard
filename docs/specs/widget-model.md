@@ -1,6 +1,8 @@
 # Spec: Widget Model (Config, Refresh Interval, Sizes, Lifecycle)
 
 > Status: draft for review, 2026-06-18. Tracked by [AOD-10](https://linear.app/thexap/issue/AOD-10) (`type:spec`). Fills the interior of the four interfaces framed by [AOD-8](https://linear.app/thexap/issue/AOD-8) (registry contract, Done). Couples to [AOD-9](https://linear.app/thexap/issue/AOD-9) (OAuth/token model, Done) for the proxy cache and the connection status enum. Builds on the locked decisions in [AOD-6](https://linear.app/thexap/issue/AOD-6) (v1 service set) and [AOD-7](https://linear.app/thexap/issue/AOD-7) (free-form layout).
+>
+> Amended 2026-06-22 ([AOD-15](https://linear.app/thexap/issue/AOD-15)): recorded the on-demand refresh button as a generic host affordance in §6.6, per [AOD-4](https://linear.app/thexap/issue/AOD-4). It rides the existing manual-refresh path; the refresh model is unchanged.
 
 ## 1. Purpose and scope
 
@@ -338,6 +340,8 @@ type CadenceProfile = "foreground" | "kiosk"; // default "foreground". AOD-11 se
 AOD-10 defines the input and the default; AOD-11 decides when the profile is `kiosk` and may pair it with a kiosk-specific interval multiplier. The mechanism (an on-device timer reading an effective interval) is identical across profiles.
 
 **Manual refresh.** A widget whose `RefreshInterval` is `"manual"` schedules no timer. It refreshes on mount, on return to foreground, and on an explicit user pull-to-refresh, and otherwise shows its last-known data with a "last updated" stamp. It never enters the stale state from a missed tick (there are no ticks), though it can still enter error or disconnected from a failed manual attempt.
+
+**On-demand refresh (the refresh button).** Every widget, not only `"manual"` ones, carries a host-drawn refresh button that fires the explicit-user arm of the manual-refresh path above (the same trigger as pull-to-refresh); it adds no new mechanism. [AOD-4](https://linear.app/thexap/issue/AOD-4) locked this as a cross-cutting v1 UX behavior. The button is generic host chrome rendered uniformly for all widgets, like the staleness badge (§7.3), not a per-widget choice the renderer ever sees. It is a foreground affordance: in kiosk the foreground timer (§6.5) already refreshes continuously, so the button serves the phone or foreground glance. It cannot inflate provider cost: a tap is still gated by the [AOD-12](https://linear.app/thexap/issue/AOD-12) §6.4 per-user fetch-floor (`mayUserTriggerFetch`), so within the floor it is served the cached/coalesced value and never an extra provider call, and it can never breach the [AOD-5](https://linear.app/thexap/issue/AOD-5) ≤900s cache ceiling. For a `device_push` widget ([AOD-14](https://linear.app/thexap/issue/AOD-14)) a tap re-reads the latest stored sample, a cheap DB read; it cannot force the bridge to push.
 
 ![Two-layer refresh cadence and cross-device coalescing](assets/widget-refresh-cadence.svg)
 
