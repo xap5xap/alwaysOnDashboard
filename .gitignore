@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Linear migration tool outputs (manifests are committed; outputs are not)
+tools/linear/manifests/*-output.json
+
+# OS
+.DS_Store

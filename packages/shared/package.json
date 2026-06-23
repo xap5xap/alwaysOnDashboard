@@ -1,0 +1,12 @@
+{
+  "name": "@vela/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared types and (later) Zod validation schemas spanning the Expo app (Metro) and the Supabase Edge Functions (Deno).",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./database.types": "./src/database.types.ts"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "alwaysondashboard",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vela (alwaysOnDashboard) monorepo: Supabase backend, shared types, and the Expo app shell.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "gen:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts",
+    "test:integration": "bash scripts/test-integration.sh",
+    "test:unit": "deno check packages/shared/src test/fixtures supabase/tests"
+  },
+  "devDependencies": {
+    "supabase": "^2.0.0"
+  }
+}
