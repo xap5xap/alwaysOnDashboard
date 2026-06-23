@@ -510,6 +510,18 @@ create policy kiosk_configs_rw_own on kiosk_configs
 | `kiosk_configs` | own | own (+ dashboard-ownership check) | client (direct) |
 | `user_settings` | own | own | client (direct) |
 
+### 8.3 The privilege layer beneath the policies (build-time addition, AOD-43)
+
+The §8.2 SQL is illustrative and assumed the legacy Supabase behavior where the Data API roles (`anon`, `authenticated`, `service_role`) hold table privileges by default and RLS alone gates access. Current Supabase **revokes** Data API privileges for newly created `public` tables by default (the `auto_expose_new_tables` change; the flag is deprecated and the always-revoked behavior becomes permanent on 2026-10-30). Verified at build in AOD-43: with the flag unset, a freshly created table is unreachable by `authenticated` even with a permissive policy, so the §8 model does not hold on policies alone.
+
+The fix (per §2: fix the build against current Supabase, record it here) is an explicit `GRANT` layer in the RLS migration that encodes the same writer-split at the privilege level, beneath the policies (defense in depth):
+
+- `service_role`: `all` on all eight tables (the server writer/seeder; it bypasses RLS but still needs table privileges to act through PostgREST).
+- `authenticated`: `select` on `connections` and `entitlements`; `select, insert, update, delete` on `dashboards`, `widget_instances`, `kiosk_configs`, `user_settings`; **nothing** on `oauth_transactions` or `proxy_cache`.
+- `anon`: nothing on any table (the app requires auth).
+
+A consequence worth noting for tests and clients: for the no-client-access tables a client now gets a privilege error rather than an RLS-empty result, which is a strictly stronger denial; the §5.1 tests accept either (error or zero rows). The other build-time claims this spec flagged (local Vault, pg_cron, `gen types`, RLS `auth.uid()`) were all confirmed available in AOD-43 and needed no change.
+
 ## 9. Migration strategy
 
 Per [AOD-25](https://linear.app/thexap/issue/AOD-25): Supabase CLI migrations are the schema source of truth, with no ORM. The workflow:
