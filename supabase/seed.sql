@@ -1,0 +1,4 @@
+-- Intentionally empty (data-model.md §9).
+-- There is no reference data to seed: the service registry is code (AOD-8), not a table, and
+-- every row is per-user runtime data. Test fixtures live in a TEST-ONLY seed built by the
+-- factories in test/fixtures (testing-strategy.md §7), never in this migration seed.
