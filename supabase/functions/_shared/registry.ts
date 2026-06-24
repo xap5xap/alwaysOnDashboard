@@ -64,6 +64,21 @@ export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
       current: { method: "GET", path: "/v1/forecast" },
     },
   },
+  // App-shell walking-skeleton stub (AOD-47), mirroring the client `stub` service (apps/app). No real
+  // provider: the client host drives it through this proxy, and with no connection row the proxy's
+  // connection gate returns 409 needs_reconnect, which the host renders as the disconnected state.
+  // This is the server half of the AOD-8 seam for the stub; remove or replace when real integrations
+  // land in PS-M3. The platform key/base are never reached (the connection gate short-circuits first).
+  stub: {
+    id: "stub",
+    authClass: "platform_key",
+    apiBase: "https://stub.invalid",
+    authHeaderStyle: "x-api-key",
+    platformKeyEnv: "STUB_PROVIDER_KEY",
+    endpoints: {
+      placeholder: { method: "GET", path: "/" },
+    },
+  },
 };
 
 export function getBackend(serviceId: string): ServiceBackendConfig {

@@ -1,0 +1,29 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@vela/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@vela/shared/*": [
+        "../../packages/shared/src/*"
+      ]
+    },
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "../../node_modules/@types"
+    ],
+    "types": [
+      "jest",
+      "node",
+      "react"
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ]
+}
