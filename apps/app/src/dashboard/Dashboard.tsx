@@ -1,30 +1,20 @@
-// The empty dashboard (AOD-8 §8 DashboardLayout, rendered). For the walking skeleton it holds ONE
-// placed stub instance and mounts it through the generic WidgetHost; the free-form layout engine
-// with persistence is the next PS-M2 task. The board reads instances and mounts the host per
-// instance, never naming a service: the AOD-8 seam holds.
-import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+// The dashboard screen (AOD-8 §8 DashboardLayout, rendered). It loads the signed-in user's real layout
+// from Supabase under RLS (useDashboard: load + bootstrap-if-empty + persist), and mounts the free-form
+// layout engine (LayoutCanvas) which renders each instance through the generic WidgetHost. The screen
+// owns the arrange-mode flag so both exits work: tapping empty canvas, or the header Done control. It
+// never names a service: the AOD-8 seam holds end to end.
+import React, { useState } from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
-import { WidgetHost } from '../host/WidgetHost';
-import type { WidgetInstance } from '../registry/types';
-
-// One statically placed stub instance. A real layout loads these from widget_instances (RLS) and the
-// next task adds drag/resize + persistence.
-const placedInstances: WidgetInstance[] = [
-  {
-    instanceId: 'stub-1',
-    serviceId: 'stub',
-    widgetType: 'placeholder',
-    config: {},
-    size: 'medium',
-    rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-  },
-];
+import { LayoutCanvas } from '../layout/LayoutCanvas';
+import { useDashboard } from '../layout/useDashboard';
 
 export function Dashboard() {
   const { session, signOut } = useAuth();
+  const { instances, isLoading, isError, error, commit } = useDashboard();
+  const [arranging, setArranging] = useState(false);
 
   return (
     <View style={styles.screen}>
@@ -36,28 +26,54 @@ export function Dashboard() {
           </Text>
         </View>
         <View style={styles.headerActions}>
-          <Link href="/settings" asChild>
-            <Pressable accessibilityRole="button">
-              <Text style={styles.link}>Settings</Text>
+          {arranging ? (
+            <Pressable onPress={() => setArranging(false)} accessibilityRole="button">
+              <Text style={styles.donePill}>Done</Text>
             </Pressable>
-          </Link>
-          <Pressable onPress={() => void signOut()} accessibilityRole="button">
-            <Text style={styles.link}>Sign out</Text>
-          </Pressable>
+          ) : (
+            <>
+              <Link href="/settings" asChild>
+                <Pressable accessibilityRole="button">
+                  <Text style={styles.link}>Settings</Text>
+                </Pressable>
+              </Link>
+              <Pressable onPress={() => void signOut()} accessibilityRole="button">
+                <Text style={styles.link}>Sign out</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.board}>
-        <Text style={styles.boardHint}>
-          Your dashboard is empty. Below is one stub widget resolving through the registry and the
-          host state machine.
-        </Text>
-        {placedInstances.map((instance) => (
-          <View key={instance.instanceId} style={styles.placed}>
-            <WidgetHost instance={instance} />
-          </View>
-        ))}
-      </ScrollView>
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color="#6E8BFF" />
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Text style={styles.errorTitle}>Could not load your dashboard.</Text>
+          <Text style={styles.errorDetail} numberOfLines={3}>
+            {error?.message ?? 'Unknown error'}
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.hint}>
+            {arranging
+              ? 'Drag to move. Drag the corner handle to resize. Tap empty space or Done to finish.'
+              : instances.length
+                ? 'Long-press a widget to rearrange.'
+                : 'Your dashboard is empty.'}
+          </Text>
+          <LayoutCanvas
+            instances={instances}
+            arranging={arranging}
+            onEnterArrange={() => setArranging(true)}
+            onExitArrange={() => setArranging(false)}
+            onCommit={commit}
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -92,6 +108,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.spacing(4),
   },
   link: {
@@ -99,15 +116,37 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: 14,
     fontWeight: '600',
   },
-  board: {
-    padding: theme.spacing(4),
-    gap: theme.spacing(4),
+  donePill: {
+    color: theme.colors.background,
+    backgroundColor: theme.colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
+    overflow: 'hidden',
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing(3),
+    paddingVertical: theme.spacing(1.5),
   },
-  boardHint: {
+  hint: {
     color: theme.colors.textMuted,
     fontSize: 13,
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(3),
   },
-  placed: {
-    alignSelf: 'flex-start',
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing(2),
+    paddingHorizontal: theme.spacing(6),
+  },
+  errorTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  errorDetail: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
   },
 }));
