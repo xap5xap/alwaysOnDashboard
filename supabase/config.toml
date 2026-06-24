@@ -385,6 +385,16 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# oauth-callback is reached by the provider's browser redirect (e.g. Linear -> .../oauth-callback?
+# code=...&state=...), not a Supabase-JWT client, so the gateway must not require a Supabase JWT. The
+# function authenticates by validating the OAuth `state` against the stored transaction (AOD-9 §7.1
+# step 4). Without this, the gateway would 401 the provider redirect before the handler runs. The
+# other broker functions keep the default verify_jwt = true: oauth-start / credentials-store / proxy
+# / disconnect are called by the JWT-bearing app, and token-refresh by pg_cron with the service-role
+# key (also a valid JWT).
+[functions.oauth-callback]
+verify_jwt = false
+
 # The RevenueCat webhook is called by RevenueCat, not a Supabase-JWT client, so the gateway must
 # not require a Supabase JWT. The function does its own constant-time Authorization-secret check
 # (AOD-12 §6.2). Without this, the gateway would 401 RevenueCat's request before the handler runs.
