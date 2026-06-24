@@ -1,4 +1,5 @@
 {
+  "comment": "Edge runtime import map (functions serve / deploy). The shared AOD-12 model is NOT aliased here: it lives under _shared/ and Edge functions import it as ../_shared/*.ts. The Edge runtime only bundles files under supabase/functions/, so a packages/ alias would fail to boot (verified 2026-06-24).",
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
     "postgres": "npm:postgres@^3",

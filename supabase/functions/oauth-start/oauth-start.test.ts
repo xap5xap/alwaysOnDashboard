@@ -8,9 +8,17 @@ import { handler } from "./handler.ts";
 import { createUser, deleteUser, type TestUser } from "../../../test/fixtures/clients.ts";
 import { closeDb, db } from "../../../test/fixtures/db.ts";
 import { closeDb as closeBrokerDb } from "../_shared/db.ts";
+import { makeConnection } from "../../../test/fixtures/factories.ts";
 import { userPost } from "../../../test/fixtures/edge.ts";
 
 let user: TestUser;
+const created: string[] = [];
+
+async function freshUser(): Promise<TestUser> {
+  const u = await createUser();
+  created.push(u.id);
+  return u;
+}
 
 beforeAll(async () => {
   user = await createUser();
@@ -18,6 +26,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await deleteUser(user.id);
+  for (const id of created) await deleteUser(id).catch(() => {});
   await closeDb();
   await closeBrokerDb();
 });
@@ -57,5 +66,29 @@ describe("oauth-start (connect, AOD-9 §7.1)", { sanitizeResources: false, sanit
 
   it("rejects an unknown service (400)", async () => {
     assertEquals((await handler(await userPost("oauth-start", user, { service: "nope" }))).status, 400);
+  });
+
+  it("connect-service count (AOD-12 §7.1): a Free user's 3rd backend service is refused 403, no transaction written", async () => {
+    const u = await freshUser(); // no entitlements row -> Free, maxConnectedServices = 2
+    await makeConnection(u.id, { service: "anthropic_usage", auth_class: "admin_key" });
+    await makeConnection(u.id, { service: "weather", auth_class: "platform_key" });
+
+    const res = await handler(await userPost("oauth-start", u, { service: "linear" })); // a new 3rd service
+    assertEquals(res.status, 403);
+    assertEquals((await res.json()).error, "over_limit");
+
+    const sql = db();
+    const rows = await sql`select 1 from public.oauth_transactions where user_id = ${u.id} and service = 'linear'`;
+    assertEquals(rows.length, 0); // no OAuth start
+  });
+
+  it("connect-service count: reconnecting an already-connected service at the limit is allowed", async () => {
+    const u = await freshUser();
+    await makeConnection(u.id, { service: "linear", auth_class: "oauth2" });
+    await makeConnection(u.id, { service: "anthropic_usage", auth_class: "admin_key" });
+
+    // linear is already connected, so it is excluded from the count: reconnect is not blocked.
+    const res = await handler(await userPost("oauth-start", u, { service: "linear" }));
+    assertEquals(res.status, 200);
   });
 });

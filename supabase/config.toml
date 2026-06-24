@@ -385,6 +385,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# The RevenueCat webhook is called by RevenueCat, not a Supabase-JWT client, so the gateway must
+# not require a Supabase JWT. The function does its own constant-time Authorization-secret check
+# (AOD-12 §6.2). Without this, the gateway would 401 RevenueCat's request before the handler runs.
+[functions.revenuecat-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

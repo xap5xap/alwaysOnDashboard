@@ -5,7 +5,9 @@ import { assert, assertEquals } from "@std/assert";
 import {
   cacheTtlSeconds,
   entitlementFloorSeconds,
+  FREE,
   mayUserTriggerFetch,
+  PRO,
   serverTier,
 } from "./entitlements.ts";
 
@@ -38,13 +40,14 @@ describe("entitlementFloorSeconds (AOD-3 / AOD-12 §4)", () => {
 });
 
 describe("mayUserTriggerFetch (AOD-12 §6.4)", () => {
+  // Signature reconciled to the AOD-12 §6.4 form: (cacheAgeSeconds, widgetTtlSeconds, ent).
   it("refuses a Free user polling at 60s until the 900s floor", () => {
-    assert(!mayUserTriggerFetch({ widgetTtlSeconds: 60, entitlementFloorSeconds: 900, ageSeconds: 60 }));
-    assert(mayUserTriggerFetch({ widgetTtlSeconds: 60, entitlementFloorSeconds: 900, ageSeconds: 900 }));
+    assert(!mayUserTriggerFetch(60, 60, FREE));
+    assert(mayUserTriggerFetch(900, 60, FREE));
   });
   it("gates a Pro user only by the widget TTL", () => {
-    assert(!mayUserTriggerFetch({ widgetTtlSeconds: 60, entitlementFloorSeconds: 0, ageSeconds: 30 }));
-    assert(mayUserTriggerFetch({ widgetTtlSeconds: 60, entitlementFloorSeconds: 0, ageSeconds: 60 }));
+    assert(!mayUserTriggerFetch(30, 60, PRO));
+    assert(mayUserTriggerFetch(60, 60, PRO));
   });
 });
 

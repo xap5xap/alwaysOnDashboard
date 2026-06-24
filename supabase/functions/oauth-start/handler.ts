@@ -2,6 +2,7 @@
 // persist an oauth_transactions row, return the URL. The app opens it in a system browser.
 
 import { deriveUser } from "../_shared/auth.ts";
+import { assertMayConnect } from "../_shared/connect-limit.ts";
 import { pkcePair, randomState } from "../_shared/crypto.ts";
 import { loadEnv, oauthClientCreds } from "../_shared/env.ts";
 import { errorResponse, HttpError, json, methodGuard, parseBody, readJson } from "../_shared/http.ts";
@@ -20,6 +21,9 @@ export async function handler(req: Request): Promise<Response> {
     if (backend.authClass !== "oauth2" || !backend.oauth) {
       throw new HttpError(400, "not_oauth2", `${service} does not use oauth2`);
     }
+
+    // AOD-12 §7.1: refuse the over-limit connect before any OAuth transaction is written.
+    await assertMayConnect(user.id, service);
 
     const env = loadEnv();
     const state = randomState();

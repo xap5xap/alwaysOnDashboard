@@ -7,6 +7,8 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./database.types": "./src/database.types.ts"
+    "./database.types": "./src/database.types.ts",
+    "./entitlements": "./src/entitlements.ts",
+    "./revenuecat": "./src/revenuecat.ts"
   }
 }

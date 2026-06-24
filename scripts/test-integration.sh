@@ -22,5 +22,10 @@ export SUPABASE_DB_URL="${DB_URL}"
 # to test values in the broker env helper, so they need no export here.
 export WEATHER_PROVIDER_KEY="${WEATHER_PROVIDER_KEY:-test-weather-key}"
 
-# Schema suite (RLS + constraints + cascades) + the broker four-flow integration tests (§5.2).
+# Entitlement env (AOD-12): the RevenueCat webhook shared secret. The §5.3 webhook suite also sets
+# this in-process, but exporting a default keeps `functions serve` and CI consistent.
+export REVENUECAT_WEBHOOK_AUTH="${REVENUECAT_WEBHOOK_AUTH:-test-revenuecat-webhook-secret}"
+
+# Schema suite (RLS + constraints + cascades) + the broker four-flow integration tests (§5.2) +
+# the entitlement webhook flow (§5.3).
 deno test --allow-all supabase/tests supabase/functions

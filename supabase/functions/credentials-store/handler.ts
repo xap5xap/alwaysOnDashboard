@@ -3,6 +3,7 @@
 // the connection config and writes NO Vault secret (the provider key is a platform secret in env).
 
 import { deriveUser } from "../_shared/auth.ts";
+import { assertMayConnect } from "../_shared/connect-limit.ts";
 import { errorResponse, HttpError, json, methodGuard, parseBody, readJson } from "../_shared/http.ts";
 import { getBackend } from "../_shared/registry.ts";
 import { CredentialsStoreSchema } from "../_shared/schemas.ts";
@@ -15,6 +16,10 @@ export async function handler(req: Request): Promise<Response> {
     const user = await deriveUser(req);
     const body = parseBody(CredentialsStoreSchema, await readJson(req));
     const backend = getBackend(body.service);
+
+    // AOD-12 §7.1: refuse the over-limit connect before any Vault secret or connection row is written.
+    await assertMayConnect(user.id, body.service);
+
     const svc = serviceClient();
 
     if (backend.authClass === "platform_key") {

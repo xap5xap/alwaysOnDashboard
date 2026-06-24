@@ -15,7 +15,15 @@
     "postgres": "npm:postgres@^3",
     "zod": "npm:zod@^3",
     "@std/assert": "jsr:@std/assert@^1",
-    "@std/testing/bdd": "jsr:@std/testing@^1/bdd"
+    "@std/testing/bdd": "jsr:@std/testing@^1/bdd",
+    // The cross-runtime shared module (AOD-25), as the Metro-facing @vela/shared specifier. The
+    // canonical source lives under supabase/functions/_shared/ (the Edge runtime only bundles files
+    // there); packages/shared re-exports it. This alias lets the cross-runtime import smoke
+    // (testing-strategy.md §3.2) load @vela/shared under deno. The Edge functions do NOT use this
+    // alias; they import ../_shared/*.ts directly, so it is absent from supabase/functions/deno.json.
+    "@vela/shared": "./packages/shared/src/index.ts",
+    "@vela/shared/entitlements": "./packages/shared/src/entitlements.ts",
+    "@vela/shared/revenuecat": "./packages/shared/src/revenuecat.ts"
   },
   "fmt": {
     "exclude": ["packages/shared/src/database.types.ts"]

@@ -5,7 +5,7 @@
 
 import { deriveUser } from "../_shared/auth.ts";
 import { paramsHash } from "../_shared/crypto.ts";
-import { cacheTtlSeconds } from "../_shared/entitlements.ts";
+import { cacheTtlSeconds, mayUserTriggerFetch, serverEntitlements } from "../_shared/entitlements.ts";
 import { requireEnv } from "../_shared/env.ts";
 import { errorResponse, HttpError, json, methodGuard, needsReconnect, parseBody, readJson } from "../_shared/http.ts";
 import { callProviderApi } from "../_shared/providers.ts";
@@ -32,17 +32,31 @@ export async function handler(req: Request): Promise<Response> {
     // Cache hit within TTL: one provider call serves every device polling this widget (AOD-9 §9 step 6).
     const hash = await paramsHash(body.params ?? {});
     const { data: cached } = await svc.from("proxy_cache")
-      .select("payload, expires_at")
+      .select("payload, expires_at, fetched_at")
       .eq("user_id", user.id).eq("service", body.service).eq("widget_type", body.widget).eq("params_hash", hash)
       .maybeSingle();
-    if (cached && new Date(cached.expires_at) > new Date()) {
+    const now = new Date();
+    if (cached && new Date(cached.expires_at) > now) {
       return json({ data: cached.payload, cached: true });
     }
 
-    // AOD-12 (separate task) gates the provider fetch here by tier: read the entitlements row,
-    // serverTier(row), and mayUserTriggerFetch(...) to enforce the Free 900s refresh floor (serve
-    // stale cache instead of refetching). Entitlement ENFORCEMENT is out of scope for AOD-44; the
-    // pure functions exist and are unit-tested. cacheTtlSeconds bounds the cache write below.
+    // AOD-12 §6.4 per-user fetch-floor: the cache is missing or stale. Read the user's authoritative
+    // entitlements and decide whether THIS user may trigger a fresh provider fetch yet. A Free user
+    // (900s floor) cannot refetch faster than the floor: the stale cached value is served instead, so
+    // a tampered device timer cannot force fresher provider data. The per-user cache key is unchanged
+    // (data-model.md §5.8/§12); this is an orthogonal per-user fetch-trigger gate.
+    const widgetTtlSeconds = cacheTtlSeconds({ defaultRefresh: { seconds: 300 } });
+    if (cached) {
+      // Only a stale cache can be floored; a first fetch (no row) always proceeds, so the
+      // entitlements read happens only when there is a cached value to serve instead.
+      const { data: entRow } = await svc.from("entitlements")
+        .select("tier, status, current_period_end").eq("user_id", user.id).maybeSingle();
+      const ent = serverEntitlements(entRow, now);
+      const cacheAgeSeconds = (now.getTime() - new Date(cached.fetched_at).getTime()) / 1000;
+      if (!mayUserTriggerFetch(cacheAgeSeconds, widgetTtlSeconds, ent)) {
+        return json({ data: cached.payload, cached: true, stale: true });
+      }
+    }
 
     // Inline (lazy) refresh if the access token has expired between scheduled runs (AOD-9 §8.3).
     if (conn.auth_class === "oauth2" && conn.expires_at && new Date(conn.expires_at) <= new Date()) {
@@ -77,16 +91,15 @@ export async function handler(req: Request): Promise<Response> {
     // Per-widget normalization is wired per integration (AOD-10 owns the data contracts); the payload
     // is provider data and carries no credentials (AOD-5 C2).
     const payload = result.json;
-    const ttlSeconds = cacheTtlSeconds({ defaultRefresh: { seconds: 300 } });
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
+    const writtenAt = new Date();
+    const expiresAt = new Date(writtenAt.getTime() + widgetTtlSeconds * 1000);
     const { error: cacheErr } = await svc.from("proxy_cache").upsert({
       user_id: user.id,
       service: body.service,
       widget_type: body.widget,
       params_hash: hash,
       payload,
-      fetched_at: now.toISOString(),
+      fetched_at: writtenAt.toISOString(),
       expires_at: expiresAt.toISOString(),
     }, { onConflict: "user_id,service,widget_type,params_hash" });
     if (cacheErr) throw new HttpError(500, "cache_write_failed", cacheErr.message);

@@ -7,6 +7,7 @@ import { handler } from "./handler.ts";
 import { createUser, deleteUser, type TestUser } from "../../../test/fixtures/clients.ts";
 import { closeDb, db } from "../../../test/fixtures/db.ts";
 import { closeDb as closeBrokerDb } from "../_shared/db.ts";
+import { makeConnection, makeEntitlement } from "../../../test/fixtures/factories.ts";
 import { readSecret } from "../../../test/fixtures/vault.ts";
 import { userPost } from "../../../test/fixtures/edge.ts";
 
@@ -72,5 +73,33 @@ describe("credentials-store (connect, AOD-9 §7.2)", { sanitizeResources: false,
     const user = await freshUser();
     const res = await handler(await userPost("credentials-store", user, { service: "anthropic_usage" }));
     assertEquals(res.status, 400);
+  });
+
+  it("connect-service count (AOD-12 §7.1): a Free user's 3rd backend service is refused 403, nothing written", async () => {
+    const user = await freshUser(); // no entitlements row -> Free, maxConnectedServices = 2
+    await makeConnection(user.id, { service: "linear", auth_class: "oauth2" });
+    await makeConnection(user.id, { service: "google_calendar", auth_class: "oauth2" });
+
+    const res = await handler(await userPost("credentials-store", user, { service: "weather", location: { city: "Quito" } }));
+    assertEquals(res.status, 403);
+    assertEquals((await res.json()).error, "over_limit");
+
+    const sql = db();
+    const rows = await sql`select 1 from public.connections where user_id = ${user.id} and service = 'weather'`;
+    assertEquals(rows.length, 0); // no connection row written
+  });
+
+  it("connect-service count: Pro is unlimited, so the 3rd backend service is allowed", async () => {
+    const user = await freshUser();
+    await makeEntitlement(user.id, { tier: "pro", status: "active" });
+    await makeConnection(user.id, { service: "linear", auth_class: "oauth2" });
+    await makeConnection(user.id, { service: "google_calendar", auth_class: "oauth2" });
+
+    const res = await handler(await userPost("credentials-store", user, { service: "weather", location: { city: "Quito" } }));
+    assertEquals(res.status, 200);
+
+    const sql = db();
+    const rows = await sql`select 1 from public.connections where user_id = ${user.id} and service = 'weather'`;
+    assertEquals(rows.length, 1);
   });
 });

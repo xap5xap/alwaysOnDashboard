@@ -12,12 +12,34 @@ import { closeDb, db } from "../../../test/fixtures/db.ts";
 import { closeDb as closeBrokerDb } from "../_shared/db.ts";
 import {
   makeConnection,
+  makeEntitlement,
   makeNearExpiryConnection,
   makeReauthRequiredConnection,
 } from "../../../test/fixtures/factories.ts";
 import { readSecret } from "../../../test/fixtures/vault.ts";
 import { userPost } from "../../../test/fixtures/edge.ts";
 import { jsonResponse, mockProvider, type ProviderMock, route } from "../../../test/fixtures/mockProvider.ts";
+import { paramsHash } from "../_shared/crypto.ts";
+
+/**
+ * Seed a STALE proxy_cache row (already expired) with a chosen age, so the proxy reaches the AOD-12
+ * §6.4 fetch-floor gate. params_hash matches an empty-params request. The 900s CHECK holds:
+ * expires_at - fetched_at = ttlSeconds (<= 900) and > 0.
+ */
+async function seedStaleCache(
+  userId: string,
+  opts: { service: string; widget: string; ageSeconds: number; ttlSeconds: number; payload: unknown },
+): Promise<void> {
+  const sql = db();
+  const fetchedAt = new Date(Date.now() - opts.ageSeconds * 1000);
+  const expiresAt = new Date(fetchedAt.getTime() + opts.ttlSeconds * 1000);
+  const hash = await paramsHash({});
+  await sql`
+    insert into public.proxy_cache (user_id, service, widget_type, params_hash, payload, fetched_at, expires_at)
+    values (${userId}, ${opts.service}, ${opts.widget}, ${hash},
+            ${sql.json(opts.payload as Parameters<typeof sql.json>[0])}, ${fetchedAt}, ${expiresAt})
+  `;
+}
 
 const created: string[] = [];
 let mock: ProviderMock | undefined;
@@ -161,5 +183,35 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
     const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues" }));
     assertEquals(res.status, 502);
     assertEquals((await res.json()).error, "upstream_unavailable");
+  });
+
+  it("fetch-floor (AOD-12 §6.4): a Free user inside the 900s floor is served the stale cache, no provider hit", async () => {
+    const user = await freshUser(); // no entitlements row -> Free, 900s floor
+    await connectedLinear(user.id);
+    // Cache is 400s old with a 300s TTL: expired (so not a fresh hit) but well inside the 900s floor.
+    await seedStaleCache(user.id, { service: "linear", widget: "my_issues", ageSeconds: 400, ttlSeconds: 300, payload: { fromCache: true } });
+    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse({ data: { fresh: true } }))]);
+
+    const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues", params: {} }));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.cached, true);
+    assertEquals(body.stale, true);
+    assertEquals(body.data.fromCache, true); // the stale cached value, not a fresh fetch
+    assertEquals(mock.countMatching("graphql"), 0); // the provider was NOT hit
+  });
+
+  it("fetch-floor: a Pro user refetches once past the widget TTL (floor is the widget TTL only)", async () => {
+    const user = await freshUser();
+    await makeEntitlement(user.id, { tier: "pro", status: "active" });
+    await connectedLinear(user.id);
+    // Same 400s-old / 300s-TTL stale cache; Pro's floor is max(300, 0) = 300, so 400s >= 300s refetches.
+    await seedStaleCache(user.id, { service: "linear", widget: "my_issues", ageSeconds: 400, ttlSeconds: 300, payload: { fromCache: true } });
+    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse({ data: { fresh: true } }))]);
+
+    const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues", params: {} }));
+    assertEquals(res.status, 200);
+    assertEquals((await res.json()).cached, false); // refetched
+    assertEquals(mock.countMatching("graphql"), 1);
   });
 });
