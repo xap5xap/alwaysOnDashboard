@@ -17,4 +17,10 @@ export SUPABASE_ANON_KEY="${ANON_KEY}"
 export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY}"
 export SUPABASE_DB_URL="${DB_URL}"
 
-deno test --allow-all supabase/tests
+# Broker env (AOD-9): the platform_key provider key the proxy attaches for Weather. A test
+# placeholder; the provider HTTP boundary is faked in the §5.2 suite. OAuth client creds default
+# to test values in the broker env helper, so they need no export here.
+export WEATHER_PROVIDER_KEY="${WEATHER_PROVIDER_KEY:-test-weather-key}"
+
+# Schema suite (RLS + constraints + cascades) + the broker four-flow integration tests (§5.2).
+deno test --allow-all supabase/tests supabase/functions

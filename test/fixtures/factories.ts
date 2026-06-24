@@ -2,11 +2,12 @@
 // SQL (superuser) connection so it can seed any user's rows and the server-written tables, then
 // returns the typed row. seedScenario.ts composes these into the canonical world.
 //
-// Connections carry PLACEHOLDER Vault secret UUIDs: the schema suite never reads Vault (the
-// secret-ref columns have no FK), so no real secret is written. The Vault-writing variant of
-// makeConnection belongs to the AOD-9 broker tests.
+// makeConnection defaults to PLACEHOLDER Vault secret UUIDs (the schema suite never reads Vault).
+// Pass `secrets: { access, refresh }` to write REAL Vault secrets and use their UUIDs: this is the
+// AOD-9 broker path the §5.2 flow tests read back through vault.decrypted_secrets.
 
 import { db } from "./db.ts";
+import { writeSecret } from "./vault.ts";
 
 // --- Plain value fixtures (also consumed by the unit layer; §7) -----------------------------
 
@@ -104,18 +105,40 @@ export interface OAuthTransactionRow {
 
 // --- Factories ------------------------------------------------------------------------------
 
+export interface MakeConnectionOptions extends Partial<Omit<ConnectionRow, "id" | "user_id">> {
+  /**
+   * When set, write REAL Vault secrets and use their UUIDs as access_secret_id / refresh_secret_id
+   * (the AOD-9 broker path). Omit a key to leave that secret ref at its default.
+   */
+  secrets?: { access?: string; refresh?: string };
+}
+
 export async function makeConnection(
   userId: string,
-  over: Partial<Omit<ConnectionRow, "id" | "user_id">> = {},
+  over: MakeConnectionOptions = {},
 ): Promise<ConnectionRow> {
   const sql = db();
+  const isPlatformKey = (over.auth_class ?? "oauth2") === "platform_key";
+
+  // Secret-ref resolution: real Vault secret > explicit override (incl. null) > class default
+  // (placeholder UUID for credentialed classes; null for platform_key, which has no per-user secret).
+  let accessSecretId: string | null;
+  if (over.secrets?.access !== undefined) accessSecretId = await writeSecret(over.secrets.access, `access for ${userId}`);
+  else if ("access_secret_id" in over) accessSecretId = over.access_secret_id ?? null;
+  else accessSecretId = isPlatformKey ? null : crypto.randomUUID();
+
+  let refreshSecretId: string | null;
+  if (over.secrets?.refresh !== undefined) refreshSecretId = await writeSecret(over.secrets.refresh, `refresh for ${userId}`);
+  else if ("refresh_secret_id" in over) refreshSecretId = over.refresh_secret_id ?? null;
+  else refreshSecretId = isPlatformKey ? null : crypto.randomUUID();
+
   const row = {
     service: over.service ?? "linear",
     auth_class: over.auth_class ?? "oauth2",
     status: over.status ?? "connected",
     scopes: over.scopes ?? ["read"],
-    access_secret_id: over.access_secret_id ?? crypto.randomUUID(),
-    refresh_secret_id: over.refresh_secret_id ?? crypto.randomUUID(),
+    access_secret_id: accessSecretId,
+    refresh_secret_id: refreshSecretId,
     config: over.config ?? null,
     expires_at: over.expires_at ?? null,
     account_label: over.account_label ?? null,
@@ -131,6 +154,39 @@ export async function makeConnection(
     returning *
   `;
   return inserted;
+}
+
+/**
+ * A near-expiry oauth2 connection with REAL Vault access + refresh secrets: the refresh-flow target
+ * (testing-strategy.md §7). Defaults to expiring in ~30s (within any reasonable grace window);
+ * override `expires_at` to a past time to model an already-expired token for the proxy inline path.
+ */
+export function makeNearExpiryConnection(
+  userId: string,
+  over: MakeConnectionOptions = {},
+): Promise<ConnectionRow> {
+  return makeConnection(userId, {
+    service: "linear",
+    auth_class: "oauth2",
+    status: "connected",
+    expires_at: new Date(Date.now() + 30_000),
+    secrets: { access: "old-access-token", refresh: "old-refresh-token" },
+    ...over,
+  });
+}
+
+/** A reauth_required oauth2 connection: the proxy 409 path (testing-strategy.md §7). */
+export function makeReauthRequiredConnection(
+  userId: string,
+  over: MakeConnectionOptions = {},
+): Promise<ConnectionRow> {
+  return makeConnection(userId, {
+    service: "linear",
+    auth_class: "oauth2",
+    status: "reauth_required",
+    secrets: { access: "dead-access-token", refresh: "dead-refresh-token" },
+    ...over,
+  });
 }
 
 export async function makeEntitlement(

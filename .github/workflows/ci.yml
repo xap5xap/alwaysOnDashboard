@@ -17,11 +17,13 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      # Placeholder for PS-M1: the type-check over the shared types, fixtures, and schema tests.
-      # The jest app/shared pure-function suites (PS-M2) and the deno-test Edge pure functions
-      # (AOD-9/10/12) join this job when that code lands.
+      # Type-check the shared types, fixtures, schema tests, and the broker Edge Functions.
+      # The jest app/shared pure-function suites (PS-M2) join this job when that code lands.
       - name: deno check
-        run: deno check packages/shared/src test/fixtures supabase/tests
+        run: deno check packages/shared/src test/fixtures supabase/tests supabase/functions
+      # The broker's pure functions (crypto, entitlements) need no stack, so they run on every push.
+      - name: deno test (pure functions, no stack)
+        run: deno test supabase/functions/_shared
 
   integration:
     name: integration

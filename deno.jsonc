@@ -4,12 +4,16 @@
   "nodeModulesDir": "none",
   "lock": false,
   "tasks": {
-    "test": "deno test --allow-all supabase/tests",
-    "check": "deno check packages/shared/src test/fixtures supabase/tests"
+    // Full backend suite (needs the local stack): schema RLS/constraints + the broker flows.
+    "test": "deno test --allow-all supabase/tests supabase/functions",
+    // Stack-free pure-function units (the unit CI job, every push).
+    "test:unit": "deno test supabase/functions/_shared",
+    "check": "deno check packages/shared/src test/fixtures supabase/tests supabase/functions"
   },
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
     "postgres": "npm:postgres@^3",
+    "zod": "npm:zod@^3",
     "@std/assert": "jsr:@std/assert@^1",
     "@std/testing/bdd": "jsr:@std/testing@^1/bdd"
   },

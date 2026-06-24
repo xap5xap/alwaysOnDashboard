@@ -1,0 +1,81 @@
+// The server half of the service registry (AOD-8 §5.2, AOD-9 §6.1). Code, never a table
+// (data-model.md §2). Adding a service is a registry entry plus its Edge env secret; no broker code
+// changes (the broker has one path per auth class, AOD-9 §4). Provider URLs are illustrative and
+// confirmed per-provider at wiring (AOD-9 §11); the broker tests fake the provider HTTP boundary.
+
+import { HttpError } from "./http.ts";
+import type { EndpointDef, ServiceBackendConfig } from "./types.ts";
+
+export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
+  linear: {
+    id: "linear",
+    authClass: "oauth2",
+    oauth: {
+      authorizeUrl: "https://linear.app/oauth/authorize",
+      tokenUrl: "https://api.linear.app/oauth/token",
+      revokeUrl: "https://api.linear.app/oauth/revoke",
+      defaultScopes: ["read"],
+      supportsPkce: true,
+    },
+    apiBase: "https://api.linear.app",
+    authHeaderStyle: "bearer",
+    endpoints: {
+      // Linear is GraphQL: every widget endpoint is the same path; the operation is held
+      // server-side keyed by widget type, so the client never supplies a query (AOD-8 §5.2).
+      my_issues: { method: "POST", path: "/graphql" },
+    },
+  },
+  google_calendar: {
+    id: "google_calendar",
+    authClass: "oauth2",
+    oauth: {
+      authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+      tokenUrl: "https://oauth2.googleapis.com/token",
+      revokeUrl: "https://oauth2.googleapis.com/revoke",
+      defaultScopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+      supportsPkce: true,
+      // Required for Google to reliably return a refresh token (AOD-9 §4).
+      extraAuthorizeParams: { access_type: "offline", prompt: "consent" },
+    },
+    apiBase: "https://www.googleapis.com",
+    authHeaderStyle: "bearer",
+    endpoints: {
+      upcoming_events: { method: "GET", path: "/calendar/v3/calendars/primary/events" },
+    },
+  },
+  anthropic_usage: {
+    id: "anthropic_usage",
+    authClass: "admin_key",
+    apiBase: "https://api.anthropic.com",
+    authHeaderStyle: "anthropic-admin",
+    endpoints: {
+      // The only two endpoints the high-sensitivity Admin key is ever attached to (AOD-9 §4).
+      usage: { method: "GET", path: "/v1/organizations/usage_report/messages" },
+      cost: { method: "GET", path: "/v1/organizations/cost_report" },
+    },
+  },
+  weather: {
+    id: "weather",
+    authClass: "platform_key",
+    apiBase: "https://api.open-meteo.com",
+    authHeaderStyle: "x-api-key",
+    platformKeyEnv: "WEATHER_PROVIDER_KEY",
+    endpoints: {
+      current: { method: "GET", path: "/v1/forecast" },
+    },
+  },
+};
+
+export function getBackend(serviceId: string): ServiceBackendConfig {
+  const backend = BACKEND_REGISTRY[serviceId];
+  if (!backend) throw new HttpError(400, "unknown_service", `no backend registered for "${serviceId}"`);
+  return backend;
+}
+
+export function getEndpoint(backend: ServiceBackendConfig, widgetType: string): EndpointDef {
+  const endpoint = backend.endpoints[widgetType];
+  if (!endpoint) {
+    throw new HttpError(400, "unknown_widget", `"${widgetType}" is not an allow-listed widget for "${backend.id}"`);
+  }
+  return endpoint;
+}
