@@ -4,13 +4,17 @@
   "private": true,
   "description": "Vela (alwaysOnDashboard) monorepo: Supabase backend, shared types, and the Expo app shell.",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "gen:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts",
+    "test": "npm run test --workspace=@vela/app",
+    "test:app": "npm run test --workspace=@vela/app",
+    "typecheck:app": "npm run typecheck --workspace=@vela/app",
     "test:integration": "bash scripts/test-integration.sh",
     "test:unit": "deno check packages/shared/src test/fixtures supabase/tests"
   },
