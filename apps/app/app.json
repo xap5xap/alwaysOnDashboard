@@ -9,9 +9,11 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thexap.vela"
     },
     "android": {
+      "package": "com.thexap.vela",
       "adaptiveIcon": {
         "backgroundColor": "#0B0B0F",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,7 +29,21 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "16092dae-d543-4a3e-9690-bfbd030e6130"
+      }
+    }
   }
 }
