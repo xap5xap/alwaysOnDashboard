@@ -1,6 +1,14 @@
 // The connections read layer: Zod validation of the owner-read rows (AOD-9 §5.1) and the row -> map
 // reshape. Unknown enum values are handled defensively so a surprising DB value never crashes Settings.
-import { rowToConnectionView, toConnectionMap, fetchConnections } from '../connectionsRepo';
+import {
+  connectedServiceIds,
+  rowToConnectionView,
+  toConnectionMap,
+  fetchConnections,
+  type ConnectionMap,
+  type ConnectionView,
+} from '../connectionsRepo';
+import type { ConnectionStatus } from '../../registry/types';
 
 jest.mock('../../supabase/client', () => ({
   supabase: { from: jest.fn() },
@@ -57,6 +65,31 @@ describe('toConnectionMap', () => {
     expect(map.size).toBe(2);
     expect(map.get('stub')?.status).toBe('connected');
     expect(map.get('linear')?.status).toBe('reauth_required');
+  });
+});
+
+describe('connectedServiceIds (the add-widget connected set, AOD-8 §9 invariant 2)', () => {
+  const view = (service: string, status: ConnectionStatus): ConnectionView => ({
+    connectionId: `c-${service}`,
+    service,
+    status,
+    authClass: 'oauth2',
+    accountLabel: null,
+    config: null,
+  });
+
+  it('keeps only services whose status is connected', () => {
+    const map: ConnectionMap = new Map([
+      ['stub', view('stub', 'connected')],
+      ['linear', view('linear', 'reauth_required')],
+      ['cal', view('cal', 'error')],
+      ['weather', view('weather', 'connected')],
+    ]);
+    expect(connectedServiceIds(map)).toEqual(new Set(['stub', 'weather']));
+  });
+
+  it('is empty for no connections', () => {
+    expect(connectedServiceIds(new Map())).toEqual(new Set());
   });
 });
 

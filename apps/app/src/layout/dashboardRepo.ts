@@ -77,6 +77,25 @@ export async function bootstrapDashboard(userId: string): Promise<LoadedDashboar
   return { dashboardId: dash.id, name: dash.name, instances: instance ? [instance] : [] };
 }
 
+/** Add ONE widget instance to a dashboard the user owns (client-direct under RLS). Mirrors the bootstrap
+ *  insert: validate the seed (mapper), set user_id explicitly for the §8 dashboard-ownership WITH CHECK,
+ *  map the row back. Returns null only if the just-inserted row fails validation (it should not, since
+ *  instanceToInsert re-validates on write). Registry-free: the caller derives the seed (placement.ts);
+ *  this only persists it, so adding any service's widget never edits this file. */
+export async function addWidgetInstance(
+  dashboardId: string,
+  userId: string,
+  seed: InstanceSeed,
+): Promise<WidgetInstance | null> {
+  const { data: row, error } = await supabase
+    .from('widget_instances')
+    .insert(instanceToInsert(seed, dashboardId, userId))
+    .select('*')
+    .single();
+  if (error) throw error;
+  return rowToInstance(row);
+}
+
 /** Persist one instance's geometry/size (and refresh if included) under RLS. Targets by id only, so
  *  dashboard_id is never touched and the §8 dashboard-ownership WITH CHECK is trivially satisfied. */
 export async function persistInstanceLayout(instanceId: string, patch: LayoutPatch): Promise<void> {

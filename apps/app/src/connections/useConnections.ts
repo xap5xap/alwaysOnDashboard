@@ -27,8 +27,15 @@ export function useConnections(): UseConnectionsResult {
     queryFn: fetchConnections,
   });
 
+  // Enforce the ConnectionMap contract. The cold-start persister (AOD-25) JSON-serializes the query
+  // cache, and a Map round-trips through JSON as a plain `{}` (its entries are lost), so a rehydrated
+  // value is not a Map. Coerce anything non-Map back to an empty Map; the query is stale on mount and
+  // refetches the live rows immediately. This keeps every consumer (.get here, the connectedServiceIds
+  // iteration in the add-widget picker) safe regardless of how the cache was hydrated.
+  const connections = query.data instanceof Map ? query.data : new Map();
+
   return {
-    connections: query.data ?? new Map(),
+    connections,
     isLoading: query.isLoading,
     isError: query.isError,
     error: (query.error as Error | null) ?? null,
