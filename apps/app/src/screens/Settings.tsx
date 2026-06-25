@@ -1,20 +1,19 @@
-// Settings entry point (stub). The connections surface (connect / disconnect / API-key / reconnect)
-// is the next PS-M2 task; the layout editor and kiosk settings come after. Included here so the
-// expo-router navigation seam exists and to demonstrate the AOD-12 §6.5 UX-only gate (a locked
-// Pro row) against the default Free CustomerInfo.
+// Settings entry point. Hosts the connections surface (AOD-50: connect / disconnect / reconnect,
+// rendered from the registry and driven by authClass) plus the AOD-12 §6.5 UX-only gate (a locked
+// Pro row) against the default Free CustomerInfo. The layout editor and kiosk settings come after.
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
 import { Gate } from '../entitlements/Gate';
+import { ConnectionsList } from '../connections/ConnectionsList';
 
 export function Settings() {
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Settings</Text>
-      <Text style={styles.muted}>
-        Connections, the layout editor, and kiosk settings land in the next PS-M2 tasks.
-      </Text>
+
+      <ConnectionsList />
 
       <View style={styles.row}>
         <Gate
@@ -28,7 +27,7 @@ export function Settings() {
       <Pressable onPress={() => router.back()} accessibilityRole="button">
         <Text style={styles.link}>Back to dashboard</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -36,18 +35,16 @@ const styles = StyleSheet.create((theme, rt) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  content: {
     padding: theme.spacing(5),
     paddingTop: rt.insets.top + theme.spacing(5),
-    gap: theme.spacing(3),
+    gap: theme.spacing(4),
   },
   title: {
     color: theme.colors.text,
     fontSize: 24,
     fontWeight: '800',
-  },
-  muted: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
   },
   row: {
     paddingVertical: theme.spacing(3),
