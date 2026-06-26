@@ -11,6 +11,19 @@ export class HttpError extends Error {
   }
 }
 
+/**
+ * Carries a fully-built Response so a deep callee can short-circuit the handler with an exact
+ * response (e.g. the typed provider-error / 409 a resolver hits inside a nested provider call) and
+ * the top-level errorResponse renders it verbatim. Lets the proxy and config-options share one
+ * provider-call boundary without each re-deciding the error body.
+ */
+export class ResponseError extends Error {
+  constructor(public response: Response) {
+    super("response_error");
+    this.name = "ResponseError";
+  }
+}
+
 const JSON_HEADERS = { "content-type": "application/json" } as const;
 
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -22,8 +35,10 @@ export function needsReconnect(): Response {
   return json({ error: "needs_reconnect" }, 409);
 }
 
-/** Map any thrown value to a Response. HttpError keeps its status; everything else is a 500. */
+/** Map any thrown value to a Response. ResponseError carries its own; HttpError keeps its status;
+ *  everything else is a 500. */
 export function errorResponse(e: unknown): Response {
+  if (e instanceof ResponseError) return e.response;
   if (e instanceof HttpError) return json({ error: e.code, message: e.message }, e.status);
   console.error("unhandled broker error:", e);
   return json({ error: "internal_error" }, 500);

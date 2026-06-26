@@ -8,6 +8,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetPicker } from '../WidgetPicker';
 import { RegistryProvider, type Registry } from '../../registry/RegistryProvider';
+import { WidgetDataSourceProvider, type WidgetDataSource } from '../../host/WidgetDataSource';
 import { dashboardQueryKey } from '../useDashboard';
 import type { LoadedDashboard } from '../dashboardRepo';
 import type { ConnectionMap, ConnectionView } from '../../connections/connectionsRepo';
@@ -62,6 +63,13 @@ const registry: Registry = {
     services.filter((s) => s.authClass === 'none' || connected.has(s.id)).flatMap((s) => s.widgets),
 };
 
+// configure-on-add renders the resolver-wrapped form, which reads the data-source seam. The test
+// widgets carry no remote-options field, so resolveOptions is never invoked; the provider just exists.
+const mockDataSource: WidgetDataSource = {
+  fetch: jest.fn(),
+  resolveOptions: jest.fn().mockResolvedValue([]),
+};
+
 const conn = (service: string, status: ConnectionView['status'] = 'connected'): ConnectionView => ({
   connectionId: `c-${service}`,
   service,
@@ -84,7 +92,9 @@ function renderPicker(
   render(
     <QueryClientProvider client={client}>
       <RegistryProvider registry={registry}>
-        <WidgetPicker onClose={onClose} />
+        <WidgetDataSourceProvider source={mockDataSource}>
+          <WidgetPicker onClose={onClose} />
+        </WidgetDataSourceProvider>
       </RegistryProvider>
     </QueryClientProvider>,
   );
@@ -177,7 +187,9 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
     render(
       <QueryClientProvider client={client}>
         <RegistryProvider registry={cfgRegistry}>
-          <WidgetPicker onClose={onClose} />
+          <WidgetDataSourceProvider source={mockDataSource}>
+            <WidgetPicker onClose={onClose} />
+          </WidgetDataSourceProvider>
         </RegistryProvider>
       </QueryClientProvider>,
     );

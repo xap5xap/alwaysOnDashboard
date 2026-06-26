@@ -11,8 +11,9 @@ describe('addableWidgets (AOD-8 §9 invariant 2: connected-only)', () => {
 
   it("offers a service's widgets once it is connected", () => {
     const widgets = addableWidgets(new Set(['stub']));
-    expect(widgets.map((w) => w.type)).toEqual(['placeholder']);
-    expect(widgets[0].serviceId).toBe('stub');
+    // The stub service publishes the bootstrap widget plus the AOD-53 remote-options vehicle.
+    expect(widgets.map((w) => w.type)).toEqual(['placeholder', 'placeholder_remote']);
+    expect(widgets.every((w) => w.serviceId === 'stub')).toBe(true);
   });
 
   it('ignores connected ids that are not in the registry', () => {

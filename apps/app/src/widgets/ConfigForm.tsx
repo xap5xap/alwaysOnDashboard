@@ -7,15 +7,17 @@
 // it is given, so it works for every widget. Persistence and the entry-point wiring live elsewhere
 // (dashboardRepo / the picker / the dashboard); this component only collects and validates.
 //
-// remote-options (AOD-10 §4.3) is OUT OF SCOPE here: it needs the server-side option-source allow-list
-// and a config-time proxy call that arrive with the Linear slice (PS-M3). Such a field renders as a
-// read-only note and its pre-existing value is carried through untouched, so the form never crashes and
-// reconfiguring other fields never erases a remote selection.
+// remote-options (AOD-10 §4.3) is resolved by the caller (useOptionSources) and passed in via
+// `options`: a real picker fed by the resolved Choice[] (single or multiple per field.multiple),
+// storing the stable id(s). On save the ready sets are passed to validateConfig so membership is
+// enforced when available and unverified when not (§4.2 rule 2). This component stays pure: the
+// network lives in the hook at the entry points.
 import React, { useState } from 'react';
 import { Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { WidgetConfigField, WidgetConfigSchema } from '../registry/types';
+import type { Choice, WidgetConfigField, WidgetConfigSchema } from '../registry/types';
 import { validateConfig } from './config';
+import type { ResolvedOptionsState } from './useOptionSources';
 
 export interface ConfigFormProps {
   schema: WidgetConfigSchema;
@@ -26,6 +28,13 @@ export interface ConfigFormProps {
   pending?: boolean;
   /** A persist failure surfaced by the caller; field-level validation errors are owned here. */
   submitError?: string | null;
+  /** Resolved remote-options sets per field key (AOD-10 §4.3), from useOptionSources. A schema with
+   *  no remote-options field needs none; an unresolved field renders its loading/error/reconnect state. */
+  options?: Record<string, ResolvedOptionsState>;
+  /** The parent service's display name, for the remote-options reconnect prompt. */
+  serviceName?: string;
+  /** Routes the remote-options 409 reconnect affordance (AOD-10 §4.3). */
+  onReconnect?: () => void;
   /** Receives the NORMALIZED values from validateConfig (defaults applied, types validated). */
   onSubmit(values: Record<string, unknown>): void;
   onCancel(): void;
@@ -45,8 +54,12 @@ function seedValue(field: WidgetConfigField, initial: Record<string, unknown>): 
       return typeof value === 'boolean' ? value : false;
     case 'enum':
       return value == null ? undefined : value;
+    case 'remote-options':
+      // multiple: an array of stable ids; single: a scalar id. Carry the existing selection through.
+      if (field.multiple) return Array.isArray(value) ? value : value == null ? [] : [value];
+      return value == null ? undefined : value;
     default:
-      return value; // remote-options: carry the existing selection through untouched
+      return value;
   }
 }
 
@@ -79,8 +92,12 @@ function coerceForValidation(
       case 'boolean':
         if (typeof v === 'boolean') out[field.key] = v;
         break;
-      default:
-        if (v !== undefined) out[field.key] = v; // remote-options: pass the carried value through
+      case 'remote-options':
+        // multiple: always an array of ids; single: the scalar id, absent when empty so required/
+        // default rules apply. The stable id(s) are stored, never the label (AOD-10 §4.3 step 4).
+        if (field.multiple) out[field.key] = Array.isArray(v) ? v : v == null ? [] : [v];
+        else if (v != null && v !== '') out[field.key] = v;
+        break;
     }
   }
   return out;
@@ -93,6 +110,9 @@ export function ConfigForm({
   submitLabel = 'Save',
   pending = false,
   submitError = null,
+  options,
+  serviceName,
+  onReconnect,
   onSubmit,
   onCancel,
 }: ConfigFormProps) {
@@ -102,7 +122,16 @@ export function ConfigForm({
   const setField = (key: string, value: unknown) => setDraft((d) => ({ ...d, [key]: value }));
 
   const onSave = () => {
-    const result = validateConfig(schema, coerceForValidation(schema, draft));
+    // Pass the ready remote-options sets so validateConfig enforces membership when available and
+    // accepts as unverified when not (AOD-10 §4.2 rule 2). Only ready fields contribute a set.
+    const resolvedOptions: Record<string, Choice[]> = {};
+    for (const field of schema.fields) {
+      if (field.kind === 'remote-options') {
+        const state = options?.[field.key];
+        if (state?.status === 'ready') resolvedOptions[field.key] = state.choices;
+      }
+    }
+    const result = validateConfig(schema, coerceForValidation(schema, draft), resolvedOptions);
     if (!result.ok) {
       setErrors(Object.fromEntries(result.errors.map((e) => [e.key, e.message])));
       return;
@@ -125,7 +154,14 @@ export function ConfigForm({
             {field.label}
             {field.required ? <Text style={styles.req}> *</Text> : null}
           </Text>
-          <Field field={field} value={draft[field.key]} onChange={(v) => setField(field.key, v)} />
+          <Field
+            field={field}
+            value={draft[field.key]}
+            onChange={(v) => setField(field.key, v)}
+            optionsState={options?.[field.key]}
+            serviceName={serviceName}
+            onReconnect={onReconnect}
+          />
           {errors[field.key] && (
             <Text style={styles.error} testID={`config-error-${field.key}`}>
               {errors[field.key]}
@@ -163,10 +199,16 @@ function Field({
   field,
   value,
   onChange,
+  optionsState,
+  serviceName,
+  onReconnect,
 }: {
   field: WidgetConfigField;
   value: unknown;
   onChange(value: unknown): void;
+  optionsState?: ResolvedOptionsState;
+  serviceName?: string;
+  onReconnect?: () => void;
 }) {
   switch (field.kind) {
     case 'string':
@@ -210,14 +252,113 @@ function Field({
           })}
         </View>
       );
-    default:
-      // remote-options (AOD-10 §4.3): not resolvable until the integration lands (PS-M3).
+    case 'remote-options':
       return (
-        <Text style={styles.muted} testID={`config-remote-${field.key}`}>
-          Choosing options needs the connected integration (coming with the first provider).
-        </Text>
+        <RemoteOptions
+          field={field}
+          value={value}
+          onChange={onChange}
+          state={optionsState}
+          serviceName={serviceName}
+          onReconnect={onReconnect}
+        />
       );
+    default:
+      return null;
   }
+}
+
+/** The remote-options picker (AOD-10 §4.3): fed by the resolved Choice[]; renders loading / error
+ *  (retry) / needs_reconnect (reconnect) / ready (pills). Stores the stable id(s), never the label. */
+function RemoteOptions({
+  field,
+  value,
+  onChange,
+  state,
+  serviceName,
+  onReconnect,
+}: {
+  field: Extract<WidgetConfigField, { kind: 'remote-options' }>;
+  value: unknown;
+  onChange(value: unknown): void;
+  state?: ResolvedOptionsState;
+  serviceName?: string;
+  onReconnect?: () => void;
+}) {
+  if (!state || state.status === 'loading') {
+    return (
+      <Text style={styles.muted} testID={`config-remote-loading-${field.key}`}>
+        Loading options...
+      </Text>
+    );
+  }
+
+  if (state.status === 'needs_reconnect') {
+    return (
+      <View style={styles.prompt} testID={`config-remote-reconnect-${field.key}`}>
+        <Text style={styles.muted}>Reconnect {serviceName ?? 'the service'} to choose options.</Text>
+        {onReconnect && (
+          <Pressable onPress={onReconnect} accessibilityRole="button">
+            <Text style={styles.actionLink}>Reconnect</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
+  if (state.status === 'error') {
+    return (
+      <View style={styles.prompt} testID={`config-remote-error-${field.key}`}>
+        <Text style={styles.muted}>Could not load options.</Text>
+        <Pressable onPress={state.retry} accessibilityRole="button">
+          <Text style={styles.actionLink}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (state.choices.length === 0) {
+    return (
+      <Text style={styles.muted} testID={`config-remote-empty-${field.key}`}>
+        No options available.
+      </Text>
+    );
+  }
+
+  const multiple = field.multiple === true;
+  const selectedArray = Array.isArray(value) ? (value as string[]) : [];
+
+  const toggle = (optValue: string) => {
+    if (multiple) {
+      onChange(
+        selectedArray.includes(optValue)
+          ? selectedArray.filter((v) => v !== optValue)
+          : [...selectedArray, optValue],
+      );
+    } else {
+      onChange(optValue);
+    }
+  };
+
+  return (
+    <View style={styles.options}>
+      {state.choices.map((opt: Choice) => {
+        const selected = multiple ? selectedArray.includes(opt.value) : value === opt.value;
+        return (
+          <Pressable
+            key={opt.value}
+            onPress={() => toggle(opt.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            testID={`config-remote-${field.key}-${opt.value}`}
+            style={[styles.pill, selected && styles.pillSelected]}
+          >
+            <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{opt.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create((theme) => ({
@@ -279,6 +420,17 @@ const styles = StyleSheet.create((theme) => ({
   muted: {
     color: theme.colors.textMuted,
     fontSize: 13,
+  },
+  prompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: theme.spacing(2),
+  },
+  actionLink: {
+    color: theme.colors.accent,
+    fontSize: 14,
+    fontWeight: '600',
   },
   error: {
     color: theme.colors.error,

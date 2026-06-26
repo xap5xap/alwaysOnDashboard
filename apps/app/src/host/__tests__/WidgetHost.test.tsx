@@ -37,6 +37,7 @@ describe('WidgetHost container through the proxy data source (testing-strategy ย
   it('resolves loading -> fresh and mounts the stub renderer', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { ok: true }, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue([]),
     };
     renderHost(source);
 
@@ -48,6 +49,7 @@ describe('WidgetHost container through the proxy data source (testing-strategy ย
   it('maps a needs_reconnect proxy error (409) to the disconnected state', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockRejectedValue({ kind: 'needs_reconnect' }),
+      resolveOptions: jest.fn().mockResolvedValue([]),
     };
     renderHost(source);
 
@@ -61,6 +63,7 @@ describe('WidgetHost container through the proxy data source (testing-strategy ย
     // in-flight here), proving the config gate takes precedence over the data path.
     const source: WidgetDataSource = {
       fetch: jest.fn().mockReturnValue(new Promise(() => {})),
+      resolveOptions: jest.fn().mockResolvedValue([]),
     };
     const onReconfigure = jest.fn();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -83,5 +86,70 @@ describe('WidgetHost container through the proxy data source (testing-strategy ย
 
     fireEvent.press(screen.getByText('Reconfigure'));
     expect(onReconfigure).toHaveBeenCalled();
+  });
+});
+
+// The render-time remote-options membership re-check (AOD-10 ยง4.2 rule 2 / ยง4.4) on the real registry's
+// `placeholder_remote` widget. The host resolves the option set through the seam and feeds it into
+// needsConfig: a non-member stored value -> needs_config; an unresolved set (outage) keeps the
+// selection (unverified passes), so a provider blip never false-trips a placed widget.
+const remoteInstance: WidgetInstance = {
+  instanceId: 'i2',
+  serviceId: 'stub',
+  widgetType: 'placeholder_remote',
+  config: { project: 'alpha' },
+  size: 'medium',
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+};
+
+function renderRemoteHost(source: WidgetDataSource, config: Record<string, unknown>) {
+  // retryDelay 0 so a rejected option query settles its retries instantly.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0, gcTime: 0 } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <RegistryProvider>
+        <WidgetDataSourceProvider source={source}>
+          <WidgetHost instance={{ ...remoteInstance, config }} maxRetries={0} />
+        </WidgetDataSourceProvider>
+      </RegistryProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('WidgetHost render-time remote-options membership re-check (AOD-10 ยง4.2 rule 2 / ยง4.4)', () => {
+  const choices = [
+    { value: 'alpha', label: 'Alpha' },
+    { value: 'bravo', label: 'Bravo' },
+  ];
+
+  it('resolves normally when the stored value is a member of the option set', async () => {
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data: { ok: true }, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(choices),
+    };
+    renderRemoteHost(source, { project: 'alpha' });
+    await waitFor(() => expect(screen.getByText(/stub payload/i)).toBeTruthy());
+    expect(screen.queryByTestId('widget-needs-config')).toBeNull();
+  });
+
+  it('surfaces needs_config when the stored value no longer resolves against the set', async () => {
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data: { ok: true }, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(choices), // alpha/bravo only; 'ghost' is gone
+    };
+    renderRemoteHost(source, { project: 'ghost' });
+    await screen.findByTestId('widget-needs-config');
+    expect(screen.queryByText(/stub payload/i)).toBeNull();
+  });
+
+  it('keeps the selection when the option set cannot be resolved (provider outage stays unverified)', async () => {
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data: { ok: true }, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockRejectedValue({ kind: 'provider_unavailable' }),
+    };
+    renderRemoteHost(source, { project: 'ghost' });
+    // Unresolved options -> membership unverified -> NOT needs_config; the data path proceeds.
+    await waitFor(() => expect(screen.getByText(/stub payload/i)).toBeTruthy());
+    expect(screen.queryByTestId('widget-needs-config')).toBeNull();
   });
 });

@@ -4,16 +4,14 @@
 // env), call the allow-listed provider endpoint, normalize, and cache within the <=900s ceiling.
 
 import { deriveUser } from "../_shared/auth.ts";
+import { isConnectionUsable, loadConnection, resolveCallSecret } from "../_shared/connection.ts";
 import { paramsHash } from "../_shared/crypto.ts";
 import { cacheTtlSeconds, mayUserTriggerFetch, serverEntitlements } from "../_shared/entitlements.ts";
-import { requireEnv } from "../_shared/env.ts";
 import { errorResponse, HttpError, json, methodGuard, needsReconnect, parseBody, readJson } from "../_shared/http.ts";
-import { callProviderApi } from "../_shared/providers.ts";
-import { refreshConnection } from "../_shared/refresh.ts";
+import { callProviderApi, providerErrorResponse } from "../_shared/providers.ts";
 import { getBackend, getEndpoint } from "../_shared/registry.ts";
 import { ProxySchema } from "../_shared/schemas.ts";
 import { serviceClient } from "../_shared/supabase.ts";
-import { readSecret } from "../_shared/vault.ts";
 
 export async function handler(req: Request): Promise<Response> {
   try {
@@ -25,9 +23,8 @@ export async function handler(req: Request): Promise<Response> {
     const endpoint = getEndpoint(backend, body.widget);
     const svc = serviceClient();
 
-    const { data: conn } = await svc.from("connections").select("*")
-      .eq("user_id", user.id).eq("service", body.service).maybeSingle();
-    if (!conn || conn.status === "reauth_required" || conn.status === "disconnected") return needsReconnect();
+    const conn = await loadConnection(svc, user.id, body.service);
+    if (!isConnectionUsable(conn)) return needsReconnect();
 
     // Cache hit within TTL: one provider call serves every device polling this widget (AOD-9 §9 step 6).
     const hash = await paramsHash(body.params ?? {});
@@ -58,35 +55,18 @@ export async function handler(req: Request): Promise<Response> {
       }
     }
 
-    // Inline (lazy) refresh if the access token has expired between scheduled runs (AOD-9 §8.3).
-    if (conn.auth_class === "oauth2" && conn.expires_at && new Date(conn.expires_at) <= new Date()) {
-      const outcome = await refreshConnection(conn.id, { graceSeconds: 0 });
-      if (outcome === "reauth_required") return needsReconnect();
-    }
-
-    // Resolve the secret: Vault for credentialed classes; platform_key reads the key from env and
-    // performs no Vault read (AOD-9 §9 step 4).
-    let secret: string;
-    if (backend.authClass === "platform_key") {
-      secret = requireEnv(backend.platformKeyEnv ?? "");
-    } else {
-      if (!conn.access_secret_id) throw new HttpError(500, "no_secret", "connection has no access secret");
-      const loaded = await readSecret(conn.access_secret_id);
-      if (!loaded) throw new HttpError(500, "secret_missing", "access secret not found in Vault");
-      secret = loaded;
-    }
+    // Inline-refresh an expired oauth2 token (AOD-9 §8.3) and resolve the per-call secret: Vault for
+    // credentialed classes; platform_key reads the key from env. Shared with the option-source path.
+    const secret = await resolveCallSecret(conn, backend);
 
     // platform_key passes the user's stored location (config) as query params (AOD-9 §9 step 5).
     const query = { ...(conn.config as Record<string, unknown> | null ?? {}), ...(body.params ?? {}) };
     const result = await callProviderApi(backend, endpoint, { secret, query, body: body.params });
 
-    // Map provider failure to a typed result so the widget shows a clear state (AOD-9 §9, AOD-10 §6.4).
-    if (result.status === 429) {
-      return json({ error: "rate_limited", retryAfterSeconds: result.retryAfterSeconds ?? null }, 429);
-    }
-    if (!result.ok) {
-      return json({ error: "upstream_unavailable", status: result.status }, 502);
-    }
+    // Map provider failure to the typed result the widget reacts to (AOD-9 §9, AOD-10 §6.4). Shared
+    // with the option-source path (providerErrorResponse) so both fail identically.
+    const errResponse = providerErrorResponse(result);
+    if (errResponse) return errResponse;
 
     // Per-widget normalization is wired per integration (AOD-10 owns the data contracts); the payload
     // is provider data and carries no credentials (AOD-5 C2).

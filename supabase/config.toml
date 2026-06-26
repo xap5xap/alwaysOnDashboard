@@ -390,8 +390,8 @@ deno_version = 2
 # function authenticates by validating the OAuth `state` against the stored transaction (AOD-9 §7.1
 # step 4). Without this, the gateway would 401 the provider redirect before the handler runs. The
 # other broker functions keep the default verify_jwt = true: oauth-start / credentials-store / proxy
-# / disconnect are called by the JWT-bearing app, and token-refresh by pg_cron with the service-role
-# key (also a valid JWT).
+# / config-options / disconnect are called by the JWT-bearing app, and token-refresh by pg_cron with
+# the service-role key (also a valid JWT).
 [functions.oauth-callback]
 verify_jwt = false
 

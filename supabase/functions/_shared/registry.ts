@@ -77,6 +77,9 @@ export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
     platformKeyEnv: "STUB_PROVIDER_KEY",
     endpoints: {
       placeholder: { method: "GET", path: "/" },
+      // AOD-53 remote-options vehicle: its client half (placeholder_remote) resolves choices via the
+      // option-source path, not this data endpoint; the entry keeps both registry halves matched.
+      placeholder_remote: { method: "GET", path: "/" },
     },
   },
 };

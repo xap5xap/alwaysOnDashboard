@@ -6,7 +6,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { ConfigForm } from '../ConfigForm';
-import type { WidgetConfigSchema } from '../../registry/types';
+import type { ResolvedOptionsState } from '../useOptionSources';
+import type { Choice, WidgetConfigSchema } from '../../registry/types';
 
 const schema: WidgetConfigSchema = {
   fields: [
@@ -52,18 +53,95 @@ describe('ConfigForm renders one input per static field kind, generic over the s
     expect(screen.getByTestId('config-field-count').props.value).toBe('7');
   });
 
-  it('renders a remote-options field as a muted note without crashing (out of scope, AOD-10 §4.3)', () => {
+});
+
+describe('remote-options picker (AOD-10 §4.3), fed by the resolved Choice[]', () => {
+  const remoteSchema: WidgetConfigSchema = {
+    fields: [
+      { key: 'project', label: 'Project', kind: 'remote-options', required: true, source: { optionSource: 'stub_options' } },
+      { key: 'tags', label: 'Tags', kind: 'remote-options', required: false, multiple: true, default: [], source: { optionSource: 'stub_options' } },
+    ],
+  };
+  const CHOICES: Choice[] = [
+    { value: 'alpha', label: 'Alpha' },
+    { value: 'bravo', label: 'Bravo' },
+  ];
+  const ready: ResolvedOptionsState = { status: 'ready', choices: CHOICES };
+
+  function renderRemote(opts: {
+    initial?: Record<string, unknown>;
+    options?: Record<string, ResolvedOptionsState>;
+    onReconnect?: () => void;
+  }) {
     const onSubmit = jest.fn();
     render(
       <ConfigForm
-        schema={{ fields: [{ key: 'projectId', label: 'Project', kind: 'remote-options', required: false, source: { optionSource: 'x' } }] }}
-        initial={{}}
+        schema={remoteSchema}
+        initial={opts.initial ?? {}}
         title="t"
+        options={opts.options}
+        serviceName="Stub"
+        onReconnect={opts.onReconnect ?? jest.fn()}
         onSubmit={onSubmit}
         onCancel={jest.fn()}
       />,
     );
-    expect(screen.getByTestId('config-remote-projectId')).toBeTruthy();
+    return { onSubmit };
+  }
+
+  it('shows a loading state until the choices resolve', () => {
+    renderRemote({ options: { project: { status: 'loading' }, tags: { status: 'loading' } } });
+    expect(screen.getByTestId('config-remote-loading-project')).toBeTruthy();
+  });
+
+  it('renders the resolved choices as a single-select picker and stores the stable id', () => {
+    const { onSubmit } = renderRemote({ options: { project: ready, tags: ready } });
+    expect(screen.getByTestId('config-remote-project-alpha')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('config-remote-project-bravo'));
+    fireEvent.press(screen.getByTestId('config-submit'));
+    expect(onSubmit).toHaveBeenCalledWith({ project: 'bravo', tags: [] });
+  });
+
+  it('multi-select toggles store an array of stable ids', () => {
+    const { onSubmit } = renderRemote({ initial: { project: 'alpha' }, options: { project: ready, tags: ready } });
+    fireEvent.press(screen.getByTestId('config-remote-tags-alpha'));
+    fireEvent.press(screen.getByTestId('config-remote-tags-bravo'));
+    fireEvent.press(screen.getByTestId('config-remote-tags-alpha')); // toggle alpha back off
+    fireEvent.press(screen.getByTestId('config-submit'));
+    expect(onSubmit).toHaveBeenCalledWith({ project: 'alpha', tags: ['bravo'] });
+  });
+
+  it('enforces membership on save: a stored value absent from the resolved set is rejected (AOD-10 §4.2)', () => {
+    const { onSubmit } = renderRemote({ initial: { project: 'ghost' }, options: { project: ready, tags: ready } });
+    fireEvent.press(screen.getByTestId('config-submit'));
+    expect(screen.getByTestId('config-error-project')).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('accepts a stored value as unverified when the set is unavailable (provider outage, AOD-10 §4.2 rule 2)', () => {
+    // No options passed for project: validateConfig cannot check membership, so a stored id is accepted.
+    const { onSubmit } = renderRemote({ initial: { project: 'ghost' }, options: { project: { status: 'loading' } } });
+    fireEvent.press(screen.getByTestId('config-submit'));
+    expect(onSubmit).toHaveBeenCalledWith({ project: 'ghost', tags: [] });
+  });
+
+  it('a provider error shows a retry affordance', () => {
+    const retry = jest.fn();
+    renderRemote({ options: { project: { status: 'error', retry }, tags: { status: 'error', retry } } });
+    fireEvent.press(screen.getAllByText('Retry')[0]);
+    expect(retry).toHaveBeenCalled();
+  });
+
+  it('a 409 shows the reconnect affordance and routes through onReconnect', () => {
+    const retry = jest.fn();
+    const onReconnect = jest.fn();
+    renderRemote({
+      options: { project: { status: 'needs_reconnect', retry }, tags: { status: 'needs_reconnect', retry } },
+      onReconnect,
+    });
+    expect(screen.getByTestId('config-remote-reconnect-project')).toBeTruthy();
+    fireEvent.press(screen.getAllByText('Reconnect')[0]);
+    expect(onReconnect).toHaveBeenCalled();
   });
 });
 

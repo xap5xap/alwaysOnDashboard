@@ -2,7 +2,7 @@
 // (testing-strategy.md §6: stub globalThis.fetch for token_url / api_base / revoke). Uses Deno-native
 // fetch; no axios, no SDK (AOD-25).
 
-import { HttpError } from "./http.ts";
+import { HttpError, json } from "./http.ts";
 import type { AuthHeaderStyle, EndpointDef, ServiceBackendConfig, TokenResponse } from "./types.ts";
 
 /** Build the provider authorize URL (AOD-9 §7.1). */
@@ -146,11 +146,25 @@ export async function callProviderApi(
   }
   const res = await fetch(url.toString(), init);
   const retryAfter = res.headers.get("retry-after");
-  const json = await res.json().catch(() => null);
+  const body = await res.json().catch(() => null);
   return {
     status: res.status,
     ok: res.ok,
     retryAfterSeconds: retryAfter ? Number(retryAfter) : undefined,
-    json,
+    json: body,
   };
+}
+
+/**
+ * Map a provider call result to the typed-error Response the client lifecycle reacts to (AOD-9 §9,
+ * AOD-10 §6.4): 429 -> rate_limited (carrying Retry-After), any other non-2xx -> upstream_unavailable.
+ * Returns null on success. The widget proxy and the config-time option-source path share this one
+ * mapping so their provider-error contract is identical.
+ */
+export function providerErrorResponse(result: ProviderApiResult): Response | null {
+  if (result.status === 429) {
+    return json({ error: "rate_limited", retryAfterSeconds: result.retryAfterSeconds ?? null }, 429);
+  }
+  if (!result.ok) return json({ error: "upstream_unavailable", status: result.status }, 502);
+  return null;
 }

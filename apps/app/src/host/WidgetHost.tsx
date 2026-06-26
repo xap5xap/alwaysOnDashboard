@@ -7,8 +7,9 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRegistry } from '../registry/RegistryProvider';
-import type { WidgetInstance } from '../registry/types';
+import type { WidgetConfigSchema, WidgetInstance } from '../registry/types';
 import { validateConfig } from '../widgets/config';
+import { useOptionSources } from '../widgets/useOptionSources';
 import {
   deriveViewState,
   type ProxyError,
@@ -18,6 +19,10 @@ import {
 import { effectiveInterval, nextDelaySeconds, requestKey } from '../widgets/scheduler';
 import { useWidgetDataSource } from './WidgetDataSource';
 import { WidgetHostView } from './WidgetHostView';
+
+// A stable empty schema for an unresolved instance, so useOptionSources runs no queries (hooks must
+// run unconditionally, before the !def early return).
+const EMPTY_SCHEMA: WidgetConfigSchema = { fields: [] };
 
 export interface WidgetHostProps {
   instance: WidgetInstance;
@@ -61,6 +66,12 @@ export function WidgetHost({
     },
   });
 
+  // AOD-10 §4.2 rule 2 / §4.4 render-time membership re-check: resolve the def's remote-options sets
+  // (riding the shared option-source cache) and feed them into needsConfig below. A stored value that
+  // is no longer a member -> needs_config; an unresolved set (provider outage / disconnected) omits
+  // the field, so validateConfig accepts it as unverified and a still-valid selection survives.
+  const { resolved: resolvedOptions } = useOptionSources(def?.configSchema ?? EMPTY_SCHEMA, instance.serviceId);
+
   // AOD-8 invariant 1: an unresolved instance is invalid (it would be dropped on a real layout).
   if (!def) {
     return (
@@ -70,8 +81,9 @@ export function WidgetHost({
     );
   }
 
-  // AOD-10 §4.4 render-time config check (host-level): an invalid/unresolvable config is needs_config.
-  const needsConfig = !validateConfig(def.configSchema, instance.config).ok;
+  // AOD-10 §4.4 render-time config check (host-level): an invalid config, or a remote-options value
+  // that no longer resolves against the available option set, is needs_config (§4.2 rule 2).
+  const needsConfig = !validateConfig(def.configSchema, instance.config, resolvedOptions).ok;
 
   // Build the lifecycle snapshot. TanStack Query keeps last data across a failed refetch, so an
   // in-flight retry must not read as an error: only treat as errored when settled (fetchStatus idle)

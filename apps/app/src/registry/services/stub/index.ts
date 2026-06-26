@@ -43,10 +43,37 @@ const stubWidget: WidgetDefinition = {
   render: StubCard,
 };
 
+// The remote-options vehicle (AOD-53). A SECOND stub widget so the bootstrap `placeholder` widget and
+// its AOD-47/49/51/52 tests stay untouched. It has a required single remote-options field and an
+// optional multiple one, both backed by the stub option source `stub_options` (the server half returns
+// a fixed Choice[]; no real provider). The required-no-default `project` makes requiresConfiguration
+// true, so adding it routes through configure-on-add (the AOD-52 path); the AOD-49 bootstrap and the
+// AOD-51 add-with-defaults invariants are unaffected because this is not the bootstrap seed. No engine
+// special-casing: these are ordinary remote-options fields the generic resolver/picker handles.
+const stubRemoteWidget: WidgetDefinition = {
+  type: 'placeholder_remote',
+  serviceId: 'stub',
+  title: 'Stub Remote Widget',
+  supportedSizes: ['small', 'medium', 'large'],
+  defaultRefresh: { seconds: 300 },
+  cacheTtlSeconds: 120,
+  minRefreshSeconds: 60,
+  dimsWithAmbient: true,
+  configSchema: {
+    fields: [
+      // remote-options, single, required: resolved through the proxy at config time (AOD-10 §4.3).
+      { key: 'project', label: 'Project', kind: 'remote-options', required: true, source: { optionSource: 'stub_options' } },
+      // remote-options, multiple, optional: proves the multi-select picker + array membership.
+      { key: 'tags', label: 'Tags', kind: 'remote-options', required: false, multiple: true, default: [], source: { optionSource: 'stub_options' } },
+    ],
+  },
+  render: StubCard,
+};
+
 export const stubService: ServiceDefinition = {
   id: 'stub',
   displayName: 'Stub',
   icon: 'cube-outline',
   authClass: 'platform_key',
-  widgets: [stubWidget],
+  widgets: [stubWidget, stubRemoteWidget],
 };

@@ -8,7 +8,7 @@
 import React from 'react';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { WidgetInstance } from '../registry/types';
-import { ConfigFormModal } from '../widgets/ConfigFormModal';
+import { ResolvedConfigFormModal } from '../widgets/ResolvedConfigFormModal';
 import { useConfigureInstance } from './useConfigureInstance';
 
 export interface ConfigureInstanceModalProps {
@@ -34,7 +34,8 @@ export function ConfigureInstanceModal({ instance, onClose }: ConfigureInstanceM
   };
 
   return (
-    <ConfigFormModal
+    <ResolvedConfigFormModal
+      serviceId={instance.serviceId}
       schema={def.configSchema}
       initial={instance.config}
       title={`Configure ${def.title}`}
