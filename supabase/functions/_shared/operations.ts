@@ -127,12 +127,91 @@ function normalizeMyIssues(raw: unknown): MyIssuesData {
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Linear: Current Cycle (integration-linear.md §4.2). The fast-follow widget; registration once the
+// seam exists. The widget tracks the chosen team's LIVE active cycle (the user picks the team, §5.2).
+// ---------------------------------------------------------------------------------------------------
+
+const CURRENT_CYCLE_QUERY = `query CurrentCycle($teamId: String!) {
+  team(id: $teamId) {
+    id
+    name
+    activeCycle {
+      id
+      number
+      name
+      startsAt
+      endsAt
+      progress
+      issueCountHistory
+      completedIssueCountHistory
+    }
+  }
+}`;
+
+function buildCurrentCycleBody(params: Record<string, unknown>): unknown {
+  const teamId = typeof params.teamId === "string" ? params.teamId : "";
+  return { query: CURRENT_CYCLE_QUERY, variables: { teamId } };
+}
+
+/**
+ * The normalized active-cycle payload (integration-linear.md §4.2). `active: false` is a normal,
+ * data-bearing state (the team has no active cycle right now), not an error or needs-config.
+ */
+export type CurrentCycleData =
+  | { active: false }
+  | {
+    active: true;
+    number: number;
+    name: string | null;
+    startsAt: string; // ISO
+    endsAt: string; // ISO
+    progress: number; // 0..1, drives the ring
+    completedCount: number; // last(completedIssueCountHistory)
+    totalCount: number; // last(issueCountHistory)
+  };
+
+/** Last element of a Linear count-history array (the current value), or 0 if absent (§4.2). */
+function lastCount(history: unknown): number {
+  if (!Array.isArray(history) || history.length === 0) return 0;
+  const last = Number(history[history.length - 1]);
+  return Number.isFinite(last) ? last : 0;
+}
+
+interface RawActiveCycle {
+  number?: unknown;
+  name?: unknown;
+  startsAt?: unknown;
+  endsAt?: unknown;
+  progress?: unknown;
+  issueCountHistory?: unknown;
+  completedIssueCountHistory?: unknown;
+}
+
+/** Map `data.team.activeCycle` to CurrentCycleData; a null active cycle is the `active: false` state. */
+function normalizeCurrentCycle(raw: unknown): CurrentCycleData {
+  const cycle = (raw as { data?: { team?: { activeCycle?: RawActiveCycle | null } } })
+    ?.data?.team?.activeCycle;
+  if (!cycle) return { active: false };
+  return {
+    active: true,
+    number: typeof cycle.number === "number" ? cycle.number : 0,
+    name: typeof cycle.name === "string" ? cycle.name : null,
+    startsAt: typeof cycle.startsAt === "string" ? cycle.startsAt : "",
+    endsAt: typeof cycle.endsAt === "string" ? cycle.endsAt : "",
+    progress: typeof cycle.progress === "number" ? cycle.progress : 0,
+    completedCount: lastCount(cycle.completedIssueCountHistory),
+    totalCount: lastCount(cycle.issueCountHistory),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------
 // The registry + lookup (mirrors getEndpoint / getOptionSource).
 // ---------------------------------------------------------------------------------------------------
 
 export const OPERATION_REGISTRY: WidgetOperationRegistry = {
   linear: {
     my_issues: { buildBody: buildMyIssuesBody, normalize: normalizeMyIssues },
+    current_cycle: { buildBody: buildCurrentCycleBody, normalize: normalizeCurrentCycle },
   },
 };
 

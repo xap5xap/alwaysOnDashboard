@@ -4,7 +4,7 @@
 
 import { describe, it } from "@std/testing/bdd";
 import { assert, assertEquals } from "@std/assert";
-import { getOperation, type MyIssuesData } from "./operations.ts";
+import { type CurrentCycleData, getOperation, type MyIssuesData } from "./operations.ts";
 
 const myIssues = () => {
   const op = getOperation("linear", "my_issues");
@@ -127,5 +127,50 @@ describe("my_issues normalize: raw -> MyIssuesData (§4.1)", () => {
     assertEquals(data.issues[0].dueDate, null);
     assertEquals(data.issues[0].priority, 0);
     assertEquals(data.issues[0].stateType, "unstarted");
+  });
+});
+
+const currentCycle = () => {
+  const op = getOperation("linear", "current_cycle");
+  assert(op, "linear current_cycle operation is registered");
+  return op;
+};
+
+describe("current_cycle buildBody + normalize (§4.2)", () => {
+  it("buildBody holds the query server-side and passes the teamId variable", () => {
+    const b = currentCycle().buildBody({ teamId: "t1" }) as { query: string; variables: { teamId: string } };
+    assert(b.query.includes("activeCycle"), "the GraphQL query is server-side");
+    assertEquals(b.variables.teamId, "t1");
+  });
+
+  it("normalize maps an active cycle, taking the last element of each count history", () => {
+    const raw = {
+      data: {
+        team: {
+          activeCycle: {
+            number: 1,
+            name: null,
+            startsAt: "2026-06-22",
+            endsAt: "2026-06-29",
+            progress: 0.5,
+            issueCountHistory: [3, 5, 8],
+            completedIssueCountHistory: [1, 2, 4],
+          },
+        },
+      },
+    };
+    const data = currentCycle().normalize(raw) as Extract<CurrentCycleData, { active: true }>;
+    assertEquals(data.active, true);
+    assertEquals(data.number, 1);
+    assertEquals(data.totalCount, 8); // last(issueCountHistory)
+    assertEquals(data.completedCount, 4); // last(completedIssueCountHistory)
+    assertEquals(data.progress, 0.5);
+    assertEquals(data.endsAt, "2026-06-29");
+  });
+
+  it("normalize returns active:false when the team has no active cycle (a normal state)", () => {
+    assertEquals(currentCycle().normalize({ data: { team: { activeCycle: null } } }), { active: false });
+    assertEquals(currentCycle().normalize({ data: {} }), { active: false });
+    assertEquals(currentCycle().normalize({}), { active: false });
   });
 });

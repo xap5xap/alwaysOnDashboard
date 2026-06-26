@@ -54,6 +54,42 @@ describe("option-source registry (AOD-10 §4.3)", () => {
   });
 });
 
+describe("linear option sources (integration-linear.md §5.3 / §5.4)", () => {
+  it("linear_projects sends the GraphQL projects query server-side and maps nodes to Choice[]", async () => {
+    let sentBody: unknown;
+    const resolver = getOptionSource("linear", "linear_projects");
+    const choices = await resolver({
+      params: {},
+      callProvider: (endpoint, opts) => {
+        assertEquals(endpoint, { method: "POST", path: "/graphql" });
+        sentBody = opts?.body;
+        return Promise.resolve({
+          data: { projects: { nodes: [{ id: "p1", name: "Integrations" }, { id: "p2", name: "Platform & App Shell" }] } },
+        });
+      },
+    });
+    assertEquals(choices, [{ value: "p1", label: "Integrations" }, { value: "p2", label: "Platform & App Shell" }]);
+    const query = (sentBody as { query?: string })?.query ?? "";
+    assert(query.includes("projects"), "the GraphQL projects query is injected server-side, not by the client");
+  });
+
+  it("linear_teams maps team nodes to Choice[] with the stable team id as the value", async () => {
+    const resolver = getOptionSource("linear", "linear_teams");
+    const choices = await resolver({
+      params: {},
+      callProvider: () =>
+        Promise.resolve({ data: { teams: { nodes: [{ id: "t1", name: "alwaysOnDashboard", key: "AOD" }] } } }),
+    });
+    assertEquals(choices, [{ value: "t1", label: "alwaysOnDashboard" }]);
+  });
+
+  it("is defensive: a missing nodes array yields no choices, not a throw", async () => {
+    const resolver = getOptionSource("linear", "linear_projects");
+    assertEquals(await resolver({ params: {}, callProvider: () => Promise.resolve({ data: {} }) }), []);
+    assertEquals(await resolver({ params: {}, callProvider: () => Promise.resolve({}) }), []);
+  });
+});
+
 describe("providerErrorResponse (shared proxy / option-source mapping, AOD-10 §6.4)", () => {
   it("returns null on a 2xx", () => {
     assertEquals(providerErrorResponse({ status: 200, ok: true, json: {} }), null);

@@ -38,11 +38,56 @@ export const STUB_OPTION_CHOICES: Choice[] = [
   { value: "charlie", label: "Charlie Source" },
 ];
 
+// --- Linear option sources (integration-linear.md §5.3 / §5.4) -----------------------------------
+// Direct GraphQL resolvers, not providerBackedSource: the shipped helper maps the field's params to
+// URL query params, which fits a REST option source but not GraphQL variables (§5.3 note). The client
+// names only the optionSource id; the query and the response mapping live here, server-side. The
+// stored value is the stable Linear id (project / team), so a rename never invalidates the instance.
+
+const LINEAR_GRAPHQL: EndpointDef = { method: "POST", path: "/graphql" };
+
+const LINEAR_PROJECTS_QUERY = `query LinearProjects {
+  projects(first: 250) {
+    nodes { id name }
+  }
+}`;
+
+const LINEAR_TEAMS_QUERY = `query LinearTeams {
+  teams(first: 100) {
+    nodes { id name key }
+  }
+}`;
+
+/** Map a Linear `{ nodes: { id, name } }` connection to Choice[] with the stable id as the value. */
+function linearNodesToChoices(nodes: unknown): Choice[] {
+  if (!Array.isArray(nodes)) return [];
+  return nodes
+    .filter((n): n is { id: string; name: string } =>
+      typeof (n as { id?: unknown })?.id === "string" && typeof (n as { name?: unknown })?.name === "string"
+    )
+    .map((n) => ({ value: n.id, label: n.name }));
+}
+
+const linear_projects: OptionSourceResolver = async (ctx) => {
+  const raw = await ctx.callProvider(LINEAR_GRAPHQL, { body: { query: LINEAR_PROJECTS_QUERY } });
+  return linearNodesToChoices((raw as { data?: { projects?: { nodes?: unknown } } })?.data?.projects?.nodes);
+};
+
+const linear_teams: OptionSourceResolver = async (ctx) => {
+  const raw = await ctx.callProvider(LINEAR_GRAPHQL, { body: { query: LINEAR_TEAMS_QUERY } });
+  return linearNodesToChoices((raw as { data?: { teams?: { nodes?: unknown } } })?.data?.teams?.nodes);
+};
+
 export const OPTION_SOURCE_REGISTRY: OptionSourceRegistry = {
   // App-shell walking-skeleton stub (AOD-53), mirroring the client `stub` service. A STATIC source:
   // no provider, no secret. Remove or replace when real provider-backed sources land in PS-M3.
   stub: {
     stub_options: () => Promise.resolve(STUB_OPTION_CHOICES),
+  },
+  // Linear: provider-backed GraphQL resolvers (§5.3 / §5.4). The projectId / teamId pickers.
+  linear: {
+    linear_projects,
+    linear_teams,
   },
 };
 
