@@ -5,6 +5,7 @@
 // Placement is functional, not final: precise drag-to-place is DS-M1 (AOD-7); a non-overlapping default
 // slot is enough here.
 import { SIZE_CATALOGUE } from '../widgets/sizes';
+import { validateConfig } from '../widgets/config';
 import type {
   LayoutRect,
   WidgetConfigSchema,
@@ -50,13 +51,30 @@ export function defaultConfig(schema: WidgetConfigSchema): Record<string, unknow
   return config;
 }
 
-/** Build the InstanceSeed for adding `def` to a board that already holds `existing` (all derived). */
-export function defaultSeedFor(def: WidgetDefinition, existing: WidgetInstance[]): InstanceSeed {
+/**
+ * Whether adding `schema` needs the config form before insert (AOD-10 §4): true when the schema's
+ * defaults alone do not validate, i.e. a required field has no default. Reuses validateConfig and
+ * defaultConfig, no new logic: a widget whose fields are all optional/defaulted (like the stub) keeps
+ * the AOD-51 add-with-defaults path; a required-no-default field routes through the form first so the
+ * instance is born valid. Generic over the registry; never per-service.
+ */
+export function requiresConfiguration(schema: WidgetConfigSchema): boolean {
+  return !validateConfig(schema, defaultConfig(schema)).ok;
+}
+
+/** Build the InstanceSeed for adding `def` to a board that already holds `existing`. `config` overrides
+ *  the schema defaults when the configure-on-add form collected values (AOD-10 §4); omit for the
+ *  add-with-defaults path (AOD-51). Geometry is always derived. */
+export function defaultSeedFor(
+  def: WidgetDefinition,
+  existing: WidgetInstance[],
+  config?: Record<string, unknown>,
+): InstanceSeed {
   const size = defaultPlacementSize(def.supportedSizes);
   return {
     serviceId: def.serviceId,
     widgetType: def.type,
-    config: defaultConfig(def.configSchema),
+    config: config ?? defaultConfig(def.configSchema),
     size,
     rect: defaultPlacementRect(size, existing),
   };

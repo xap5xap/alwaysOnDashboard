@@ -6,6 +6,7 @@ import {
   defaultPlacementRect,
   defaultPlacementSize,
   defaultSeedFor,
+  requiresConfiguration,
 } from '../placement';
 import type { WidgetConfigSchema, WidgetDefinition, WidgetInstance } from '../../registry/types';
 
@@ -85,6 +86,29 @@ describe('defaultConfig (AOD-10 §4.1)', () => {
   });
 });
 
+describe('requiresConfiguration (AOD-10 §4 configure-on-add predicate)', () => {
+  it('is false when the schema has no fields (the stub-as-shipped before config fields)', () => {
+    expect(requiresConfiguration({ fields: [] })).toBe(false);
+  });
+
+  it('is false when every required field has a default (defaults alone validate)', () => {
+    const schema: WidgetConfigSchema = {
+      fields: [
+        { key: 'density', label: 'Density', kind: 'enum', required: true, default: 'comfortable', options: [{ value: 'comfortable', label: 'Comfortable' }] },
+        { key: 'label', label: 'Label', kind: 'string', required: false, default: 'Stub' },
+      ],
+    };
+    expect(requiresConfiguration(schema)).toBe(false);
+  });
+
+  it('is true when a required field has no default (defaults cannot make it valid)', () => {
+    const schema: WidgetConfigSchema = {
+      fields: [{ key: 'name', label: 'Name', kind: 'string', required: true }],
+    };
+    expect(requiresConfiguration(schema)).toBe(true);
+  });
+});
+
 describe('defaultSeedFor', () => {
   it('derives size, an origin rect, and empty config for an empty board (matches the bootstrap stub seed)', () => {
     expect(defaultSeedFor(def(), [])).toEqual({
@@ -99,5 +123,10 @@ describe('defaultSeedFor', () => {
   it('places a new instance below the existing ones', () => {
     const seed = defaultSeedFor(def(), [inst({ x: 0, y: 0, w: 2, h: 1, z: 0 })]);
     expect(seed.rect).toEqual({ x: 0, y: 1, w: 2, h: 1, z: 1 });
+  });
+
+  it('uses the collected config when configure-on-add supplies one (overriding schema defaults)', () => {
+    const seed = defaultSeedFor(def(), [], { name: 'chosen' });
+    expect(seed.config).toEqual({ name: 'chosen' });
   });
 });

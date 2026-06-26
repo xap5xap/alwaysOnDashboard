@@ -1,7 +1,7 @@
 // The widget_instances row <-> WidgetInstance boundary. Reads drop malformed rows (AOD-8 §9
 // invariant 1); writes re-validate so no bad geometry is persisted.
 import type { Tables } from '@vela/shared';
-import { instanceToInsert, layoutToUpdate, rowToInstance } from '../mapper';
+import { configToUpdate, instanceToInsert, layoutToUpdate, rowToInstance } from '../mapper';
 
 function row(overrides: Partial<Tables<'widget_instances'>> = {}): Tables<'widget_instances'> {
   return {
@@ -95,6 +95,25 @@ describe('layoutToUpdate', () => {
     expect(
       layoutToUpdate({ rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, size: 'small', refresh: { seconds: 60 } }).refresh,
     ).toEqual({ seconds: 60 });
+  });
+});
+
+describe('configToUpdate (AOD-10 §4 config-update path)', () => {
+  it('sets only config, never touching rect/size/refresh', () => {
+    const update = configToUpdate({ density: 'compact', label: 'Wall' });
+    expect(update).toEqual({ config: { density: 'compact', label: 'Wall' } });
+    expect('rect' in update).toBe(false);
+    expect('size' in update).toBe(false);
+    expect('refresh' in update).toBe(false);
+  });
+
+  it('accepts an empty config object', () => {
+    expect(configToUpdate({})).toEqual({ config: {} });
+  });
+
+  it('rejects a non-object config (structural guard, data-model §5.5)', () => {
+    expect(() => configToUpdate([] as never)).toThrow();
+    expect(() => configToUpdate(null as never)).toThrow();
   });
 });
 

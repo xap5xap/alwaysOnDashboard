@@ -143,6 +143,73 @@ describe('adding a widget', () => {
   });
 });
 
+describe('configure-on-add (AOD-10 §4): a widget needing config routes through the form before insert', () => {
+  const cfgWidget: WidgetDefinition = {
+    type: 'configured',
+    serviceId: 'cfg',
+    title: 'Configured Widget',
+    supportedSizes: ['small', 'medium', 'large'],
+    defaultRefresh: { seconds: 300 },
+    configSchema: { fields: [{ key: 'name', label: 'Name', kind: 'string', required: true }] },
+    render: () => null,
+  };
+  const cfgService: ServiceDefinition = {
+    id: 'cfg',
+    displayName: 'Configurable',
+    icon: 'x',
+    authClass: 'platform_key',
+    widgets: [cfgWidget],
+  };
+  const cfgServices = [cfgService];
+  const cfgRegistry: Registry = {
+    services: cfgServices,
+    getService: (id) => cfgServices.find((s) => s.id === id),
+    getWidgetDef: (sid, t) => cfgServices.find((s) => s.id === sid)?.widgets.find((w) => w.type === t),
+    connectableServices: () => cfgServices,
+    addableWidgets: (connected) => cfgServices.filter((s) => connected.has(s.id)).flatMap((s) => s.widgets),
+  };
+
+  function renderCfg() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    client.setQueryData(dashboardQueryKey('u1'), { dashboardId: 'dash-1', name: 'Wall', instances: [] });
+    (fetchConnections as jest.Mock).mockResolvedValue(new Map([['cfg', conn('cfg')]]));
+    const onClose = jest.fn();
+    render(
+      <QueryClientProvider client={client}>
+        <RegistryProvider registry={cfgRegistry}>
+          <WidgetPicker onClose={onClose} />
+        </RegistryProvider>
+      </QueryClientProvider>,
+    );
+    return { onClose };
+  }
+
+  it('opens the config form instead of inserting immediately', async () => {
+    renderCfg();
+    fireEvent.press(await screen.findByTestId('widget-picker-add-cfg-configured'));
+    expect(await screen.findByTestId('config-form')).toBeTruthy();
+    expect(addWidgetInstance).not.toHaveBeenCalled();
+  });
+
+  it('inserts with the collected config and closes once the form is submitted valid', async () => {
+    const { onClose } = renderCfg();
+    fireEvent.press(await screen.findByTestId('widget-picker-add-cfg-configured'));
+    fireEvent.changeText(await screen.findByTestId('config-field-name'), 'My Board');
+    fireEvent.press(screen.getByTestId('config-submit'));
+
+    await waitFor(() =>
+      expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
+        serviceId: 'cfg',
+        widgetType: 'configured',
+        config: { name: 'My Board' },
+        size: 'medium',
+        rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+      }),
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+});
+
 describe('empty state', () => {
   it('points to Settings when no service is connected', async () => {
     const { onClose } = renderPicker(new Map());

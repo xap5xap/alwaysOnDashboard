@@ -18,7 +18,28 @@ const stubWidget: WidgetDefinition = {
   cacheTtlSeconds: 120, // provider-facing floor (AOD-10 §6.1); never hit in the skeleton
   minRefreshSeconds: 60, // device-cadence floor the author asserts (AOD-10 §6.2)
   dimsWithAmbient: true,
-  configSchema: { fields: [] }, // no per-instance config
+  // Two STATIC config fields (AOD-10 §4.1) so the generic ConfigForm has something to render, exactly
+  // as the stub exercises the host lifecycle (AOD-47) and the add flow (AOD-51). Both are
+  // optional/defaulted on purpose: validateConfig({}) stays ok, so the AOD-49 bootstrap seed
+  // (config: {}) and the AOD-51 add-with-defaults path keep working and the host never false-trips into
+  // needs_config. A required-no-default field (configure-on-add) is exercised by a synthetic widget in
+  // tests, never by special-casing the stub. remote-options is out of scope here (AOD-10 §4.3).
+  configSchema: {
+    fields: [
+      {
+        key: 'density',
+        label: 'Density',
+        kind: 'enum',
+        required: false,
+        default: 'comfortable',
+        options: [
+          { value: 'comfortable', label: 'Comfortable' },
+          { value: 'compact', label: 'Compact' },
+        ],
+      },
+      { key: 'label', label: 'Label', kind: 'string', required: false, default: 'Stub', maxLength: 40 },
+    ],
+  },
   render: StubCard,
 };
 

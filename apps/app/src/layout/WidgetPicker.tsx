@@ -5,7 +5,7 @@
 // an integration grows this list by one group with zero edits here. Selecting a widget inserts it into
 // the current dashboard (useAddWidget) and closes. When nothing is addable it points to Settings ->
 // Connections. Visual design is DS-M1 (AOD-28); this is the functional surface, like AOD-49/AOD-50.
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
@@ -13,6 +13,8 @@ import { connectedServiceIds } from '../connections/connectionsRepo';
 import { useConnections } from '../connections/useConnections';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { ServiceDefinition, ServiceId, WidgetDefinition } from '../registry/types';
+import { ConfigFormModal } from '../widgets/ConfigFormModal';
+import { defaultConfig, requiresConfiguration } from './placement';
 import { useAddWidget } from './useAddWidget';
 
 export interface WidgetPickerProps {
@@ -54,12 +56,24 @@ export function WidgetPicker({ onClose }: WidgetPickerProps) {
   const connected = connectedServiceIds(connections);
   const groups = groupByService(registry.addableWidgets(connected), (id) => registry.getService(id));
 
-  const onAdd = async (def: WidgetDefinition) => {
+  // A widget whose schema needs values before it can be born valid (a required field with no default)
+  // routes through the config form first (AOD-10 §4); everything else adds with schema defaults (AOD-51).
+  const [configuring, setConfiguring] = useState<WidgetDefinition | null>(null);
+
+  const onSelect = (def: WidgetDefinition) => {
+    if (requiresConfiguration(def.configSchema)) {
+      setConfiguring(def);
+      return;
+    }
+    void addAndClose(def);
+  };
+
+  const addAndClose = async (def: WidgetDefinition, config?: Record<string, unknown>) => {
     try {
-      await addWidget(def);
+      await addWidget(def, config);
       onClose();
     } catch {
-      // Failure is surfaced via `error` below; keep the picker open so the user can retry.
+      // Failure is surfaced via `error`; keep the picker (or the config form) open so the user can retry.
     }
   };
 
@@ -67,6 +81,22 @@ export function WidgetPicker({ onClose }: WidgetPickerProps) {
     onClose();
     router.push('/settings');
   };
+
+  // When configuring-on-add, the picker stays mounted behind the config form so a cancel returns to it.
+  if (configuring) {
+    return (
+      <ConfigFormModal
+        schema={configuring.configSchema}
+        initial={defaultConfig(configuring.configSchema)}
+        title={`Configure ${configuring.title}`}
+        submitLabel="Add"
+        pending={pending}
+        submitError={error ? error.message : null}
+        onSubmit={(values) => void addAndClose(configuring, values)}
+        onCancel={() => setConfiguring(null)}
+      />
+    );
+  }
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -108,7 +138,7 @@ export function WidgetPicker({ onClose }: WidgetPickerProps) {
                   {group.widgets.map((widget) => (
                     <Pressable
                       key={widget.type}
-                      onPress={() => void onAdd(widget)}
+                      onPress={() => onSelect(widget)}
                       disabled={pending}
                       accessibilityRole="button"
                       testID={`widget-picker-add-${group.service.id}-${widget.type}`}
