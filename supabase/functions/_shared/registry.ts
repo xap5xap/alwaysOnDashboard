@@ -23,6 +23,7 @@ export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
       // Linear is GraphQL: every widget endpoint is the same path; the operation is held
       // server-side keyed by widget type, so the client never supplies a query (AOD-8 §5.2).
       my_issues: { method: "POST", path: "/graphql" },
+      current_cycle: { method: "POST", path: "/graphql" },
     },
   },
   google_calendar: {

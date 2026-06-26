@@ -61,6 +61,26 @@ function connectedLinear(userId: string) {
   });
 }
 
+/**
+ * A real Linear `viewer.assignedIssues` GraphQL response (integration-linear.md §4.1). The proxy's
+ * operation seam (operations.ts) normalizes this to MyIssuesData before returning/caching, so the
+ * widget mocks must use the live node shape, not a placeholder.
+ */
+function myIssuesResponse(nodes: Array<Record<string, unknown>> = []) {
+  return { data: { viewer: { assignedIssues: { nodes } } } };
+}
+const SAMPLE_ISSUE = {
+  id: "i1",
+  identifier: "AOD-1",
+  title: "Wire Linear My Issues",
+  url: "https://linear.app/thexap/issue/AOD-1",
+  priority: 2,
+  priorityLabel: "High",
+  dueDate: null,
+  state: { name: "In Progress", type: "started" },
+  project: { id: "p1", name: "Platform & App Shell" },
+};
+
 beforeAll(() => {});
 afterEach(() => {
   mock?.restore();
@@ -73,16 +93,36 @@ afterAll(async () => {
 });
 
 describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitizeOps: false }, () => {
-  it("cache miss: calls the provider, returns data, writes proxy_cache within the 900s ceiling", async () => {
+  it("cache miss: builds the GraphQL body, normalizes, returns data, writes proxy_cache within the 900s ceiling", async () => {
     const user = await freshUser();
     await connectedLinear(user.id);
-    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse({ data: { issues: [{ id: "1" }] } }))]);
+    let seenBody = "";
+    mock = mockProvider([route("api.linear.app/graphql", (call) => {
+      seenBody = call.body ?? "";
+      return jsonResponse(myIssuesResponse([SAMPLE_ISSUE]));
+    })]);
 
-    const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues", params: {} }));
+    const res = await handler(await userPost("proxy", user, {
+      service: "linear",
+      widget: "my_issues",
+      params: { projectId: "p1", filter: "open" },
+    }));
     assertEquals(res.status, 200);
     const body = await res.json();
     assertEquals(body.cached, false);
     assertEquals(mock.countMatching("graphql"), 1);
+
+    // The operation seam built the provider body server-side: the client sent only {projectId, filter},
+    // the broker injected the held GraphQL query + the IssueFilter variables (integration-linear.md §6).
+    assert(seenBody.includes("assignedIssues"), "the server-side GraphQL query was sent as the body");
+    const sent = JSON.parse(seenBody) as { variables: { filter: Record<string, unknown> } };
+    assertEquals(sent.variables.filter.project, { id: { eq: "p1" } });
+    assertEquals(sent.variables.filter.state, { type: { nin: ["completed", "canceled"] } });
+
+    // ...and normalized the raw response to MyIssuesData before returning/caching (AOD-8 §6.1).
+    assertEquals(body.data.totalCount, 1);
+    assertEquals(body.data.issues[0].identifier, "AOD-1");
+    assertEquals(body.data.issues[0].stateType, "started");
 
     const sql = db();
     const [cache] = await sql`
@@ -97,7 +137,7 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
   it("cache hit within TTL: served from cache, the provider is hit only once", async () => {
     const user = await freshUser();
     await connectedLinear(user.id);
-    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse({ data: { n: 1 } }))]);
+    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse(myIssuesResponse([SAMPLE_ISSUE])))]);
 
     const first = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues", params: {} }));
     assertEquals((await first.json()).cached, false);
@@ -123,7 +163,7 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
     mock = mockProvider([
       route("api.linear.app/oauth/token", () =>
         jsonResponse({ access_token: "refreshed-access", refresh_token: "refreshed-refresh", expires_in: 3600 })),
-      route("api.linear.app/graphql", () => jsonResponse({ data: { ok: true } })),
+      route("api.linear.app/graphql", () => jsonResponse(myIssuesResponse([SAMPLE_ISSUE]))),
     ]);
 
     const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues" }));
@@ -207,7 +247,7 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
     await connectedLinear(user.id);
     // Same 400s-old / 300s-TTL stale cache; Pro's floor is max(300, 0) = 300, so 400s >= 300s refetches.
     await seedStaleCache(user.id, { service: "linear", widget: "my_issues", ageSeconds: 400, ttlSeconds: 300, payload: { fromCache: true } });
-    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse({ data: { fresh: true } }))]);
+    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse(myIssuesResponse([SAMPLE_ISSUE])))]);
 
     const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues", params: {} }));
     assertEquals(res.status, 200);
