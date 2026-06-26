@@ -110,7 +110,9 @@ describe('the picker offers exactly the connected-only addable widgets, grouped 
   it("lists a connected service's widget and hides a disconnected one", async () => {
     renderPicker(new Map([['stub', conn('stub')]]));
     await screen.findByText('Stub Widget');
-    expect(screen.getByText('Stub')).toBeTruthy(); // group label = displayName
+    // findByText (retry), not getByText: the group header can settle a commit after the widget title
+    // under load, because the picker also mounts the AOD-53 option-source resolver (AOD-54).
+    expect(await screen.findByText('Stub')).toBeTruthy(); // group label = displayName
     expect(screen.queryByText('Agenda')).toBeNull(); // cal is not connected
     expect(screen.queryByText('Calendar')).toBeNull();
   });
@@ -123,9 +125,11 @@ describe('the picker offers exactly the connected-only addable widgets, grouped 
       ]),
     );
     await screen.findByText('Agenda');
-    expect(screen.getByText('Stub Widget')).toBeTruthy();
-    expect(screen.getByText('Stub')).toBeTruthy();
-    expect(screen.getByText('Calendar')).toBeTruthy();
+    // findByText (retry) for each group: the stub group can render a commit after the cal group under
+    // load (the picker mounts the AOD-53 option-source resolver), so a bare getByText flakes (AOD-54).
+    expect(await screen.findByText('Stub Widget')).toBeTruthy();
+    expect(await screen.findByText('Stub')).toBeTruthy();
+    expect(await screen.findByText('Calendar')).toBeTruthy();
   });
 
   it('does not offer a service that is connected-but-unhealthy (reauth_required)', async () => {
