@@ -74,4 +74,26 @@ describe("providerErrorResponse (shared proxy / option-source mapping, AOD-10 §
     assertEquals(res.status, 502);
     assertEquals((await res.json()).error, "upstream_unavailable");
   });
+
+  // Linear returns HTTP 400 with a RATELIMITED code, not 429 (integration-linear.md §7.3).
+  it("maps a Linear 400 with a RATELIMITED code to rate_limited, using the reset window", async () => {
+    const res = providerErrorResponse({
+      status: 400,
+      ok: false,
+      rateLimitResetSeconds: 42,
+      json: { errors: [{ message: "rate limited", extensions: { code: "RATELIMITED" } }] },
+    });
+    assert(res, "a Response is returned");
+    assertEquals(res.status, 429);
+    const body = await res.json();
+    assertEquals(body.error, "rate_limited");
+    assertEquals(body.retryAfterSeconds, 42); // from X-RateLimit-Requests-Reset, not Retry-After
+  });
+
+  it("leaves a non-RATELIMITED 400 as upstream_unavailable (only the rate-limit code is special)", async () => {
+    const res = providerErrorResponse({ status: 400, ok: false, json: { errors: [{ message: "bad query" }] } });
+    assert(res, "a Response is returned");
+    assertEquals(res.status, 502);
+    assertEquals((await res.json()).error, "upstream_unavailable");
+  });
 });

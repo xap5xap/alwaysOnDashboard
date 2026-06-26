@@ -120,7 +120,9 @@ function authHeaders(style: AuthHeaderStyle | undefined, secret: string): Record
 export interface ProviderApiResult {
   status: number;
   ok: boolean;
-  retryAfterSeconds?: number;
+  retryAfterSeconds?: number; // from a Retry-After header (e.g. a standard 429)
+  /** Seconds until the rate-limit window resets, from X-RateLimit-Requests-Reset (Linear's 400 path). */
+  rateLimitResetSeconds?: number;
   json: unknown;
 }
 
@@ -146,24 +148,51 @@ export async function callProviderApi(
   }
   const res = await fetch(url.toString(), init);
   const retryAfter = res.headers.get("retry-after");
+  // Linear reports its rate-limit reset as a UTC epoch (ms) header rather than Retry-After (§7.1/§7.3).
+  const rlReset = res.headers.get("x-ratelimit-requests-reset");
   const body = await res.json().catch(() => null);
   return {
     status: res.status,
     ok: res.ok,
     retryAfterSeconds: retryAfter ? Number(retryAfter) : undefined,
+    rateLimitResetSeconds: rlReset ? resetEpochMsToSeconds(Number(rlReset)) : undefined,
     json: body,
   };
 }
 
+/** Convert a UTC epoch-ms reset timestamp to whole seconds from now (never negative). */
+function resetEpochMsToSeconds(resetEpochMs: number): number | undefined {
+  if (!Number.isFinite(resetEpochMs)) return undefined;
+  return Math.max(0, Math.ceil((resetEpochMs - Date.now()) / 1000));
+}
+
+/**
+ * Whether a provider result is a rate limit. A standard 429 is one; Linear instead returns HTTP 400
+ * with a RATELIMITED code in the GraphQL `errors` (integration-linear.md §7.3), so detect that too.
+ * The check is on the signal (status + body code), not on the service id, so it stays generic.
+ */
+function isRateLimited(result: ProviderApiResult): boolean {
+  if (result.status === 429) return true;
+  if (result.status !== 400) return false;
+  const errors = (result.json as { errors?: unknown })?.errors;
+  if (!Array.isArray(errors)) return false;
+  return errors.some((e) => {
+    const code = (e as { extensions?: { code?: unknown } })?.extensions?.code;
+    return typeof code === "string" && code.toUpperCase() === "RATELIMITED";
+  });
+}
+
 /**
  * Map a provider call result to the typed-error Response the client lifecycle reacts to (AOD-9 §9,
- * AOD-10 §6.4): 429 -> rate_limited (carrying Retry-After), any other non-2xx -> upstream_unavailable.
- * Returns null on success. The widget proxy and the config-time option-source path share this one
- * mapping so their provider-error contract is identical.
+ * AOD-10 §6.4): a rate limit -> rate_limited, any other non-2xx -> upstream_unavailable. Returns null
+ * on success. A standard 429 carries Retry-After; Linear's 400/RATELIMITED carries the reset window
+ * instead (§7.3). The widget proxy and the config-time option-source path share this one mapping so
+ * their provider-error contract is identical.
  */
 export function providerErrorResponse(result: ProviderApiResult): Response | null {
-  if (result.status === 429) {
-    return json({ error: "rate_limited", retryAfterSeconds: result.retryAfterSeconds ?? null }, 429);
+  if (isRateLimited(result)) {
+    const retryAfterSeconds = result.retryAfterSeconds ?? result.rateLimitResetSeconds ?? null;
+    return json({ error: "rate_limited", retryAfterSeconds }, 429);
   }
   if (!result.ok) return json({ error: "upstream_unavailable", status: result.status }, 502);
   return null;
