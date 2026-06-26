@@ -9,12 +9,14 @@ import { Link } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
+import { WidgetPicker } from '../layout/WidgetPicker';
 import { useDashboard } from '../layout/useDashboard';
 
 export function Dashboard() {
   const { session, signOut } = useAuth();
   const { instances, isLoading, isError, error, commit } = useDashboard();
   const [arranging, setArranging] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   return (
     <View style={styles.screen}>
@@ -32,6 +34,15 @@ export function Dashboard() {
             </Pressable>
           ) : (
             <>
+              {!isLoading && !isError && (
+                <Pressable
+                  onPress={() => setPicking(true)}
+                  accessibilityRole="button"
+                  testID="dashboard-add-widget"
+                >
+                  <Text style={styles.link}>Add</Text>
+                </Pressable>
+              )}
               <Link href="/settings" asChild>
                 <Pressable accessibilityRole="button">
                   <Text style={styles.link}>Settings</Text>
@@ -58,13 +69,24 @@ export function Dashboard() {
         </View>
       ) : (
         <>
-          <Text style={styles.hint}>
-            {arranging
-              ? 'Drag to move. Drag the corner handle to resize. Tap empty space or Done to finish.'
-              : instances.length
-                ? 'Long-press a widget to rearrange.'
-                : 'Your dashboard is empty.'}
-          </Text>
+          {!arranging && instances.length === 0 ? (
+            <View style={styles.emptyCta}>
+              <Text style={styles.emptyText}>Your dashboard is empty.</Text>
+              <Pressable
+                onPress={() => setPicking(true)}
+                accessibilityRole="button"
+                testID="dashboard-empty-add"
+              >
+                <Text style={styles.ctaButton}>Add widget</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.hint}>
+              {arranging
+                ? 'Drag to move. Drag the corner handle to resize. Tap empty space or Done to finish.'
+                : 'Long-press a widget to rearrange.'}
+            </Text>
+          )}
           <LayoutCanvas
             instances={instances}
             arranging={arranging}
@@ -72,6 +94,7 @@ export function Dashboard() {
             onExitArrange={() => setArranging(false)}
             onCommit={commit}
           />
+          {picking && <WidgetPicker onClose={() => setPicking(false)} />}
         </>
       )}
     </View>
@@ -131,6 +154,26 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: 13,
     paddingHorizontal: theme.spacing(4),
     paddingVertical: theme.spacing(3),
+  },
+  emptyCta: {
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(3),
+    gap: theme.spacing(3),
+    alignItems: 'flex-start',
+  },
+  emptyText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+  },
+  ctaButton: {
+    color: theme.colors.background,
+    backgroundColor: theme.colors.accent,
+    fontSize: 14,
+    fontWeight: '700',
+    overflow: 'hidden',
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing(4),
+    paddingVertical: theme.spacing(2),
   },
   center: {
     flex: 1,

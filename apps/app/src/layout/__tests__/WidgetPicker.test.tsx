@@ -1,0 +1,156 @@
+// Component band: the add-widget picker rendered from an injected registry, with the connections read,
+// the add insert, and routing mocked. It proves the picker is generic over the registry (it offers
+// exactly addableWidgets(connectedSet), grouped by service), that connected-only holds (a service that
+// is not connected is never offered), that tapping a widget inserts the derived seed into the current
+// dashboard, and that the empty state points to Settings (testing-strategy §9).
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WidgetPicker } from '../WidgetPicker';
+import { RegistryProvider, type Registry } from '../../registry/RegistryProvider';
+import { dashboardQueryKey } from '../useDashboard';
+import type { LoadedDashboard } from '../dashboardRepo';
+import type { ConnectionMap, ConnectionView } from '../../connections/connectionsRepo';
+import type { ServiceDefinition, WidgetDefinition } from '../../registry/types';
+
+jest.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
+jest.mock('../../supabase/client', () => ({ supabase: { from: jest.fn() } }));
+jest.mock('../../connections/connectionsRepo', () => ({
+  ...jest.requireActual('../../connections/connectionsRepo'), // keep the real connectedServiceIds
+  fetchConnections: jest.fn(),
+}));
+jest.mock('../dashboardRepo', () => ({ addWidgetInstance: jest.fn() }));
+jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+
+import { fetchConnections } from '../../connections/connectionsRepo';
+import { addWidgetInstance } from '../dashboardRepo';
+import { router } from 'expo-router';
+
+const widget = (serviceId: string, type: string, title: string): WidgetDefinition => ({
+  type,
+  serviceId,
+  title,
+  supportedSizes: ['small', 'medium', 'large'],
+  defaultRefresh: { seconds: 300 },
+  configSchema: { fields: [] },
+  render: () => null,
+});
+
+const stub: ServiceDefinition = {
+  id: 'stub',
+  displayName: 'Stub',
+  icon: 'cube-outline',
+  authClass: 'platform_key',
+  widgets: [widget('stub', 'placeholder', 'Stub Widget')],
+};
+const cal: ServiceDefinition = {
+  id: 'cal',
+  displayName: 'Calendar',
+  icon: 'cal',
+  authClass: 'oauth2',
+  widgets: [widget('cal', 'agenda', 'Agenda')],
+};
+const services = [stub, cal];
+
+// A registry that mirrors the real addableWidgets predicate (connected-only; authClass 'none' exempt).
+const registry: Registry = {
+  services,
+  getService: (id) => services.find((s) => s.id === id),
+  getWidgetDef: (sid, t) => services.find((s) => s.id === sid)?.widgets.find((w) => w.type === t),
+  connectableServices: () => services,
+  addableWidgets: (connected) =>
+    services.filter((s) => s.authClass === 'none' || connected.has(s.id)).flatMap((s) => s.widgets),
+};
+
+const conn = (service: string, status: ConnectionView['status'] = 'connected'): ConnectionView => ({
+  connectionId: `c-${service}`,
+  service,
+  status,
+  authClass: 'platform_key',
+  accountLabel: null,
+  config: null,
+});
+
+function renderPicker(
+  connections: ConnectionMap,
+  dashboard: LoadedDashboard | null = { dashboardId: 'dash-1', name: 'Wall', instances: [] },
+) {
+  // gcTime Infinity (not 0): the seeded dashboard cache has no active observer here, so gcTime:0 would
+  // collect it before addWidget reads it; Infinity also schedules no gc timer, so no worker leak.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  client.setQueryData(dashboardQueryKey('u1'), dashboard);
+  (fetchConnections as jest.Mock).mockResolvedValue(connections);
+  const onClose = jest.fn();
+  render(
+    <QueryClientProvider client={client}>
+      <RegistryProvider registry={registry}>
+        <WidgetPicker onClose={onClose} />
+      </RegistryProvider>
+    </QueryClientProvider>,
+  );
+  return { onClose };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  (addWidgetInstance as jest.Mock).mockResolvedValue(null);
+});
+
+describe('the picker offers exactly the connected-only addable widgets, grouped by service', () => {
+  it("lists a connected service's widget and hides a disconnected one", async () => {
+    renderPicker(new Map([['stub', conn('stub')]]));
+    await screen.findByText('Stub Widget');
+    expect(screen.getByText('Stub')).toBeTruthy(); // group label = displayName
+    expect(screen.queryByText('Agenda')).toBeNull(); // cal is not connected
+    expect(screen.queryByText('Calendar')).toBeNull();
+  });
+
+  it('lists each connected service as its own group', async () => {
+    renderPicker(
+      new Map([
+        ['stub', conn('stub')],
+        ['cal', conn('cal')],
+      ]),
+    );
+    await screen.findByText('Agenda');
+    expect(screen.getByText('Stub Widget')).toBeTruthy();
+    expect(screen.getByText('Stub')).toBeTruthy();
+    expect(screen.getByText('Calendar')).toBeTruthy();
+  });
+
+  it('does not offer a service that is connected-but-unhealthy (reauth_required)', async () => {
+    renderPicker(new Map([['stub', conn('stub', 'reauth_required')]]));
+    await screen.findByTestId('widget-picker-empty');
+    expect(screen.queryByText('Stub Widget')).toBeNull();
+  });
+});
+
+describe('adding a widget', () => {
+  it('inserts the derived default seed into the current dashboard, then closes', async () => {
+    const { onClose } = renderPicker(new Map([['stub', conn('stub')]]));
+    fireEvent.press(await screen.findByTestId('widget-picker-add-stub-placeholder'));
+
+    await waitFor(() =>
+      expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
+        serviceId: 'stub',
+        widgetType: 'placeholder',
+        config: {},
+        size: 'medium',
+        rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+      }),
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+});
+
+describe('empty state', () => {
+  it('points to Settings when no service is connected', async () => {
+    const { onClose } = renderPicker(new Map());
+    await screen.findByTestId('widget-picker-empty');
+    expect(screen.queryByText('Stub Widget')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('widget-picker-go-settings'));
+    expect(onClose).toHaveBeenCalled();
+    expect(router.push).toHaveBeenCalledWith('/settings');
+  });
+});

@@ -70,6 +70,18 @@ export function toConnectionMap(rows: readonly unknown[]): ConnectionMap {
   return map;
 }
 
+/** The service ids the user has a live `connected` connection for. The add-widget picker feeds this to
+ *  registry.addableWidgets (AOD-8 §9 invariant 2): `reauth_required`/`error` are NOT connected, so their
+ *  widgets are not offered until the connection is healthy again. Clock (authClass 'none') is exempt
+ *  inside addableWidgets, not here, so this stays a plain status filter that names no service. */
+export function connectedServiceIds(map: ConnectionMap): Set<ServiceId> {
+  const ids = new Set<ServiceId>();
+  for (const [service, view] of map) {
+    if (view.status === 'connected') ids.add(service);
+  }
+  return ids;
+}
+
 /** Read the signed-in user's connections under RLS. The query is owner-scoped by the session JWT. */
 export async function fetchConnections(): Promise<ConnectionMap> {
   const { data, error } = await supabase
