@@ -16,6 +16,8 @@ export interface LayoutCanvasProps {
   onEnterArrange(): void;
   onExitArrange(): void;
   onCommit(instanceId: string, patch: LayoutPatch): void;
+  /** Open the config form for one instance (AOD-10 §4); the dashboard owns the modal. */
+  onRequestConfigure(instance: WidgetInstance): void;
 }
 
 export function LayoutCanvas({
@@ -24,6 +26,7 @@ export function LayoutCanvas({
   onEnterArrange,
   onExitArrange,
   onCommit,
+  onRequestConfigure,
 }: LayoutCanvasProps) {
   return (
     <View style={styles.canvas}>
@@ -38,6 +41,7 @@ export function LayoutCanvas({
           arranging={arranging}
           onLongPress={onEnterArrange}
           onCommit={onCommit}
+          onRequestConfigure={onRequestConfigure}
         />
       ))}
     </View>

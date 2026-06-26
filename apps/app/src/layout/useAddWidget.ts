@@ -15,8 +15,9 @@ import { dashboardQueryKey } from './useDashboard';
 
 export interface UseAddWidgetResult {
   /** Insert `def` into the current dashboard with a default placement, then repaint. Throws on failure
-   *  (also surfaced via `error`) so the caller can keep the picker open. */
-  addWidget(def: WidgetDefinition): Promise<void>;
+   *  (also surfaced via `error`) so the caller can keep the picker open. `config` overrides the schema
+   *  defaults when the configure-on-add form collected values (AOD-10 §4); omit for add-with-defaults. */
+  addWidget(def: WidgetDefinition, config?: Record<string, unknown>): Promise<void>;
   pending: boolean;
   error: Error | null;
 }
@@ -29,7 +30,7 @@ export function useAddWidget(): UseAddWidgetResult {
   const [error, setError] = useState<Error | null>(null);
 
   const addWidget = useCallback(
-    async (def: WidgetDefinition) => {
+    async (def: WidgetDefinition, config?: Record<string, unknown>) => {
       if (!userId) throw new Error('Not signed in');
       const key = dashboardQueryKey(userId);
       const dashboard = queryClient.getQueryData<LoadedDashboard | null>(key);
@@ -38,7 +39,7 @@ export function useAddWidget(): UseAddWidgetResult {
       setPending(true);
       setError(null);
       try {
-        const seed = defaultSeedFor(def, dashboard.instances);
+        const seed = defaultSeedFor(def, dashboard.instances, config);
         await addWidgetInstance(dashboard.dashboardId, userId, seed);
         // Repaint and let the host drive the new instance. The host reacts to the proxy, not the
         // connections table (AOD-47), so a fresh dashboard load is what mounts and fetches the new row.

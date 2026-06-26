@@ -8,6 +8,7 @@
 import { supabase } from '../supabase/client';
 import type { WidgetInstance } from '../registry/types';
 import {
+  configToUpdate,
   instanceToInsert,
   layoutToUpdate,
   rowToInstance,
@@ -102,6 +103,20 @@ export async function persistInstanceLayout(instanceId: string, patch: LayoutPat
   const { error } = await supabase
     .from('widget_instances')
     .update(layoutToUpdate(patch))
+    .eq('id', instanceId);
+  if (error) throw error;
+}
+
+/** Persist one instance's config (AOD-10 §4) under RLS. Mirrors persistInstanceLayout exactly: targets
+ *  by id only, so dashboard_id is untouched and the §8 dashboard-ownership WITH CHECK holds trivially.
+ *  The caller validated the values with validateConfig (AOD-10 §4.2 place 1); this only persists them. */
+export async function persistInstanceConfig(
+  instanceId: string,
+  config: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await supabase
+    .from('widget_instances')
+    .update(configToUpdate(config))
     .eq('id', instanceId);
   if (error) throw error;
 }

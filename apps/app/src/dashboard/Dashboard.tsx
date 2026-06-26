@@ -8,15 +8,20 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
+import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { WidgetPicker } from '../layout/WidgetPicker';
 import { useDashboard } from '../layout/useDashboard';
+import type { WidgetInstance } from '../registry/types';
 
 export function Dashboard() {
   const { session, signOut } = useAuth();
   const { instances, isLoading, isError, error, commit } = useDashboard();
   const [arranging, setArranging] = useState(false);
   const [picking, setPicking] = useState(false);
+  // The instance whose config form is open (AOD-10 §4). Owned here like `picking`/`arranging` so both
+  // reconfigure entries (arrange-mode "Configure" and the host's needs_config prompt) route through it.
+  const [configuring, setConfiguring] = useState<WidgetInstance | null>(null);
 
   return (
     <View style={styles.screen}>
@@ -93,8 +98,15 @@ export function Dashboard() {
             onEnterArrange={() => setArranging(true)}
             onExitArrange={() => setArranging(false)}
             onCommit={commit}
+            onRequestConfigure={setConfiguring}
           />
           {picking && <WidgetPicker onClose={() => setPicking(false)} />}
+          {configuring && (
+            <ConfigureInstanceModal
+              instance={configuring}
+              onClose={() => setConfiguring(null)}
+            />
+          )}
         </>
       )}
     </View>

@@ -4,7 +4,7 @@
 // (testing-strategy §9). The flaky stale / error-with-data transitions are covered deterministically
 // by the deriveViewState and WidgetHostView unit/component tests.
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../WidgetDataSource';
@@ -53,5 +53,35 @@ describe('WidgetHost container through the proxy data source (testing-strategy �
 
     await waitFor(() => expect(screen.getByTestId('widget-disconnected')).toBeTruthy());
     expect(screen.queryByText(/stub payload/i)).toBeNull();
+  });
+
+  it('renders the needs_config prompt for an invalid config and fires the wired onReconfigure (AOD-10 §4.4)', async () => {
+    // The stub's density enum rejects an out-of-set value: validateConfig fails, so the host's
+    // render-time config check short-circuits to needs_config regardless of the proxy query (kept
+    // in-flight here), proving the config gate takes precedence over the data path.
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockReturnValue(new Promise(() => {})),
+    };
+    const onReconfigure = jest.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(
+      <QueryClientProvider client={client}>
+        <RegistryProvider>
+          <WidgetDataSourceProvider source={source}>
+            <WidgetHost
+              instance={{ ...instance, config: { density: 'bogus' } }}
+              maxRetries={0}
+              onReconfigure={onReconfigure}
+            />
+          </WidgetDataSourceProvider>
+        </RegistryProvider>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByTestId('widget-needs-config');
+    expect(screen.queryByText(/stub payload/i)).toBeNull();
+
+    fireEvent.press(screen.getByText('Reconfigure'));
+    expect(onReconfigure).toHaveBeenCalled();
   });
 });

@@ -10,7 +10,12 @@ import type {
   WidgetInstance,
   WidgetSize,
 } from '../registry/types';
-import { LayoutRectSchema, RefreshIntervalSchema, WidgetSizeSchema } from './schema';
+import {
+  LayoutRectSchema,
+  RefreshIntervalSchema,
+  WidgetConfigSchema as WidgetConfigStructSchema,
+  WidgetSizeSchema,
+} from './schema';
 
 type InstanceRow = Tables<'widget_instances'>;
 
@@ -80,6 +85,14 @@ export function instanceToInsert(
     rect: LayoutRectSchema.parse(seed.rect) as unknown as Json,
     refresh: seed.refresh === undefined ? null : (RefreshIntervalSchema.parse(seed.refresh) as unknown as Json),
   };
+}
+
+/** Build a validated UPDATE for a per-instance config change (AOD-10 §4). config is structurally
+ *  validated as a JSON object (data-model §5.5: the per-kind interior is the host's validateConfig
+ *  concern, AOD-10 §4.2; here we only guard the blob shape, like the rect/size guards). Sits beside
+ *  layoutToUpdate so the config-update path is symmetric with the geometry-update path. */
+export function configToUpdate(config: Record<string, unknown>): TablesUpdate<'widget_instances'> {
+  return { config: WidgetConfigStructSchema.parse(config) as Json };
 }
 
 /** Build a validated UPDATE for a geometry/size change. rect+size always set; refresh only if present. */

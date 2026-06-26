@@ -6,7 +6,7 @@
 // authoritative). It renders the instance through the generic WidgetHost and imports no service: the
 // AOD-8 §10 seam holds (it knows WidgetInstance/LayoutRect, not which service this is).
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
@@ -23,9 +23,19 @@ export interface PlacedInstanceProps {
   /** Long-press anywhere on the card enters arrange mode (the iOS-style "jiggle" affordance). */
   onLongPress(): void;
   onCommit(instanceId: string, patch: LayoutPatch): void;
+  /** Open the per-instance config form (AOD-10 §4). Generic over the registry; the dashboard owns the
+   *  modal. Reached two ways: the arrange-mode "Configure" affordance and the host's needs_config
+   *  "Reconfigure" prompt (the previously unwired WidgetHost onReconfigure seam). */
+  onRequestConfigure(instance: WidgetInstance): void;
 }
 
-export function PlacedInstance({ instance, arranging, onLongPress, onCommit }: PlacedInstanceProps) {
+export function PlacedInstance({
+  instance,
+  arranging,
+  onLongPress,
+  onCommit,
+  onRequestConfigure,
+}: PlacedInstanceProps) {
   const registry = useRegistry();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
   const supportedSizes = def?.supportedSizes ?? [instance.size];
@@ -119,15 +129,29 @@ export function PlacedInstance({ instance, arranging, onLongPress, onCommit }: P
       <Animated.View style={[styles.positioned, animatedStyle]}>
         <GestureDetector gesture={drag}>
           <View style={[styles.body, arranging && styles.bodyArranging]}>
-            <WidgetHost instance={instance} />
+            {/* Wire the previously-unwired host onReconfigure seam to the dashboard's config form. */}
+            <WidgetHost instance={instance} onReconfigure={() => onRequestConfigure(instance)} />
           </View>
         </GestureDetector>
         {arranging ? (
-          <GestureDetector gesture={resize}>
-            <View style={styles.handleHit} accessibilityLabel="Resize widget" accessibilityRole="adjustable">
-              <View style={styles.handleDot} />
-            </View>
-          </GestureDetector>
+          <>
+            {/* A generic arrange-mode affordance to configure any widget, not only a needs_config one
+                (AOD-52 cut). A sibling of the drag detector, so a tap never starts a drag. */}
+            <Pressable
+              onPress={() => onRequestConfigure(instance)}
+              style={styles.configurePill}
+              accessibilityRole="button"
+              accessibilityLabel="Configure widget"
+              testID={`configure-${instance.instanceId}`}
+            >
+              <Text style={styles.configureText}>Configure</Text>
+            </Pressable>
+            <GestureDetector gesture={resize}>
+              <View style={styles.handleHit} accessibilityLabel="Resize widget" accessibilityRole="adjustable">
+                <View style={styles.handleDot} />
+              </View>
+            </GestureDetector>
+          </>
         ) : null}
       </Animated.View>
     </GestureDetector>
@@ -147,6 +171,21 @@ const styles = StyleSheet.create((theme) => ({
   bodyArranging: {
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.surfaceAlt,
+  },
+  // The arrange-mode configure affordance, top-left so it never overlaps the bottom-right resize dot.
+  configurePill: {
+    position: 'absolute',
+    top: -12,
+    left: -8,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing(2.5),
+    paddingVertical: theme.spacing(1),
+  },
+  configureText: {
+    color: theme.colors.background,
+    fontSize: 12,
+    fontWeight: '700',
   },
   // A 44pt touch target (the dot is 24pt, centered): comfortable on touch and reliably hittable.
   handleHit: {
