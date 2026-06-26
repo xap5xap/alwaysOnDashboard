@@ -13,7 +13,7 @@ import { connectedServiceIds } from '../connections/connectionsRepo';
 import { useConnections } from '../connections/useConnections';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { ServiceDefinition, ServiceId, WidgetDefinition } from '../registry/types';
-import { ConfigFormModal } from '../widgets/ConfigFormModal';
+import { ResolvedConfigFormModal } from '../widgets/ResolvedConfigFormModal';
 import { defaultConfig, requiresConfiguration } from './placement';
 import { useAddWidget } from './useAddWidget';
 
@@ -85,7 +85,8 @@ export function WidgetPicker({ onClose }: WidgetPickerProps) {
   // When configuring-on-add, the picker stays mounted behind the config form so a cancel returns to it.
   if (configuring) {
     return (
-      <ConfigFormModal
+      <ResolvedConfigFormModal
+        serviceId={configuring.serviceId}
         schema={configuring.configSchema}
         initial={defaultConfig(configuring.configSchema)}
         title={`Configure ${configuring.title}`}

@@ -28,6 +28,15 @@ export const ProxySchema = z.object({
 });
 export type ProxyBody = z.infer<typeof ProxySchema>;
 
+// The config-time option-source request (AOD-10 §4.3): the client names a service + an allow-listed
+// option-source id + optional static params, never a URL or query. Parallel to ProxySchema.
+export const OptionSourceSchema = z.object({
+  service: z.string().min(1),
+  optionSource: z.string().min(1),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+export type OptionSourceBody = z.infer<typeof OptionSourceSchema>;
+
 export const DisconnectSchema = z.object({
   connectionId: z.string().uuid(),
 });

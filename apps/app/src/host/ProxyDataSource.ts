@@ -3,8 +3,9 @@
 // signed-in user's session drives the call. Typed proxy failures (409/429/5xx) are mapped to the
 // AOD-10 §6.4 ProxyError the host lifecycle reacts to.
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Choice } from '../registry/types';
 import type { ProxyError, ProxyResult } from '../widgets/lifecycle';
-import type { WidgetDataRequest, WidgetDataSource } from './WidgetDataSource';
+import type { OptionSourceRequest, WidgetDataRequest, WidgetDataSource } from './WidgetDataSource';
 
 export class ProxyDataSource implements WidgetDataSource {
   constructor(
@@ -23,6 +24,19 @@ export class ProxyDataSource implements WidgetDataSource {
         ? (data as { data: unknown }).data
         : data;
     return { data: payload, fetchedAt: this.now() };
+  }
+
+  async resolveOptions(req: OptionSourceRequest): Promise<Choice[]> {
+    const { data, error } = await this.supabase.functions.invoke('config-options', {
+      body: { service: req.serviceId, optionSource: req.optionSource, params: req.params },
+    });
+    if (error) throw await toProxyError(error); // 409 -> needs_reconnect, 429 -> rate_limited, ... (same map)
+    // config-options returns { choices: Choice[], cached? } (config-options/handler.ts).
+    const choices =
+      data && typeof data === 'object' && 'choices' in (data as object)
+        ? (data as { choices: unknown }).choices
+        : data;
+    return Array.isArray(choices) ? (choices as Choice[]) : [];
   }
 }
 
