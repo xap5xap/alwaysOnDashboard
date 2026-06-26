@@ -1,0 +1,101 @@
+<svg width="100%" viewBox="0 0 880 500" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Linear data flow: connect, resolve options, render through the server-side operation seam</title>
+  <desc>Three flows bind the generic app client to the Supabase Edge broker and the Linear GraphQL API. Connect: the connections surface starts the oauth2 flow at oauth-start and oauth-callback (actor=user, PKCE, read scope), which stores the access and refresh tokens in Vault (24 hour expiry, refresh applies). Resolve options at config time: the config form and useOptionSources call config-options, which runs the linear_projects and linear_teams option sources against Linear with the user's secret attached and returns Choice arrays. Render at data time: the widget host calls proxy, which looks up the new per-widget operation in OPERATION_REGISTRY.linear; the operation builds the GraphQL query and variables, calls Linear, and normalizes the raw response into the payload the renderer receives, which the proxy caches. The operation registry is the one new generic seam; the rest of the engine is unchanged.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:11px;fill:#5b5b5b;}
+    .bt{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:11px;fill:#4a4a4a;}
+    .lane{font-size:11px;font-weight:600;fill:#8a8a8a;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .container{fill:none;stroke:#c0c0c0;stroke-width:0.8;stroke-dasharray:4 4;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1.4;}
+    .bg-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-faded{fill:#f4f4f4;stroke:#dadada;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="879" height="499" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="36" y="30" class="cap">Linear data flow: connect, resolve options, render through the server-side operation seam</text>
+
+  <!-- column captions (kept short so they stay within their columns) -->
+  <text x="36" y="50" class="lane">App client</text>
+  <text x="300" y="50" class="lane">Edge broker (AOD-9): the only line of trust</text>
+
+  <!-- Connect lane -->
+  <rect x="36" y="58" width="232" height="52" rx="8" class="bg-gray"/>
+  <text x="50" y="80" class="bt">Connections surface</text>
+  <text x="50" y="98" class="bs">oauth2 connect (AOD-50)</text>
+
+  <rect x="300" y="58" width="232" height="52" rx="8" class="bg-gray"/>
+  <text x="314" y="80" class="bt">oauth-start / callback</text>
+  <text x="314" y="98" class="bs">actor=user · PKCE · read</text>
+
+  <rect x="564" y="58" width="232" height="52" rx="8" class="bg-gray"/>
+  <text x="578" y="80" class="bt">Vault tokens</text>
+  <text x="578" y="98" class="bs">access + refresh · 24h · refresh applies</text>
+
+  <path d="M268 84 H300" class="edge" marker-end="url(#arrow)"/>
+  <text x="272" y="78" class="ts">1 start</text>
+  <path d="M532 84 H564" class="edge" marker-end="url(#arrow)"/>
+  <text x="534" y="78" class="ts">store</text>
+
+  <!-- Config-time lane -->
+  <rect x="36" y="152" width="232" height="64" rx="8" class="bg-amber"/>
+  <text x="50" y="174" class="bt">Config form (AOD-53)</text>
+  <text x="50" y="191" class="bs">useOptionSources</text>
+  <text x="50" y="207" class="bs">projectId / teamId / filter</text>
+
+  <rect x="300" y="152" width="232" height="64" rx="8" class="bg-amber"/>
+  <text x="314" y="174" class="bt">config-options</text>
+  <text x="314" y="191" class="bs">linear_projects /</text>
+  <text x="314" y="207" class="bs">linear_teams to Choice[]</text>
+
+  <path d="M268 184 H300" class="edge" marker-end="url(#arrow)"/>
+  <text x="270" y="178" class="ts">2 resolve + JWT</text>
+
+  <!-- Linear shared box (spans config + data lanes) -->
+  <rect x="564" y="152" width="232" height="232" rx="8" class="bg-faded"/>
+  <text x="578" y="262" class="bt">Linear GraphQL API</text>
+  <text x="578" y="280" class="bs">POST /graphql</text>
+
+  <path d="M532 176 H564" class="edge" marker-end="url(#arrow)"/>
+  <text x="568" y="170" class="ts">projects / teams</text>
+  <path d="M564 200 H532" class="edge" marker-end="url(#arrow)"/>
+  <text x="568" y="214" class="ts">Choice[]</text>
+
+  <!-- Data-time lane -->
+  <rect x="36" y="250" width="232" height="64" rx="8" class="bg-blue"/>
+  <text x="50" y="272" class="bt">Widget host (AOD-8 §9)</text>
+  <text x="50" y="289" class="bs">proxy(linear,</text>
+  <text x="50" y="305" class="bs">my_issues, config)</text>
+
+  <rect x="300" y="250" width="232" height="44" rx="8" class="bg-blue"/>
+  <text x="314" y="270" class="bt">proxy</text>
+  <text x="314" y="286" class="bs">gate · cache · secret</text>
+
+  <rect x="300" y="312" width="232" height="72" rx="8" class="bg-green"/>
+  <text x="314" y="334" class="bt">OPERATION_REGISTRY.linear</text>
+  <text x="314" y="351" class="bs">NEW seam · buildBody</text>
+  <text x="314" y="367" class="bs">(query + variables) · normalize</text>
+
+  <path d="M268 268 H300" class="edge" marker-end="url(#arrow)"/>
+  <text x="272" y="262" class="ts">3 proxy + JWT</text>
+  <path d="M300 286 H268" class="edge" marker-end="url(#arrow)"/>
+  <text x="272" y="309" class="ts">normalized to render</text>
+
+  <path d="M404 294 V312" class="edge" marker-end="url(#arrow)"/>
+  <path d="M428 312 V294" class="edge" marker-end="url(#arrow)"/>
+
+  <path d="M532 338 H564" class="edge" marker-end="url(#arrow)"/>
+  <text x="560" y="332" class="ts">{ query, variables }</text>
+  <path d="M564 362 H532" class="edge" marker-end="url(#arrow)"/>
+  <text x="560" y="376" class="ts">raw to normalize</text>
+</svg>
