@@ -5,10 +5,12 @@
 // specific service.
 import type { ServiceDefinition, ServiceId, WidgetDefinition, WidgetTypeId } from './types';
 import { stubService } from './services/stub';
+import { linearService } from './services/linear';
 
 export const SERVICE_REGISTRY: ServiceDefinition[] = [
   stubService,
-  // v1 services (Linear, Google Calendar, Claude usage, Weather, Clock) register here in PS-M3,
+  linearService, // PS-M3 first real service (AOD-55); My Issues + Current Cycle (integration-linear.md §8).
+  // The remaining v1 services (Google Calendar, Claude usage, Weather, Clock) register here the same way,
   // each as an entry + its widgets + leaf renderers, with zero edits to the engine below.
 ];
 
