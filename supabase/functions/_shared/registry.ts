@@ -41,7 +41,11 @@ export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
     apiBase: "https://www.googleapis.com",
     authHeaderStyle: "bearer",
     endpoints: {
-      upcoming_events: { method: "GET", path: "/calendar/v3/calendars/primary/events" },
+      // Both widgets read events.list; the chosen calendar is a {calendarId} path token filled from the
+      // instance config at call time (integration-calendar.md §6.3c, §8), not the hard-coded `primary`
+      // placeholder. The operation (operations.ts) builds the time-derived query and normalizes the body.
+      next_event: { method: "GET", path: "/calendar/v3/calendars/{calendarId}/events" },
+      agenda: { method: "GET", path: "/calendar/v3/calendars/{calendarId}/events" },
     },
   },
   anthropic_usage: {

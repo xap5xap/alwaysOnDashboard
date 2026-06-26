@@ -127,16 +127,33 @@ export interface ProviderApiResult {
 }
 
 /**
+ * Substitute {token} slots in an allow-listed registry path from the instance params, URL-encoded
+ * (integration-calendar.md §6.3c). A path with no {token} is returned unchanged, so services without
+ * path tokens (Linear, Weather, the stub, Anthropic) are untouched. The registry path template stays
+ * the authoritative allow-list: only declared {token} slots are filled, and encodeURIComponent keeps a
+ * hostile value inside its single path segment (no traversal, no query injection), preserving the
+ * AOD-9 goal-5 allow-list. A token declared in the path but absent from params is a 400, not a silent
+ * literal "{calendarId}" in the URL.
+ */
+export function applyPathParams(path: string, pathParams: Record<string, unknown>): string {
+  return path.replace(/\{(\w+)\}/g, (_, key) => {
+    const v = pathParams[key];
+    if (v == null) throw new HttpError(400, "missing_path_param", `path token {${key}} has no value`);
+    return encodeURIComponent(String(v));
+  });
+}
+
+/**
  * Call an allow-listed provider endpoint (AOD-9 §9 step 5), attaching the secret server-side in the
  * registry's header style. Returns the raw status + body; the proxy maps 429/5xx to typed results.
  */
 export async function callProviderApi(
   backend: ServiceBackendConfig,
   endpoint: EndpointDef,
-  opts: { secret: string; query?: Record<string, unknown>; body?: unknown },
+  opts: { secret: string; query?: Record<string, unknown>; body?: unknown; pathParams?: Record<string, unknown> },
 ): Promise<ProviderApiResult> {
   if (!backend.apiBase) throw new HttpError(500, "no_api_base", `${backend.id} has no apiBase`);
-  const url = new URL(backend.apiBase + endpoint.path);
+  const url = new URL(backend.apiBase + applyPathParams(endpoint.path, opts.pathParams ?? {}));
   for (const [k, v] of Object.entries(opts.query ?? {})) {
     if (v != null) url.searchParams.set(k, String(v));
   }
@@ -167,19 +184,33 @@ function resetEpochMsToSeconds(resetEpochMs: number): number | undefined {
 }
 
 /**
- * Whether a provider result is a rate limit. A standard 429 is one; Linear instead returns HTTP 400
- * with a RATELIMITED code in the GraphQL `errors` (integration-linear.md §7.3), so detect that too.
- * The check is on the signal (status + body code), not on the service id, so it stays generic.
+ * Whether a provider result is a rate limit. A standard 429 is one; two providers signal it off-band:
+ * Linear returns HTTP 400 with a RATELIMITED code in the GraphQL top-level `errors`
+ * (integration-linear.md §7.3), and Google returns HTTP 403 with a `usageLimits` domain (or a
+ * `rateLimitExceeded` / `userRateLimitExceeded` reason) in `error.errors[]` (integration-calendar.md
+ * §7.3). The check is on the signal (status + body code), never on the service id, so it stays generic:
+ * a 403 WITHOUT that quota signal is a real auth error and still maps to upstream_unavailable.
  */
 function isRateLimited(result: ProviderApiResult): boolean {
   if (result.status === 429) return true;
-  if (result.status !== 400) return false;
-  const errors = (result.json as { errors?: unknown })?.errors;
-  if (!Array.isArray(errors)) return false;
-  return errors.some((e) => {
-    const code = (e as { extensions?: { code?: unknown } })?.extensions?.code;
-    return typeof code === "string" && code.toUpperCase() === "RATELIMITED";
-  });
+  // Linear: HTTP 400 + a RATELIMITED extension code in the GraphQL top-level errors array.
+  if (result.status === 400) {
+    const errors = (result.json as { errors?: unknown })?.errors;
+    return Array.isArray(errors) && errors.some((e) => {
+      const code = (e as { extensions?: { code?: unknown } })?.extensions?.code;
+      return typeof code === "string" && code.toUpperCase() === "RATELIMITED";
+    });
+  }
+  // Google: HTTP 403 + a usageLimits domain / rateLimitExceeded reason in error.errors[].
+  if (result.status === 403) {
+    const errors = (result.json as { error?: { errors?: unknown } })?.error?.errors;
+    return Array.isArray(errors) && errors.some((e) => {
+      const o = e as { domain?: unknown; reason?: unknown };
+      return o?.domain === "usageLimits" || o?.reason === "rateLimitExceeded" ||
+        o?.reason === "userRateLimitExceeded";
+    });
+  }
+  return false;
 }
 
 /**

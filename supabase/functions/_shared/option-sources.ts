@@ -78,6 +78,40 @@ const linear_teams: OptionSourceResolver = async (ctx) => {
   return linearNodesToChoices((raw as { data?: { teams?: { nodes?: unknown } } })?.data?.teams?.nodes);
 };
 
+// --- Google Calendar option source (integration-calendar.md §5.3) --------------------------------
+// The FIRST real consumer of the shipped providerBackedSource helper: calendarList.list is a plain REST
+// GET with no params and no body (unlike Linear's GraphQL sources, which needed the direct-resolver
+// form). The client names only the optionSource id "google_calendars"; the endpoint and the mapping
+// live here, server-side. The stored value is the stable calendar id, so a rename never invalidates the
+// instance. This endpoint is supplied by the resolver and is NOT in the registry endpoints map (which
+// is the widget-data allow-list); option sources carry their own allow-listed endpoint (§5.3).
+
+interface RawCalendarListEntry {
+  id: string;
+  summary?: string;
+  summaryOverride?: string;
+  primary?: boolean;
+}
+
+/** Map a calendarList.list response to Choice[]: stable id as value, primary first then alphabetical. */
+function calendarListToChoices(raw: unknown): Choice[] {
+  const items = (raw as { items?: unknown })?.items;
+  if (!Array.isArray(items)) return [];
+  const label = (c: RawCalendarListEntry) => c.summaryOverride ?? c.summary ?? c.id; // user's custom name, else the calendar name, else the id
+  return items
+    .filter((c): c is RawCalendarListEntry => typeof (c as { id?: unknown })?.id === "string")
+    .sort((a, b) => (b.primary === true ? 1 : 0) - (a.primary === true ? 1 : 0) || label(a).localeCompare(label(b)))
+    .map((c) => ({ value: c.id, label: label(c) }));
+}
+
+// providerBackedSource calls ctx.callProvider(endpoint, { query: ctx.params, body: undefined }); for
+// calendarList.list ctx.params is empty, so it is a clean GET (§5.3). The helper attaches the user's
+// secret, maps typed errors, and returns the raw JSON.
+const google_calendars: OptionSourceResolver = providerBackedSource(
+  { method: "GET", path: "/calendar/v3/users/me/calendarList" },
+  calendarListToChoices,
+);
+
 export const OPTION_SOURCE_REGISTRY: OptionSourceRegistry = {
   // App-shell walking-skeleton stub (AOD-53), mirroring the client `stub` service. A STATIC source:
   // no provider, no secret. Remove or replace when real provider-backed sources land in PS-M3.
@@ -88,6 +122,10 @@ export const OPTION_SOURCE_REGISTRY: OptionSourceRegistry = {
   linear: {
     linear_projects,
     linear_teams,
+  },
+  // Google Calendar: the calendarId picker, the first providerBackedSource consumer (§5.3).
+  google_calendar: {
+    google_calendars,
   },
 };
 

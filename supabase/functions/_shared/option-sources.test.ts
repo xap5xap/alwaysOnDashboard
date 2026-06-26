@@ -90,6 +90,52 @@ describe("linear option sources (integration-linear.md §5.3 / §5.4)", () => {
   });
 });
 
+describe("google_calendar option source (integration-calendar.md §5.3)", () => {
+  // A real calendarList.list body (§12): primary carries a summaryOverride; others vary.
+  const calendarListBody = {
+    items: [
+      { id: "team@group.calendar.google.com", summary: "Team", selected: true },
+      { id: "me@example.com", summary: "me@example.com", summaryOverride: "Personal", primary: true },
+      { id: "z@group.calendar.google.com", summary: "Zebra" },
+    ],
+  };
+
+  it("google_calendars GETs calendarList.list and maps items to Choice[] (primary first, stable id value)", async () => {
+    let seenEndpoint: unknown;
+    const resolver = getOptionSource("google_calendar", "google_calendars");
+    const choices = await resolver({
+      params: {},
+      callProvider: (endpoint, opts) => {
+        seenEndpoint = endpoint;
+        assertEquals(opts?.query, {}); // a clean GET, no params and no body (§5.3)
+        return Promise.resolve(calendarListBody);
+      },
+    });
+    // The resolver supplies its own allow-listed endpoint, not a registry widget endpoint (§5.3).
+    assertEquals(seenEndpoint, { method: "GET", path: "/calendar/v3/users/me/calendarList" });
+    assertEquals(choices, [
+      { value: "me@example.com", label: "Personal" }, // primary first; summaryOverride preferred over summary
+      { value: "team@group.calendar.google.com", label: "Team" }, // then alphabetical by display name
+      { value: "z@group.calendar.google.com", label: "Zebra" },
+    ]);
+  });
+
+  it("falls back to summary then id for the label, always storing the stable id as the value", async () => {
+    const resolver = getOptionSource("google_calendar", "google_calendars");
+    const choices = await resolver({
+      params: {},
+      callProvider: () => Promise.resolve({ items: [{ id: "only-an-id@x" }] }),
+    });
+    assertEquals(choices, [{ value: "only-an-id@x", label: "only-an-id@x" }]);
+  });
+
+  it("is defensive: a missing/empty items array yields no choices, not a throw", async () => {
+    const resolver = getOptionSource("google_calendar", "google_calendars");
+    assertEquals(await resolver({ params: {}, callProvider: () => Promise.resolve({}) }), []);
+    assertEquals(await resolver({ params: {}, callProvider: () => Promise.resolve({ items: null }) }), []);
+  });
+});
+
 describe("providerErrorResponse (shared proxy / option-source mapping, AOD-10 §6.4)", () => {
   it("returns null on a 2xx", () => {
     assertEquals(providerErrorResponse({ status: 200, ok: true, json: {} }), null);
@@ -128,6 +174,40 @@ describe("providerErrorResponse (shared proxy / option-source mapping, AOD-10 §
 
   it("leaves a non-RATELIMITED 400 as upstream_unavailable (only the rate-limit code is special)", async () => {
     const res = providerErrorResponse({ status: 400, ok: false, json: { errors: [{ message: "bad query" }] } });
+    assert(res, "a Response is returned");
+    assertEquals(res.status, 502);
+    assertEquals((await res.json()).error, "upstream_unavailable");
+  });
+
+  // Google returns HTTP 403 with a usageLimits reason for a rate limit (integration-calendar.md §7.3).
+  it("maps a Google 403 with a usageLimits / rateLimitExceeded reason to rate_limited", async () => {
+    const res = providerErrorResponse({
+      status: 403,
+      ok: false,
+      json: { error: { code: 403, errors: [{ domain: "usageLimits", reason: "rateLimitExceeded", message: "Rate Limit Exceeded" }] } },
+    });
+    assert(res, "a Response is returned");
+    assertEquals(res.status, 429);
+    assertEquals((await res.json()).error, "rate_limited");
+  });
+
+  it("maps a Google 403 userRateLimitExceeded reason to rate_limited", async () => {
+    const res = providerErrorResponse({
+      status: 403,
+      ok: false,
+      json: { error: { errors: [{ reason: "userRateLimitExceeded" }] } },
+    });
+    assert(res, "a Response is returned");
+    assertEquals(res.status, 429);
+    assertEquals((await res.json()).error, "rate_limited");
+  });
+
+  it("leaves a non-quota 403 (a real auth/forbidden error) as upstream_unavailable", async () => {
+    const res = providerErrorResponse({
+      status: 403,
+      ok: false,
+      json: { error: { code: 403, errors: [{ domain: "global", reason: "forbidden" }] } },
+    });
     assert(res, "a Response is returned");
     assertEquals(res.status, 502);
     assertEquals((await res.json()).error, "upstream_unavailable");
