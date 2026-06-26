@@ -8,6 +8,7 @@ import { isConnectionUsable, loadConnection, resolveCallSecret } from "../_share
 import { paramsHash } from "../_shared/crypto.ts";
 import { cacheTtlSeconds, mayUserTriggerFetch, serverEntitlements } from "../_shared/entitlements.ts";
 import { errorResponse, HttpError, json, methodGuard, needsReconnect, parseBody, readJson } from "../_shared/http.ts";
+import { getOperation } from "../_shared/operations.ts";
 import { callProviderApi, providerErrorResponse } from "../_shared/providers.ts";
 import { getBackend, getEndpoint } from "../_shared/registry.ts";
 import { ProxySchema } from "../_shared/schemas.ts";
@@ -59,18 +60,25 @@ export async function handler(req: Request): Promise<Response> {
     // credentialed classes; platform_key reads the key from env. Shared with the option-source path.
     const secret = await resolveCallSecret(conn, backend);
 
+    // The single generic operation seam (integration-linear.md §6.3): a GraphQL / normalized service
+    // (Linear) builds its provider body server-side and normalizes the response; REST services and the
+    // stub have no operation and keep the pass-through below. One lookup serves every such service.
+    const op = getOperation(body.service, body.widget);
+
     // platform_key passes the user's stored location (config) as query params (AOD-9 §9 step 5).
     const query = { ...(conn.config as Record<string, unknown> | null ?? {}), ...(body.params ?? {}) };
-    const result = await callProviderApi(backend, endpoint, { secret, query, body: body.params });
+    const callBody = op ? op.buildBody(body.params ?? {}) : body.params;
+    const result = await callProviderApi(backend, endpoint, { secret, query, body: callBody });
 
     // Map provider failure to the typed result the widget reacts to (AOD-9 §9, AOD-10 §6.4). Shared
     // with the option-source path (providerErrorResponse) so both fail identically.
     const errResponse = providerErrorResponse(result);
     if (errResponse) return errResponse;
 
-    // Per-widget normalization is wired per integration (AOD-10 owns the data contracts); the payload
-    // is provider data and carries no credentials (AOD-5 C2).
-    const payload = result.json;
+    // Normalize before caching (AOD-8 §6.1): the cache stores small normalized payloads, so every device
+    // and the kiosk get the renderer's data shape and the AOD-5 "normalized data only" rule holds
+    // literally. A pass-through service caches raw provider JSON exactly as before. No credentials (AOD-5 C2).
+    const payload = op ? op.normalize(result.json) : result.json;
     const writtenAt = new Date();
     const expiresAt = new Date(writtenAt.getTime() + widgetTtlSeconds * 1000);
     const { error: cacheErr } = await svc.from("proxy_cache").upsert({
