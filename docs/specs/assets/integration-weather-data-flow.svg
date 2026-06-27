@@ -1,0 +1,92 @@
+<svg width="100%" viewBox="0 0 960 470" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Weather data flow: connect with a location, render through the operation seam over keyless Open-Meteo</title>
+  <desc>Two flows bind the generic app client to the Supabase Edge broker and the keyless Open-Meteo Forecast API. Connect: the connections surface runs the platform_key connect (a location, no key, no OAuth) at credentials-store, which stores the location as connections.config with no Vault secret. Render: the widget host applies the one-time platform_key seeding (params equals connection.config, the location) and calls proxy; the proxy gates the connection, serves or fills the cache, and takes the platform key from env (vestigial for the keyless tier); it looks up the per-widget operation in OPERATION_REGISTRY.weather on the AOD-56 seam with zero seam edits; the operation builds the /v1/forecast query server-side (latitude, longitude, timezone plus the current or daily selectors), calls Open-Meteo (the x-api-key header is ignored), and normalizes the raw current object or columnar daily arrays into CurrentWeatherData or ForecastData, which the proxy caches and returns. Weather has no path token and no option source.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:11px;fill:#5b5b5b;}
+    .bt{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:11px;fill:#4a4a4a;}
+    .lane{font-size:11px;font-weight:600;fill:#8a8a8a;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1.4;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-faded{fill:#f4f4f4;stroke:#dadada;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="959" height="469" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="32" y="30" class="cap">Weather data flow: connect with a location, render through the operation seam (keyless Open-Meteo)</text>
+
+  <!-- column captions -->
+  <text x="32" y="52" class="lane">App client</text>
+  <text x="336" y="52" class="lane">Edge broker (AOD-9): the only line of trust</text>
+  <text x="664" y="52" class="lane">Provider</text>
+
+  <!-- Connect lane -->
+  <rect x="32" y="64" width="236" height="50" rx="8" class="bg-gray"/>
+  <text x="46" y="86" class="bt">Connections surface</text>
+  <text x="46" y="103" class="bs">platform_key connect: a location</text>
+
+  <rect x="336" y="64" width="252" height="50" rx="8" class="bg-gray"/>
+  <text x="350" y="86" class="bt">credentials-store (AOD-9 §7.2)</text>
+  <text x="350" y="103" class="bs">no OAuth · no Vault secret</text>
+
+  <path d="M268 89 H336" class="edge" marker-end="url(#arrow)"/>
+  <text x="280" y="83" class="ts">location</text>
+
+  <!-- connections.config store -->
+  <rect x="336" y="130" width="252" height="42" rx="8" class="bg-faded"/>
+  <text x="350" y="149" class="bt">connections.config</text>
+  <text x="350" y="164" class="bs">location: lat, lon, timezone, name</text>
+  <path d="M462 114 V130" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Data lane: client host -->
+  <rect x="32" y="200" width="236" height="88" rx="8" class="bg-blue"/>
+  <text x="46" y="222" class="bt">Widget host (AOD-8 §9)</text>
+  <text x="46" y="240" class="bs">platform_key seeding:</text>
+  <text x="46" y="256" class="bs">params = connection.config</text>
+  <text x="46" y="272" class="bs">proxy(weather, current)</text>
+
+  <!-- store -> host (seeding reads the location) -->
+  <path d="M336 151 H300 V230 H268" class="edge" marker-end="url(#arrow)"/>
+  <text x="96" y="192" class="ts">seed params (location)</text>
+
+  <!-- Data lane: proxy -->
+  <rect x="336" y="200" width="252" height="46" rx="8" class="bg-blue"/>
+  <text x="350" y="220" class="bt">proxy</text>
+  <text x="350" y="237" class="bs">gate · cache · platform key (env, vestigial)</text>
+
+  <!-- Data lane: operation -->
+  <rect x="336" y="262" width="252" height="88" rx="8" class="bg-green"/>
+  <text x="350" y="284" class="bt">OPERATION_REGISTRY.weather</text>
+  <text x="350" y="302" class="bs">AOD-56 seam · zero seam edits</text>
+  <text x="350" y="318" class="bs">buildQuery: lat/lon/tz + current/daily</text>
+  <text x="350" y="334" class="bs">normalize to CurrentWeatherData</text>
+
+  <path d="M268 216 H336" class="edge" marker-end="url(#arrow)"/>
+  <text x="280" y="210" class="ts">proxy + JWT</text>
+  <path d="M336 232 H268" class="edge" marker-end="url(#arrow)"/>
+  <text x="64" y="308" class="ts">data (normalized)</text>
+
+  <!-- proxy <-> operation -->
+  <path d="M462 246 V262" class="edge" marker-end="url(#arrow)"/>
+  <path d="M486 262 V246" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Provider -->
+  <rect x="664" y="200" width="264" height="150" rx="8" class="bg-faded"/>
+  <text x="678" y="228" class="bt">Open-Meteo Forecast API</text>
+  <text x="678" y="246" class="bs">keyless free tier</text>
+  <text x="678" y="262" class="bs">GET /v1/forecast</text>
+  <text x="678" y="278" class="bs">(x-api-key ignored)</text>
+
+  <path d="M588 302 H664" class="edge" marker-end="url(#arrow)"/>
+  <text x="600" y="296" class="ts">lat/lon + selectors</text>
+  <path d="M664 326 H588" class="edge" marker-end="url(#arrow)"/>
+  <text x="604" y="340" class="ts">raw current / daily</text>
+</svg>
