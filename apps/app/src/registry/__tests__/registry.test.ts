@@ -75,3 +75,46 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
     expect(linearWidgets.map((w) => w.type)).toEqual(['my_issues', 'current_cycle']);
   });
 });
+
+describe('Google Calendar service registration (AOD-56, integration-calendar.md §8)', () => {
+  it("registers the Google Calendar oauth2 service with Next Event + Today's Agenda", () => {
+    const cal = getService('google_calendar');
+    expect(cal?.displayName).toBe('Google Calendar');
+    expect(cal?.authClass).toBe('oauth2');
+    expect(cal?.widgets.map((w) => w.type)).toEqual(['next_event', 'agenda']);
+  });
+
+  it('Next Event declares the §4.1 sizes/TTLs and the §5.1 calendarId option source', () => {
+    const def = getWidgetDef('google_calendar', 'next_event')!;
+    expect(def.title).toBe('Next Event');
+    expect(def.supportedSizes).toEqual(['small', 'medium']);
+    expect(def.defaultRefresh).toEqual({ seconds: 600 });
+    expect(def.cacheTtlSeconds).toBe(300);
+    expect(def.minRefreshSeconds).toBe(120);
+
+    const calendarId = def.configSchema.fields[0];
+    expect(calendarId.key).toBe('calendarId');
+    expect(calendarId.kind).toBe('remote-options');
+    expect(calendarId.required).toBe(true);
+    expect(calendarId.kind === 'remote-options' && calendarId.source.optionSource).toBe('google_calendars');
+  });
+
+  it("Today's Agenda declares the §4.2 sizes/TTLs and the §5.2 calendarId option source", () => {
+    const def = getWidgetDef('google_calendar', 'agenda')!;
+    expect(def.title).toBe("Today's Agenda");
+    expect(def.supportedSizes).toEqual(['tall', 'wide']);
+    expect(def.defaultRefresh).toEqual({ seconds: 900 });
+    expect(def.cacheTtlSeconds).toBe(600);
+    expect(def.minRefreshSeconds).toBe(300);
+
+    const calendarId = def.configSchema.fields[0];
+    expect(calendarId.key).toBe('calendarId');
+    expect(calendarId.kind === 'remote-options' && calendarId.source.optionSource).toBe('google_calendars');
+  });
+
+  it('Calendar widgets become addable only once Google Calendar is connected (oauth2, not exempt)', () => {
+    expect(addableWidgets(new Set()).some((w) => w.serviceId === 'google_calendar')).toBe(false);
+    const calWidgets = addableWidgets(new Set(['google_calendar'])).filter((w) => w.serviceId === 'google_calendar');
+    expect(calWidgets.map((w) => w.type)).toEqual(['next_event', 'agenda']);
+  });
+});

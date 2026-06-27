@@ -60,15 +60,23 @@ export async function handler(req: Request): Promise<Response> {
     // credentialed classes; platform_key reads the key from env. Shared with the option-source path.
     const secret = await resolveCallSecret(conn, backend);
 
-    // The single generic operation seam (integration-linear.md §6.3): a GraphQL / normalized service
-    // (Linear) builds its provider body server-side and normalizes the response; REST services and the
-    // stub have no operation and keep the pass-through below. One lookup serves every such service.
+    // The single generic operation seam (integration-linear.md §6.3, refined for REST by
+    // integration-calendar.md §6.3): a GraphQL service (Linear) builds its provider body server-side; a
+    // REST service (Calendar) builds its time-derived URL query server-side via buildQuery; services with
+    // no operation (stub, Weather pass-through) keep the pass-through query below. One lookup serves all.
     const op = getOperation(body.service, body.widget);
+    const params = body.params ?? {};
 
-    // platform_key passes the user's stored location (config) as query params (AOD-9 §9 step 5).
-    const query = { ...(conn.config as Record<string, unknown> | null ?? {}), ...(body.params ?? {}) };
-    const callBody = op ? op.buildBody(body.params ?? {}) : body.params;
-    const result = await callProviderApi(backend, endpoint, { secret, query, body: callBody });
+    // buildQuery owns the URL query for a REST op, so timeMin/timeMax are computed at call time and never
+    // enter the cache key (hashed on body.params above; integration-calendar.md §6.2). Otherwise platform_key
+    // / pass-through merges the user's stored config (e.g. a location) with the params (AOD-9 §9 step 5).
+    const callBody = op?.buildBody ? op.buildBody(params) : params;
+    const callQuery = op?.buildQuery
+      ? op.buildQuery(params)
+      : { ...(conn.config as Record<string, unknown> | null ?? {}), ...params };
+    // pathParams fills any {token} slot in the allow-listed registry path (Calendar's {calendarId});
+    // a token-free path is unchanged, so Linear/Weather/stub/Anthropic are untouched (§6.3c).
+    const result = await callProviderApi(backend, endpoint, { secret, query: callQuery, body: callBody, pathParams: params });
 
     // Map provider failure to the typed result the widget reacts to (AOD-9 §9, AOD-10 §6.4). Shared
     // with the option-source path (providerErrorResponse) so both fail identically.

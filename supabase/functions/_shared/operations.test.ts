@@ -4,7 +4,13 @@
 
 import { describe, it } from "@std/testing/bdd";
 import { assert, assertEquals } from "@std/assert";
-import { type CurrentCycleData, getOperation, type MyIssuesData } from "./operations.ts";
+import {
+  type AgendaData,
+  type CurrentCycleData,
+  getOperation,
+  type MyIssuesData,
+  type NextEventData,
+} from "./operations.ts";
 
 const myIssues = () => {
   const op = getOperation("linear", "my_issues");
@@ -13,7 +19,9 @@ const myIssues = () => {
 };
 
 function bodyFor(params: Record<string, unknown>) {
-  return myIssues().buildBody(params) as {
+  // buildBody is OPTIONAL since the REST refinement (integration-calendar.md §6.3a); every Linear op
+  // still provides it, so the non-null assertion is honest here.
+  return myIssues().buildBody!(params) as {
     query: string;
     variables: { filter: { project?: unknown; state?: unknown } };
   };
@@ -138,7 +146,7 @@ const currentCycle = () => {
 
 describe("current_cycle buildBody + normalize (§4.2)", () => {
   it("buildBody holds the query server-side and passes the teamId variable", () => {
-    const b = currentCycle().buildBody({ teamId: "t1" }) as { query: string; variables: { teamId: string } };
+    const b = currentCycle().buildBody!({ teamId: "t1" }) as { query: string; variables: { teamId: string } };
     assert(b.query.includes("activeCycle"), "the GraphQL query is server-side");
     assertEquals(b.variables.teamId, "t1");
   });
@@ -172,5 +180,115 @@ describe("current_cycle buildBody + normalize (§4.2)", () => {
     assertEquals(currentCycle().normalize({ data: { team: { activeCycle: null } } }), { active: false });
     assertEquals(currentCycle().normalize({ data: {} }), { active: false });
     assertEquals(currentCycle().normalize({}), { active: false });
+  });
+});
+
+// --- Google Calendar (integration-calendar.md §4, §6.2): the first REST operations ----------------
+
+const calOp = (widget: string) => {
+  const op = getOperation("google_calendar", widget);
+  assert(op, `google_calendar ${widget} operation is registered`);
+  return op;
+};
+
+describe("google_calendar buildQuery: server-built, time-derived, calendarId is a path token (§6.2)", () => {
+  it("next_event: singleEvents + orderBy=startTime + maxResults=1, timeMin ~now, no timeMax", () => {
+    const q = calOp("next_event").buildQuery!({ calendarId: "me@example.com" });
+    assertEquals(q.singleEvents, true);
+    assertEquals(q.orderBy, "startTime");
+    assertEquals(q.maxResults, 1);
+    assertEquals(q.timeMax, undefined);
+    const t = new Date(q.timeMin as string).getTime();
+    assert(Number.isFinite(t), "timeMin is a parseable RFC3339 instant");
+    assert(Math.abs(Date.now() - t) < 5000, "timeMin is derived at call time (~now)");
+  });
+
+  it("agenda: adds a coarse ~36h timeMax window and maxResults=10", () => {
+    const q = calOp("agenda").buildQuery!({ calendarId: "me@example.com" });
+    assertEquals(q.singleEvents, true);
+    assertEquals(q.orderBy, "startTime");
+    assertEquals(q.maxResults, 10);
+    const min = new Date(q.timeMin as string).getTime();
+    const max = new Date(q.timeMax as string).getTime();
+    const hours = (max - min) / 3_600_000;
+    assert(Math.abs(hours - 36) < 0.01, `agenda window is ~36h (got ${hours}h)`);
+  });
+
+  it("timeMin is DERIVED, not cache-keyed: the query shape is params-independent and calendarId-free", () => {
+    // The proxy hashes body.params (here { calendarId }); buildQuery builds the time bound from `now`,
+    // never from params, and never echoes calendarId into the query (it is a path token, §6.3c). So the
+    // params-hash stays stable across polls while timeMin floats with the clock and never enters the key.
+    const ka = Object.keys(calOp("next_event").buildQuery!({ calendarId: "a" })).sort();
+    const kb = Object.keys(calOp("next_event").buildQuery!({ calendarId: "b", filter: "x" })).sort();
+    assertEquals(ka, kb); // identical query shape regardless of params
+    assertEquals(ka.includes("calendarId"), false); // calendarId travels as a path token, not the query
+    assert(ka.includes("timeMin"), "timeMin is in the provider query, but not in the params the proxy keys on");
+  });
+});
+
+describe("google_calendar normalize: events.list -> NextEventData / AgendaData (§4, §12)", () => {
+  const TIMED = {
+    id: "e1",
+    summary: "Standup",
+    location: "Zoom",
+    htmlLink: "https://calendar.google.com/e1",
+    start: { dateTime: "2026-06-26T14:00:00-05:00" },
+    end: { dateTime: "2026-06-26T14:30:00-05:00" },
+  };
+  const ALL_DAY = {
+    id: "e2",
+    summary: "Holiday",
+    htmlLink: "https://calendar.google.com/e2",
+    start: { date: "2026-06-27" },
+    end: { date: "2026-06-28" },
+  };
+
+  it("next_event maps items[0] to a timed CalendarEvent (allDay false, absolute dateTime carried)", () => {
+    const d = calOp("next_event").normalize({ items: [TIMED] }) as Extract<NextEventData, { hasEvent: true }>;
+    assertEquals(d.hasEvent, true);
+    assertEquals(d.event, {
+      id: "e1",
+      summary: "Standup",
+      location: "Zoom",
+      start: "2026-06-26T14:00:00-05:00",
+      end: "2026-06-26T14:30:00-05:00",
+      allDay: false,
+      htmlLink: "https://calendar.google.com/e1",
+    });
+  });
+
+  it("next_event derives allDay from start.date (no dateTime) and defaults a missing location to null", () => {
+    const d = calOp("next_event").normalize({ items: [ALL_DAY] }) as Extract<NextEventData, { hasEvent: true }>;
+    assertEquals(d.event.allDay, true);
+    assertEquals(d.event.start, "2026-06-27");
+    assertEquals(d.event.end, "2026-06-28");
+    assertEquals(d.event.location, null);
+  });
+
+  it("next_event returns hasEvent:false on an empty window or a missing items array (a normal state)", () => {
+    assertEquals(calOp("next_event").normalize({ items: [] }), { hasEvent: false });
+    assertEquals(calOp("next_event").normalize({}), { hasEvent: false });
+    assertEquals(calOp("next_event").normalize({ summary: "ignored" }), { hasEvent: false });
+  });
+
+  it("agenda maps every item to CalendarEvent[], preserving Google's start-ascending order", () => {
+    const d = calOp("agenda").normalize({ items: [TIMED, ALL_DAY] }) as AgendaData;
+    assertEquals(d.events.length, 2);
+    assertEquals(d.events[0].id, "e1");
+    assertEquals(d.events[0].allDay, false);
+    assertEquals(d.events[1].id, "e2");
+    assertEquals(d.events[1].allDay, true);
+  });
+
+  it("agenda returns an empty array for an empty/absent items list (nothing left today)", () => {
+    assertEquals(calOp("agenda").normalize({ items: [] }), { events: [] });
+    assertEquals(calOp("agenda").normalize({}), { events: [] });
+  });
+
+  it("normalizes an untitled event to summary '' (Google omits summary on a no-title event)", () => {
+    const raw = { items: [{ id: "e3", start: { dateTime: "2026-06-26T10:00:00-05:00" }, end: { dateTime: "2026-06-26T10:15:00-05:00" } }] };
+    const d = calOp("next_event").normalize(raw) as Extract<NextEventData, { hasEvent: true }>;
+    assertEquals(d.event.summary, "");
+    assertEquals(d.event.allDay, false);
   });
 });

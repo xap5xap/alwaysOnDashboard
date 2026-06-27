@@ -81,6 +81,34 @@ const SAMPLE_ISSUE = {
   project: { id: "p1", name: "Platform & App Shell" },
 };
 
+/** A connected oauth2 google_calendar connection with real Vault secrets and a far-future expiry. */
+function connectedGoogleCalendar(userId: string) {
+  return makeConnection(userId, {
+    service: "google_calendar",
+    auth_class: "oauth2",
+    status: "connected",
+    expires_at: new Date(Date.now() + 3_600_000),
+    secrets: { access: "live-access", refresh: "live-refresh" },
+  });
+}
+
+/**
+ * A real Google Calendar events.list body (integration-calendar.md §4, §12). The proxy's REST operation
+ * (operations.ts) normalizes this to NextEventData / AgendaData before returning/caching, so the mock
+ * must use the live item shape (start.dateTime for a timed event), not a placeholder.
+ */
+function eventsListResponse(items: Array<Record<string, unknown>> = []) {
+  return { kind: "calendar#events", summary: "me@example.com", items };
+}
+const SAMPLE_EVENT = {
+  id: "ev1",
+  summary: "Standup",
+  location: "Zoom",
+  htmlLink: "https://calendar.google.com/event?eid=ev1",
+  start: { dateTime: "2026-06-26T14:00:00-05:00" },
+  end: { dateTime: "2026-06-26T14:30:00-05:00" },
+};
+
 beforeAll(() => {});
 afterEach(() => {
   mock?.restore();
@@ -253,5 +281,80 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
     assertEquals(res.status, 200);
     assertEquals((await res.json()).cached, false); // refetched
     assertEquals(mock.countMatching("graphql"), 1);
+  });
+
+  // --- Google Calendar: the REST buildQuery / {calendarId} path-token branch (integration-calendar.md §6.3) ---
+
+  it("google_calendar next_event: substitutes {calendarId} into the path, builds the time query server-side, normalizes to NextEventData", async () => {
+    const user = await freshUser();
+    await connectedGoogleCalendar(user.id);
+    let seenUrl = "";
+    mock = mockProvider([route("www.googleapis.com/calendar/v3/calendars", (call) => {
+      seenUrl = call.url;
+      return jsonResponse(eventsListResponse([SAMPLE_EVENT]));
+    })]);
+
+    const res = await handler(await userPost("proxy", user, {
+      service: "google_calendar",
+      widget: "next_event",
+      params: { calendarId: "me@example.com" },
+    }));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.cached, false);
+    assertEquals(mock.countMatching("/events"), 1);
+
+    // The chosen calendarId reached Google's PATH, URL-encoded, not the literal token or a hard-coded primary.
+    assert(seenUrl.includes("/calendars/me%40example.com/events"), `calendarId substituted into the path: ${seenUrl}`);
+    assert(!seenUrl.includes("{calendarId}") && !seenUrl.includes("/calendars/primary/"), "no placeholder, no hard-coded primary");
+    // The query was built server-side (the client sent only { calendarId }).
+    assert(seenUrl.includes("singleEvents=true") && seenUrl.includes("orderBy=startTime"), "server-built base query");
+    assert(seenUrl.includes("maxResults=1"), "next_event asks for one event");
+    assert(seenUrl.includes("timeMin="), "timeMin derived server-side");
+    assert(!seenUrl.includes("calendarId="), "calendarId is a path token, NOT a query param");
+
+    // ...and normalized to NextEventData before returning/caching (AOD-8 §6.1).
+    assertEquals(body.data.hasEvent, true);
+    assertEquals(body.data.event.summary, "Standup");
+    assertEquals(body.data.event.allDay, false);
+    assertEquals(body.data.event.start, "2026-06-26T14:00:00-05:00");
+  });
+
+  it("google_calendar agenda: builds the now -> now+~36h window and normalizes to AgendaData", async () => {
+    const user = await freshUser();
+    await connectedGoogleCalendar(user.id);
+    let seenUrl = "";
+    mock = mockProvider([route("www.googleapis.com/calendar/v3/calendars", (call) => {
+      seenUrl = call.url;
+      return jsonResponse(eventsListResponse([SAMPLE_EVENT, { ...SAMPLE_EVENT, id: "ev2", summary: "Review" }]));
+    })]);
+
+    const res = await handler(await userPost("proxy", user, {
+      service: "google_calendar",
+      widget: "agenda",
+      params: { calendarId: "me@example.com" },
+    }));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assert(seenUrl.includes("/calendars/me%40example.com/events"), "calendarId in path");
+    assert(seenUrl.includes("timeMin=") && seenUrl.includes("timeMax="), "agenda carries a bounded window");
+    assert(seenUrl.includes("maxResults=10"), "agenda asks for up to 10");
+    assertEquals(body.data.events.length, 2);
+    assertEquals(body.data.events[1].summary, "Review");
+  });
+
+  it("cache-key: repeated next_event polls within the TTL hit cache once (timeMin is derived, never in the key)", async () => {
+    const user = await freshUser();
+    await connectedGoogleCalendar(user.id);
+    mock = mockProvider([route("www.googleapis.com/calendar/v3/calendars", () => jsonResponse(eventsListResponse([SAMPLE_EVENT])))]);
+
+    const p = { service: "google_calendar", widget: "next_event", params: { calendarId: "me@example.com" } };
+    const first = await handler(await userPost("proxy", user, p));
+    assertEquals((await first.json()).cached, false);
+    const second = await handler(await userPost("proxy", user, p));
+    assertEquals((await second.json()).cached, true);
+    // timeMin changes between calls, but the params-hash ({ calendarId }) is identical, so the second
+    // poll is served from cache and Google is hit exactly once (integration-calendar.md §6.2).
+    assertEquals(mock.countMatching("/events"), 1);
   });
 });

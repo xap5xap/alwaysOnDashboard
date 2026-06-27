@@ -1,21 +1,28 @@
-// The server-side per-widget operation registry (AOD-8 §5.2, integration-linear.md §6). A sibling to
-// BACKEND_REGISTRY (registry.ts) and OPTION_SOURCE_REGISTRY (option-sources.ts), keyed by serviceId +
-// widgetType. Server-side ONLY, never shipped to the client.
+// The server-side per-widget operation registry (AOD-8 §5.2, integration-linear.md §6, refined for
+// REST by integration-calendar.md §6.3). A sibling to BACKEND_REGISTRY (registry.ts) and
+// OPTION_SOURCE_REGISTRY (option-sources.ts), keyed by serviceId + widgetType. Server-side ONLY,
+// never shipped to the client.
 //
-// It holds the two things a GraphQL / normalized widget data path needs that the registry's endpoint
-// allow-list does not:
-//   1. buildBody  - the provider request BODY built server-side from the instance config. For Linear
-//      this is the GraphQL { query, variables }; the client never supplies a query (AOD-8 §5.2).
-//   2. normalize  - the raw-provider -> normalized-payload mapping the renderer receives (AOD-8 §6.1),
-//      so the proxy caches small clean payloads (AOD-5: normalized data only).
+// It holds what a normalized widget data path needs that the registry's endpoint allow-list does not,
+// all OPTIONAL except normalize so each service supplies only what its transport requires:
+//   1. buildBody  - the provider request BODY (a GraphQL POST). For Linear this is the held
+//      { query, variables }; the client never supplies a query (AOD-8 §5.2). A REST GET omits it.
+//   2. buildQuery - the provider URL QUERY built server-side (a REST GET). For Calendar this is the
+//      time-derived timeMin/timeMax/singleEvents/orderBy, computed at call time so `now` never enters
+//      the cache key (integration-calendar.md §6.2). A GraphQL service omits it and the proxy passes
+//      the merged config/params through as the query, exactly as before.
+//   3. normalize  - the raw-provider -> normalized-payload mapping the renderer receives (AOD-8 §6.1),
+//      so the proxy caches small clean payloads (AOD-5: normalized data only). Required.
 //
-// REST services (Calendar, Weather) and the stub register NO operation and keep the proxy's current
-// pass-through. This seam is additive and backward compatible: one generic lookup in the proxy
-// (proxy/handler.ts), no per-service engine edits (integration-linear.md §6.3).
+// Services with no operation (the stub, Weather's pass-through) keep the proxy's pass-through query and
+// raw body. This seam is additive and backward compatible: one generic lookup in the proxy
+// (proxy/handler.ts), no per-service engine edits (integration-linear.md §6.3, integration-calendar.md §6.3).
 
 export interface WidgetOperation {
-  /** Build the provider request body from the instance config (untrusted params, bounded here). */
-  buildBody(params: Record<string, unknown>): unknown; // Linear: { query, variables }
+  /** Build the provider request BODY (a GraphQL POST). Optional: a REST GET carries no body (§6.3a). */
+  buildBody?(params: Record<string, unknown>): unknown; // Linear: { query, variables }
+  /** Build the provider URL QUERY server-side (a REST GET). Optional: GraphQL services build a body. */
+  buildQuery?(params: Record<string, unknown>): Record<string, unknown>; // Calendar: timeMin/timeMax/... (§6.2)
   /** Map the raw provider response to the normalized payload the renderer receives (AOD-8 §6.1). */
   normalize(raw: unknown): unknown;
 }
@@ -205,6 +212,117 @@ function normalizeCurrentCycle(raw: unknown): CurrentCycleData {
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Google Calendar: Next Event + Today's Agenda (integration-calendar.md §4, §6.2). The first REST
+// operations on the refined seam: a server-built, time-derived buildQuery (no buildBody, a GET carries
+// no body) plus a normalize over a shared CalendarEvent. The {calendarId} is a PATH token (§6.3c), not
+// a query param, so it is deliberately absent from buildQuery's output.
+// ---------------------------------------------------------------------------------------------------
+
+// orderBy=startTime REQUIRES singleEvents=true (it expands recurring series into concrete instances);
+// verified 2026-06-26 (integration-calendar.md §12). Shared by both widgets' queries.
+const EVENTS_BASE = { singleEvents: true, orderBy: "startTime" } as const;
+// A coarse server-side look-ahead for the agenda. The precise "today" boundary is a render concern
+// (the device clock + timezone, integration-calendar.md §4.2), so the server stays timezone-free and
+// the cache key stays stable. A configurable horizon is a named seam (§10), not a v1 need.
+const AGENDA_HORIZON_MS = 36 * 60 * 60 * 1000;
+
+/**
+ * Next Event query (§4.1): the current-or-next single event. timeMin=now is Google's lower bound
+ * (exclusive) on an event's END time, so an event already in progress is included and, ordered by
+ * start time, sorts first; maxResults=1 returns the current-or-next. `now` is read at call time so it
+ * never enters the cache key (the proxy hashes body.params = { calendarId }; §6.2).
+ */
+function buildNextEventQuery(_params: Record<string, unknown>): Record<string, unknown> {
+  return { ...EVENTS_BASE, timeMin: new Date().toISOString(), maxResults: 1 };
+}
+
+/** Today's Agenda query (§4.2): a coarse now -> now+~36h window; the renderer scopes "today" on-device. */
+function buildAgendaQuery(_params: Record<string, unknown>): Record<string, unknown> {
+  const now = new Date();
+  return {
+    ...EVENTS_BASE,
+    timeMin: now.toISOString(),
+    timeMax: new Date(now.getTime() + AGENDA_HORIZON_MS).toISOString(),
+    maxResults: 10,
+  };
+}
+
+/** One normalized calendar event the renderers receive (integration-calendar.md §4). */
+export interface CalendarEvent {
+  id: string;
+  summary: string; // event title; "" when Google omits it (an untitled event)
+  location: string | null; // free-form text or null
+  start: string; // ISO: the dateTime (timed) or the date "YYYY-MM-DD" (all-day)
+  end: string; // ISO: the dateTime or the date
+  allDay: boolean; // true when Google used start.date (no dateTime)
+  htmlLink: string; // deep link into the Google Calendar web UI
+}
+
+/** `hasEvent: false` is a normal empty-window state (§4.1), not an error or needs-config. */
+export type NextEventData =
+  | { hasEvent: false }
+  | { hasEvent: true; event: CalendarEvent };
+
+/** An empty `events` array is the normal "nothing left today" state (§4.2). */
+export interface AgendaData {
+  events: CalendarEvent[];
+}
+
+/** The raw start/end object Google returns: `date` (all-day) XOR `dateTime` (timed) (§12). */
+interface RawEventDate {
+  date?: unknown;
+  dateTime?: unknown;
+}
+interface RawEvent {
+  id?: unknown;
+  summary?: unknown;
+  location?: unknown;
+  htmlLink?: unknown;
+  start?: RawEventDate | null;
+  end?: RawEventDate | null;
+}
+
+/**
+ * Map one raw events.list item to a CalendarEvent. allDay is derived from the shape Google returns: an
+ * all-day event carries start.date ("YYYY-MM-DD") and no dateTime; a timed event carries start.dateTime
+ * (RFC3339). start/end carry whichever was present as an absolute string, so the renderer formats
+ * relative times against the device clock without another fetch (integration-calendar.md §4, §12).
+ */
+function toCalendarEvent(raw: RawEvent): CalendarEvent {
+  const startDateTime = typeof raw.start?.dateTime === "string" ? raw.start.dateTime : null;
+  const startDate = typeof raw.start?.date === "string" ? raw.start.date : null;
+  const endDateTime = typeof raw.end?.dateTime === "string" ? raw.end.dateTime : null;
+  const endDate = typeof raw.end?.date === "string" ? raw.end.date : null;
+  return {
+    id: typeof raw.id === "string" ? raw.id : "",
+    summary: typeof raw.summary === "string" ? raw.summary : "",
+    location: typeof raw.location === "string" ? raw.location : null,
+    start: startDateTime ?? startDate ?? "",
+    end: endDateTime ?? endDate ?? "",
+    allDay: startDateTime == null && startDate != null,
+    htmlLink: typeof raw.htmlLink === "string" ? raw.htmlLink : "",
+  };
+}
+
+/** Pull the items[] array from an events.list body, defensive against a missing array (§6.2). */
+function eventItems(raw: unknown): RawEvent[] {
+  const items = (raw as { items?: unknown })?.items;
+  return Array.isArray(items) ? (items as RawEvent[]) : [];
+}
+
+/** items[0] -> the current-or-next event, else hasEvent:false (a normal empty-window state, §4.1). */
+function normalizeNextEvent(raw: unknown): NextEventData {
+  const items = eventItems(raw);
+  if (items.length === 0) return { hasEvent: false };
+  return { hasEvent: true, event: toCalendarEvent(items[0]) };
+}
+
+/** items -> CalendarEvent[]; an empty array is the normal "nothing left today" state (§4.2). */
+function normalizeAgenda(raw: unknown): AgendaData {
+  return { events: eventItems(raw).map(toCalendarEvent) };
+}
+
+// ---------------------------------------------------------------------------------------------------
 // The registry + lookup (mirrors getEndpoint / getOptionSource).
 // ---------------------------------------------------------------------------------------------------
 
@@ -212,6 +330,11 @@ export const OPERATION_REGISTRY: WidgetOperationRegistry = {
   linear: {
     my_issues: { buildBody: buildMyIssuesBody, normalize: normalizeMyIssues },
     current_cycle: { buildBody: buildCurrentCycleBody, normalize: normalizeCurrentCycle },
+  },
+  // Google Calendar: REST operations on the refined seam (buildQuery + normalize, no buildBody, §6.2).
+  google_calendar: {
+    next_event: { buildQuery: buildNextEventQuery, normalize: normalizeNextEvent },
+    agenda: { buildQuery: buildAgendaQuery, normalize: normalizeAgenda },
   },
 };
 
