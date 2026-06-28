@@ -33,7 +33,20 @@ export interface RemoteOptionsSource {
 
 // The AOD-8 base (key/label/kind/required) intersected with the AOD-10 §4.1 per-kind extras.
 export type WidgetConfigField = { key: string; label: string; required: boolean } & (
-  | { kind: 'string'; default?: string; minLength?: number; maxLength?: number; pattern?: string; placeholder?: string }
+  | {
+      kind: 'string';
+      default?: string;
+      minLength?: number;
+      maxLength?: number;
+      pattern?: string;
+      placeholder?: string;
+      // Optional client SAVE-TIME validator beyond the static checks (integration-clock.md §5.2, the
+      // Intl time-zone check). Returns an error message, or null when valid. Run by validateConfig only
+      // under runFieldValidators (the config form's save path), NOT at the host's render-time check, so a
+      // field whose value can degrade gracefully (e.g. a Clock IANA zone) never trips needs_config (§5.4,
+      // §7.3). In-code only: the schema lives in the WidgetDefinition and is never serialized.
+      validate?: (value: string) => string | null;
+    }
   | { kind: 'number'; default?: number; min?: number; max?: number; step?: number }
   | { kind: 'boolean'; default?: boolean }
   | { kind: 'enum'; default?: string; options: Choice[] }

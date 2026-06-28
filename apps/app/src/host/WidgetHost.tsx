@@ -59,6 +59,15 @@ export function WidgetHost({
     service?.authClass === 'platform_key'
       ? { ...(conn?.config ?? {}), ...instance.config }
       : instance.config;
+
+  // AOD-60 / integration-clock.md §6.3: the one-time generic authClass:'none' no-fetch + self-tick path.
+  // A none widget (Clock) has no server half (no backend, no operation), so dataSource.fetch would proxy
+  // to a service the server does not know (getBackend('clock') throws unknown_service). So DON'T fetch for
+  // none: disable the query (below) and synthesize a permanent Fresh snapshot with no proxy data; the leaf
+  // self-ticks from the device clock (§7.2). Generic per AUTH CLASS, not per service: the none analogue of
+  // Weather's platform_key seeding and Claude's 401 detector. Every other class takes the else and fetches.
+  const isLocal = service?.authClass === 'none';
+
   const key = requestKey(instance.serviceId, instance.widgetType, params);
   const interval = def ? effectiveInterval(def, instance, entitlementFloorSeconds) : 'manual';
   const staleAfterSeconds = interval === 'manual' ? Infinity : interval.seconds;
@@ -68,7 +77,7 @@ export function WidgetHost({
     queryKey: [key],
     queryFn: () =>
       dataSource.fetch({ serviceId: instance.serviceId, widgetType: instance.widgetType, params }),
-    enabled: !!def,
+    enabled: !!def && !isLocal, // none: no proxy fetch at all (integration-clock.md §6.3)
     refetchInterval: interval === 'manual' ? false : interval.seconds * 1000,
     retry: (failureCount, error) => error?.kind !== 'needs_reconnect' && failureCount < maxRetries,
     retryDelay: (failureCount, error) => {
@@ -110,7 +119,11 @@ export function WidgetHost({
     query.errorUpdatedAt > query.dataUpdatedAt;
 
   let snapshot: WidgetQuerySnapshot;
-  if (!hasData && !erroredNoData) {
+  if (isLocal) {
+    // none (Clock): no proxy fetch, so synthesize a permanent Fresh snapshot with no proxy data. The leaf
+    // self-derives from the device clock (integration-clock.md §6.3); deriveViewState yields 'fresh'.
+    snapshot = { status: 'success', data: undefined, fetchedAt: now() };
+  } else if (!hasData && !erroredNoData) {
     snapshot = { status: 'pending' };
   } else if (erroredNoData) {
     snapshot = { status: 'error', error: latestError ?? { kind: 'provider_unavailable' } };
