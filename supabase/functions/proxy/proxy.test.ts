@@ -201,32 +201,56 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
     assertEquals(await readSecret(conn.access_secret_id!), "refreshed-access");
   });
 
-  it("platform_key (weather) reads no Vault and attaches the env key + the stored location", async () => {
+  it("platform_key (weather): no Vault, attaches the env key, buildQuery carries the host-seeded location, normalizes", async () => {
     Deno.env.set("WEATHER_PROVIDER_KEY", "test-weather-key");
     const user = await freshUser();
+    // The connection holds the location; the client host seeds it into body.params for platform_key
+    // services (integration-weather.md §6.3), so the proxy's conn.config pass-through merge does NOT run
+    // on the buildQuery branch. The location below is what the seeded params carry.
+    const location = { latitude: -0.18, longitude: -78.47, timezone: "America/Guayaquil", name: "Quito, Ecuador" };
     await makeConnection(user.id, {
       service: "weather",
       auth_class: "platform_key",
       status: "connected",
-      config: { lat: 0.11, lon: 0.22 },
+      config: location,
       access_secret_id: null,
       refresh_secret_id: null,
     });
-    let seenKey: string | null = null;
+    let seenAuth: string | null = null;
     let seenUrl = "";
     mock = mockProvider([
       route("api.open-meteo.com/v1/forecast", (call) => {
-        seenKey = call.headers.get("x-api-key");
+        seenAuth = call.headers.get("authorization");
         seenUrl = call.url;
-        return jsonResponse({ temperature: 20 });
+        // A real /v1/forecast current body (integration-weather.md §12); the proxy normalizes it.
+        return jsonResponse({
+          current_units: { temperature_2m: "°C", wind_speed_10m: "km/h", relative_humidity_2m: "%" },
+          current: {
+            time: "2026-06-27T11:15", is_day: 1, weather_code: 2, temperature_2m: 18.2,
+            apparent_temperature: 17.5, relative_humidity_2m: 60, wind_speed_10m: 7.1, wind_direction_10m: 120,
+          },
+        });
       }),
     ]);
 
-    const res = await handler(await userPost("proxy", user, { service: "weather", widget: "current" }));
+    const res = await handler(
+      await userPost("proxy", user, { service: "weather", widget: "current", params: location }),
+    );
     assertEquals(res.status, 200);
     assertEquals(mock.countMatching("forecast"), 1);
-    assertEquals(seenKey, "test-weather-key");
-    assert(seenUrl.includes("lat=0.11") && seenUrl.includes("lon=0.22"), "location passed as query params");
+    // platform_key: the env key rides as an IGNORED bearer header. Re-verified live 2026-06-28 (AOD-58):
+    // the keyless tier 303-redirects an x-api-key header but ignores Authorization: Bearer, so the registry
+    // uses the bearer style for the vestigial placeholder; no Vault read happens for a platform_key class.
+    assertEquals(seenAuth, "Bearer test-weather-key");
+    // buildQuery composed the seeded location + the static current= selector server-side (§6.1).
+    assert(seenUrl.includes("latitude=-0.18") && seenUrl.includes("longitude=-78.47"), `location in query: ${seenUrl}`);
+    assert(seenUrl.includes("current=temperature_2m"), "server-built current selector");
+    assert(!seenUrl.includes("name="), "the display name is not forwarded to the provider");
+    // ...and normalized to CurrentWeatherData before returning/caching (AOD-8 §6.1), not raw provider JSON.
+    const body = await res.json();
+    assertEquals(body.data.temperature, 18.2);
+    assertEquals(body.data.condition, { code: 2, label: "Partly cloudy", group: "cloudy", isDay: true });
+    assertEquals(body.data.units.temperature, "°C");
   });
 
   it("provider 429 maps to a typed rate_limited result carrying Retry-After", async () => {

@@ -63,10 +63,23 @@ export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
     id: "weather",
     authClass: "platform_key",
     apiBase: "https://api.open-meteo.com",
-    authHeaderStyle: "x-api-key",
+    // The platform key is VESTIGIAL for the keyless Open-Meteo free tier and reserved for the commercial
+    // tier (integration-weather.md §3.2). resolveCallSecret still requireEnv(WEATHER_PROVIDER_KEY), so the
+    // env var is a non-empty placeholder. authHeaderStyle is "bearer", NOT "x-api-key": re-verified live
+    // on 2026-06-28 (AOD-58 build), the keyless /v1/forecast 303-redirects any request carrying an
+    // `x-api-key` header into the commercial flow (which then 400s), but it IGNORES an `Authorization:
+    // Bearer` header (HTTP 200). So the vestigial placeholder rides as a genuinely-ignored bearer header,
+    // which is the spec's stated intent (§3.2) realized against the live API. The real commercial tier uses
+    // an `apikey` QUERY PARAM on customer-api.open-meteo.com (a named future seam, §3.2/§10), not a header.
+    // apiBase / authClass / platformKeyEnv are unchanged from the AOD-13 placeholder.
+    authHeaderStyle: "bearer",
     platformKeyEnv: "WEATHER_PROVIDER_KEY",
     endpoints: {
+      // Both widgets read the same /v1/forecast; they differ only in the operation (operations.ts):
+      // the buildQuery selectors (current=... vs daily=...) and the normalize (integration-weather.md
+      // §4, §6, §8). The location is a query param, so there is no {path token} (§6.2).
       current: { method: "GET", path: "/v1/forecast" },
+      forecast: { method: "GET", path: "/v1/forecast" },
     },
   },
   // App-shell walking-skeleton stub (AOD-47), mirroring the client `stub` service (apps/app). No real

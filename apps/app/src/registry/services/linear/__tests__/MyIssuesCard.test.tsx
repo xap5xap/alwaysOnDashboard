@@ -11,6 +11,13 @@ import { RegistryProvider } from '../../../RegistryProvider';
 import type { WidgetInstance } from '../../../types';
 import type { MyIssuesData } from '../MyIssuesCard';
 
+// The host reads useConnections() for the generic platform_key params-seeding (integration-weather.md
+// §6.3). linear is oauth2, so seeding is a no-op (params = instance.config); stub the hook so the host
+// needs no AuthProvider/supabase here.
+jest.mock('../../../../connections/useConnections', () => ({
+  useConnections: () => ({ connections: new Map(), isLoading: false, isError: false, error: null }),
+}));
+
 const baseInstance: WidgetInstance = {
   instanceId: 'li1',
   serviceId: 'linear',

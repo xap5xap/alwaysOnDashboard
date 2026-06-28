@@ -7,6 +7,8 @@ import { assert, assertEquals } from "@std/assert";
 import {
   type AgendaData,
   type CurrentCycleData,
+  type CurrentWeatherData,
+  type ForecastData,
   getOperation,
   type MyIssuesData,
   type NextEventData,
@@ -28,10 +30,11 @@ function bodyFor(params: Record<string, unknown>) {
 }
 
 describe("operation registry (integration-linear.md §6)", () => {
-  it("returns undefined for a service/widget with no operation (REST/stub keep pass-through)", () => {
-    assertEquals(getOperation("weather", "current"), undefined);
+  it("returns undefined for a service/widget with no operation (the stub keeps pass-through)", () => {
     assertEquals(getOperation("stub", "placeholder"), undefined);
     assertEquals(getOperation("linear", "not_a_widget"), undefined);
+    // Weather now has current/forecast operations (below), but an unknown weather widget is still undefined.
+    assertEquals(getOperation("weather", "not_a_widget"), undefined);
   });
 
   it("resolves the linear my_issues operation", () => {
@@ -290,5 +293,171 @@ describe("google_calendar normalize: events.list -> NextEventData / AgendaData (
     const d = calOp("next_event").normalize(raw) as Extract<NextEventData, { hasEvent: true }>;
     assertEquals(d.event.summary, "");
     assertEquals(d.event.allDay, false);
+  });
+});
+
+// --- Weather (integration-weather.md §4, §6.1): the first platform_key REST operations, no path token --
+
+const weatherOp = (widget: string) => {
+  const op = getOperation("weather", widget);
+  assert(op, `weather ${widget} operation is registered`);
+  return op;
+};
+
+// A real /v1/forecast body (current + daily), verified against the live keyless API on 2026-06-27
+// (integration-weather.md §12). The daily block is the COLUMNAR parallel-array shape normalize zips.
+const FORECAST_BODY = {
+  latitude: -0.17574693,
+  longitude: -78.486755,
+  timezone: "America/Guayaquil",
+  utc_offset_seconds: -18000,
+  current_units: {
+    time: "iso8601", interval: "seconds", temperature_2m: "°C", relative_humidity_2m: "%",
+    apparent_temperature: "°C", is_day: "", weather_code: "wmo code", wind_speed_10m: "km/h",
+    wind_direction_10m: "°",
+  },
+  current: {
+    time: "2026-06-27T21:45", interval: 900, temperature_2m: 10.3, relative_humidity_2m: 83,
+    apparent_temperature: 9.0, is_day: 0, weather_code: 3, wind_speed_10m: 4.4, wind_direction_10m: 210,
+  },
+  daily_units: {
+    time: "iso8601", weather_code: "wmo code", temperature_2m_max: "°C", temperature_2m_min: "°C",
+    precipitation_probability_max: "%", sunrise: "iso8601", sunset: "iso8601",
+  },
+  daily: {
+    time: ["2026-06-27", "2026-06-28", "2026-06-29"],
+    weather_code: [51, 3, 80], // drizzle, cloudy (overcast), showers
+    temperature_2m_max: [17.4, 17.6, 18.3],
+    temperature_2m_min: [9.1, 9.7, 9.7],
+    precipitation_probability_max: [16, 2, 4],
+    sunrise: ["2026-06-27T06:13", "2026-06-28T06:13", "2026-06-29T06:14"],
+    sunset: ["2026-06-27T18:20", "2026-06-28T18:20", "2026-06-29T18:20"],
+  },
+};
+
+const QUITO = { latitude: -0.1807, longitude: -78.4678, timezone: "America/Guayaquil", name: "Quito, Ecuador" };
+
+describe("weather buildQuery: location (from params) + static selectors, no path token (§6.1)", () => {
+  it("current: carries the seeded location + the static current= selector, never the daily block", () => {
+    const q = weatherOp("current").buildQuery!(QUITO);
+    assertEquals(q.latitude, -0.1807);
+    assertEquals(q.longitude, -78.4678);
+    assertEquals(q.timezone, "America/Guayaquil");
+    assert(typeof q.current === "string" && q.current.includes("temperature_2m"), "static current selector");
+    assert((q.current as string).includes("weather_code"), "weather_code is requested");
+    assertEquals(q.daily, undefined);
+    assertEquals(q.forecast_days, undefined);
+  });
+
+  it("forecast: carries the location + the static daily= selector + a fixed 7-day horizon, no current", () => {
+    const q = weatherOp("forecast").buildQuery!(QUITO);
+    assertEquals(q.latitude, -0.1807);
+    assert(typeof q.daily === "string" && q.daily.includes("temperature_2m_max"), "static daily selector");
+    assert((q.daily as string).includes("precipitation_probability_max"), "precip is requested");
+    assertEquals(q.forecast_days, 7);
+    assertEquals(q.current, undefined);
+  });
+
+  it("defaults timezone to 'auto' when the connection omitted it, and never forwards the display name", () => {
+    const q = weatherOp("current").buildQuery!({ latitude: 1, longitude: 2 });
+    assertEquals(q.timezone, "auto");
+    assertEquals(q.name, undefined); // `name` is display-only; it is not a provider query param (§6.1)
+  });
+
+  it("the selector is static; only the location varies with params (so the location keys the cache, §6.3)", () => {
+    const a = weatherOp("current").buildQuery!({ latitude: 1, longitude: 2, timezone: "auto" });
+    const b = weatherOp("current").buildQuery!({ latitude: 9, longitude: 8, timezone: "auto" });
+    assertEquals(a.current, b.current); // identical static selector regardless of location
+    assert(a.latitude !== b.latitude, "the location is what differs between the two queries");
+  });
+});
+
+describe("weather normalize current: current{}+current_units{} -> CurrentWeatherData (§4.1, §12)", () => {
+  it("maps the scalars, the WMO condition, is_day, and echoes the unit strings", () => {
+    const d = weatherOp("current").normalize(FORECAST_BODY) as CurrentWeatherData;
+    assertEquals(d.observedAt, "2026-06-27T21:45");
+    assertEquals(d.temperature, 10.3);
+    assertEquals(d.apparentTemperature, 9.0);
+    assertEquals(d.humidityPct, 83);
+    assertEquals(d.windSpeed, 4.4);
+    assertEquals(d.windDirectionDeg, 210);
+    assertEquals(d.condition, { code: 3, label: "Overcast", group: "cloudy", isDay: false }); // is_day 0
+    assertEquals(d.units, { temperature: "°C", windSpeed: "km/h", humidity: "%" });
+  });
+
+  it("maps is_day 1 to isDay true (the daytime icon)", () => {
+    const raw = { current: { time: "2026-06-27T12:00", is_day: 1, weather_code: 0, temperature_2m: 21 } };
+    const d = weatherOp("current").normalize(raw) as CurrentWeatherData;
+    assertEquals(d.condition, { code: 0, label: "Clear sky", group: "clear", isDay: true });
+  });
+
+  it("is defensive: a missing current block defaults rather than throwing (no empty state, §4.1)", () => {
+    const d = weatherOp("current").normalize({}) as CurrentWeatherData;
+    assertEquals(d.temperature, 0);
+    assertEquals(d.observedAt, "");
+    assertEquals(d.condition.group, "cloudy"); // unknown code -> neutral bucket
+    assertEquals(d.condition.code, -1);
+    assertEquals(d.units, { temperature: "°C", windSpeed: "km/h", humidity: "%" }); // metric v1 defaults
+  });
+});
+
+describe("weather normalize forecast: columnar daily[] -> ForecastDay[] (the zip is the value-add, §4.2)", () => {
+  it("zips the parallel arrays into index-aligned rows, today first, all using the day icon", () => {
+    const d = weatherOp("forecast").normalize(FORECAST_BODY) as ForecastData;
+    assertEquals(d.days.length, 3);
+    assertEquals(d.days[0], {
+      date: "2026-06-27",
+      condition: { code: 51, label: "Light drizzle", group: "drizzle", isDay: true },
+      tempMax: 17.4,
+      tempMin: 9.1,
+      precipProbabilityPct: 16,
+      sunrise: "2026-06-27T06:13",
+      sunset: "2026-06-27T18:20",
+    });
+    assertEquals(d.days[1].condition.group, "cloudy"); // code 3
+    assertEquals(d.days[2].condition.group, "showers"); // code 80
+    assert(d.days.every((day) => day.condition.isDay === true), "forecast days use the daytime icon");
+    assertEquals(d.units, { temperature: "°C" });
+  });
+
+  it("maps representative WMO codes to the right groups (§4.0/§12)", () => {
+    const groupFor = (code: number) =>
+      (weatherOp("forecast").normalize({ daily: { time: ["2026-06-27"], weather_code: [code] } }) as ForecastData)
+        .days[0].condition.group;
+    assertEquals(groupFor(0), "clear");
+    assertEquals(groupFor(2), "cloudy");
+    assertEquals(groupFor(48), "fog");
+    assertEquals(groupFor(53), "drizzle");
+    assertEquals(groupFor(65), "rain");
+    assertEquals(groupFor(75), "snow");
+    assertEquals(groupFor(81), "showers");
+    assertEquals(groupFor(86), "snow"); // snow showers bucket to snow (§12)
+    assertEquals(groupFor(99), "thunderstorm");
+  });
+
+  it("is defensive: a missing daily block yields days: [] (the host shows an empty card, never a crash)", () => {
+    assertEquals(weatherOp("forecast").normalize({}), { days: [], units: { temperature: "°C" } });
+    assertEquals(weatherOp("forecast").normalize({ daily: { time: "not-an-array" } }), {
+      days: [],
+      units: { temperature: "°C" },
+    });
+  });
+
+  it("is defensive over a ragged response: a short/absent column degrades only its own cell", () => {
+    // time has 2 days; weather_code has 1; precipitation is absent entirely. Anchored on time, the
+    // second row still renders with a neutral condition and a null precip, never a throw (§4.2).
+    const d = weatherOp("forecast").normalize({
+      daily: {
+        time: ["2026-06-27", "2026-06-28"],
+        weather_code: [3],
+        temperature_2m_max: [17.4, 17.6],
+      },
+    }) as ForecastData;
+    assertEquals(d.days.length, 2);
+    assertEquals(d.days[0].condition.group, "cloudy");
+    assertEquals(d.days[1].condition, { code: -1, label: "Unknown", group: "cloudy", isDay: true });
+    assertEquals(d.days[1].precipProbabilityPct, null);
+    assertEquals(d.days[1].tempMin, 0); // absent column cell -> numeric default
+    assertEquals(d.days[1].sunrise, "");
   });
 });
