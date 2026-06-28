@@ -1,0 +1,85 @@
+<svg width="100%" viewBox="0 0 820 432" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Spend MTD lifecycle: the admin_key case adds a reauth / Disconnected edge (reuses widget-model section 9)</title>
+  <desc>The Claude usage Spend MTD widget is added while Claude usage is connected. It is zero-config (org-wide totals), so there is no config form and no NeedsConfig edge. After adding, the instance enters Loading and goes to Fresh on a proxy 200 carrying SpendMtdData. Fresh refreshes on a tick from cache or provider; it becomes Stale when a refresh is overdue, and Error on a provider failure (a 429 maps to rate_limited with backoff, any other non-2xx is upstream_unavailable). Stale returns to Fresh on a later successful tick, and Error recovers to Fresh. Unlike Weather and other platform_key services, admin_key carries a per-user credential that can be revoked: a 401 on the data call maps to reauth_required, which the proxy serves as 409 needs_reconnect, moving the widget to Disconnected; the user re-pastes the Admin key to reconnect, returning to Loading. This 401 to reauth_required mapping is the new generic credential-death detector named in section 3.3.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .cap{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .ts{font-size:11px;fill:#5b5b5b;}
+    .st{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .edge{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .note{font-size:10.5px;fill:#6a6a6a;}
+    .notebox{fill:#fafafa;stroke:#dadada;stroke-width:0.8;stroke-dasharray:4 4;}
+    .bg-blue{fill:#dce8fb;stroke:#6e97d6;stroke-width:1;}
+    .bg-green{fill:#dcf3e3;stroke:#5aa97a;stroke-width:1.2;}
+    .bg-amber{fill:#fbecc9;stroke:#cda12f;stroke-width:1;}
+    .bg-gray{fill:#ededed;stroke:#b4b4b4;stroke-width:1;}
+    .bg-rose{fill:#f7dde0;stroke:#c2787f;stroke-width:1.1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="819" height="431" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="36" y="30" class="cap">Spend MTD: the admin_key lifecycle adds a reauth / Disconnected edge (reuses widget-model §9)</text>
+
+  <!-- start dot -->
+  <circle cx="185" cy="56" r="6" fill="#1a1a1a"/>
+  <path d="M185 62 V74" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- states -->
+  <rect x="110" y="74" width="150" height="44" rx="8" class="bg-gray"/>
+  <text x="185" y="101" text-anchor="middle" class="st">Loading</text>
+
+  <rect x="110" y="170" width="150" height="44" rx="8" class="bg-green"/>
+  <text x="185" y="197" text-anchor="middle" class="st">Fresh</text>
+
+  <rect x="360" y="170" width="150" height="44" rx="8" class="bg-blue"/>
+  <text x="435" y="197" text-anchor="middle" class="st">Stale</text>
+
+  <rect x="110" y="270" width="150" height="44" rx="8" class="bg-amber"/>
+  <text x="185" y="297" text-anchor="middle" class="st">Error</text>
+
+  <rect x="360" y="270" width="150" height="44" rx="8" class="bg-rose"/>
+  <text x="435" y="297" text-anchor="middle" class="st">Disconnected</text>
+
+  <!-- Loading -> Fresh -->
+  <path d="M185 118 V170" class="edge" marker-end="url(#arrow)"/>
+  <text x="193" y="148" class="ts">proxy 200, SpendMtdData</text>
+
+  <!-- Fresh self tick -->
+  <path d="M110 182 C73 182 73 202 110 202" class="edge" marker-end="url(#arrow)"/>
+  <text x="34" y="186" class="ts">TTL tick</text>
+
+  <!-- Fresh <-> Stale -->
+  <path d="M260 182 H360" class="edge" marker-end="url(#arrow)"/>
+  <text x="272" y="176" class="ts">overdue</text>
+  <path d="M360 202 H260" class="edge" marker-end="url(#arrow)"/>
+  <text x="268" y="214" class="ts">tick succeeds</text>
+
+  <!-- Fresh <-> Error -->
+  <path d="M172 214 V270" class="edge" marker-end="url(#arrow)"/>
+  <text x="58" y="246" class="ts">429 / 5xx</text>
+  <path d="M198 270 V214" class="edge" marker-end="url(#arrow)"/>
+  <text x="204" y="246" class="ts">recovery</text>
+
+  <!-- Fresh -> Disconnected (401) -->
+  <path d="M260 190 H310 V288 H360" class="edge" marker-end="url(#arrow)"/>
+  <text x="296" y="250" class="ts">401 → reauth (409)</text>
+
+  <!-- Disconnected -> Loading (reconnect) -->
+  <path d="M510 282 H560 V96 H260" class="edge" marker-end="url(#arrow)"/>
+  <text x="300" y="90" class="ts">re-paste key (reconnect)</text>
+
+  <!-- notes -->
+  <rect x="40" y="338" width="360" height="72" rx="8" class="notebox"/>
+  <text x="54" y="359" class="note">Zero-config: org-wide totals, no config form,</text>
+  <text x="54" y="376" class="note">so no NeedsConfig edge (no remote-options</text>
+  <text x="54" y="393" class="note">field). Same as Weather.</text>
+
+  <rect x="420" y="338" width="360" height="72" rx="8" class="notebox"/>
+  <text x="434" y="359" class="note">admin_key has a per-user credential that CAN be</text>
+  <text x="434" y="376" class="note">revoked: a 401 on the data call maps to reauth_required</text>
+  <text x="434" y="393" class="note">(§3.3). Unlike Weather, there IS a reauth edge.</text>
+</svg>
