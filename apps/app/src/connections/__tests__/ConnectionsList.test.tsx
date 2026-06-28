@@ -19,9 +19,16 @@ jest.mock('../connectionsApi', () => ({
   disconnectConnection: jest.fn(),
   openExternalUrl: jest.fn(),
 }));
+// The location form geocodes the typed city via Open-Meteo (keyless); fake just the network call and
+// keep toWeatherLocation/geocodeLabel real so the picked result maps to the stored coordinate shape.
+jest.mock('../geocoding', () => ({
+  ...jest.requireActual('../geocoding'),
+  searchLocations: jest.fn(),
+}));
 
 import { fetchConnections } from '../connectionsRepo';
 import { startOAuth, storeCredentials, disconnectConnection, openExternalUrl } from '../connectionsApi';
+import { searchLocations } from '../geocoding';
 
 const svc = (id: string, authClass: AuthClass): ServiceDefinition => ({
   id,
@@ -69,6 +76,9 @@ beforeEach(() => {
   (startOAuth as jest.Mock).mockResolvedValue({ authorizeUrl: 'https://provider.example/authorize?x=1' });
   (storeCredentials as jest.Mock).mockResolvedValue({ ok: true });
   (disconnectConnection as jest.Mock).mockResolvedValue({ ok: true });
+  (searchLocations as jest.Mock).mockResolvedValue([
+    { id: 1, name: 'Quito', latitude: -0.1807, longitude: -78.4678, timezone: 'America/Guayaquil', country: 'Ecuador', admin1: 'Pichincha' },
+  ]);
 });
 
 describe('ConnectionsList renders one row per service with the authClass-driven affordance', () => {
@@ -92,17 +102,30 @@ describe('ConnectionsList renders one row per service with the authClass-driven 
 });
 
 describe('tapping an affordance drives the matching Edge Function', () => {
-  it('location connect: opens the generic form and submits { location: { city } } to credentials-store', async () => {
+  it('location connect: geocodes the typed city and submits the picked { location } coordinates', async () => {
     renderList();
     await screen.findByText('Disconnect');
 
     fireEvent.press(screen.getByTestId('connection-action-stub'));
     fireEvent.changeText(screen.getByPlaceholderText('City, e.g. Quito'), 'Quito');
-    fireEvent.press(screen.getByTestId('credential-form-submit'));
+    fireEvent.press(screen.getByTestId('location-search-submit'));
+
+    // The geocoding result list appears; picking the first result stores its coordinate shape (§5.2).
+    await screen.findByTestId('location-result-0');
+    fireEvent.press(screen.getByTestId('location-result-0'));
 
     await waitFor(() =>
-      expect(storeCredentials).toHaveBeenCalledWith({ service: 'stub', location: { city: 'Quito' } }),
+      expect(storeCredentials).toHaveBeenCalledWith({
+        service: 'stub',
+        location: {
+          latitude: -0.1807,
+          longitude: -78.4678,
+          timezone: 'America/Guayaquil',
+          name: 'Quito, Pichincha, Ecuador',
+        },
+      }),
     );
+    expect(searchLocations).toHaveBeenCalledWith('Quito');
   });
 
   it('oauth connect: invokes oauth-start then opens the returned authorize URL', async () => {

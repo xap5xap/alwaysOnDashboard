@@ -7,13 +7,15 @@ import type { ServiceDefinition, ServiceId, WidgetDefinition, WidgetTypeId } fro
 import { stubService } from './services/stub';
 import { linearService } from './services/linear';
 import { googleCalendarService } from './services/google_calendar';
+import { weatherService } from './services/weather';
 
 export const SERVICE_REGISTRY: ServiceDefinition[] = [
   stubService,
   linearService, // PS-M3 first real service (AOD-55); My Issues + Current Cycle (integration-linear.md §8).
   googleCalendarService, // I-M1 second real service (AOD-56), first REST one; Next Event + Today's Agenda (integration-calendar.md §8).
-  // The remaining v1 services (Claude usage, Weather, Clock) register here the same way, each as an
-  // entry + its widgets + leaf renderers, with zero edits to the engine below.
+  weatherService, // I-M1 third real service (AOD-58), first platform_key one; Current + Forecast (integration-weather.md §8).
+  // The remaining v1 services (Claude usage, Clock) register here the same way, each as an entry + its
+  // widgets + leaf renderers, with zero edits to the engine below.
 ];
 
 export function getService(id: ServiceId): ServiceDefinition | undefined {

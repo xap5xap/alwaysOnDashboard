@@ -8,6 +8,7 @@ import { Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { WidgetConfigSchema, WidgetInstance } from '../registry/types';
+import { useConnections } from '../connections/useConnections';
 import { validateConfig } from '../widgets/config';
 import { useOptionSources } from '../widgets/useOptionSources';
 import {
@@ -44,9 +45,20 @@ export function WidgetHost({
 }: WidgetHostProps) {
   const registry = useRegistry();
   const dataSource = useWidgetDataSource();
+  const { connections } = useConnections();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
+  const service = registry.getService(instance.serviceId);
 
-  const params = instance.config;
+  // AOD-58 / integration-weather.md §6.3: the one-time generic platform_key host params-seeding. A
+  // platform_key widget (Weather) is zero-config and its single input (the location) lives on the
+  // CONNECTION, so seed params from connection.config. Generic per AUTH CLASS, not per service:
+  // oauth2 / api_key / admin_key widgets pass instance.config through byte-for-byte unchanged. This
+  // delivers the location into the server buildQuery and keeps the cache key the stable location.
+  const conn = connections.get(instance.serviceId);
+  const params =
+    service?.authClass === 'platform_key'
+      ? { ...(conn?.config ?? {}), ...instance.config }
+      : instance.config;
   const key = requestKey(instance.serviceId, instance.widgetType, params);
   const interval = def ? effectiveInterval(def, instance, entitlementFloorSeconds) : 'manual';
   const staleAfterSeconds = interval === 'manual' ? Infinity : interval.seconds;
@@ -109,7 +121,7 @@ export function WidgetHost({
   }
 
   const state = deriveViewState({ needsConfig, query: snapshot, staleAfterSeconds, now: now() });
-  const serviceName = registry.getService(instance.serviceId)?.displayName ?? instance.serviceId;
+  const serviceName = service?.displayName ?? instance.serviceId;
 
   return (
     <WidgetHostView

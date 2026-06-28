@@ -323,6 +323,230 @@ function normalizeAgenda(raw: unknown): AgendaData {
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Weather: Current + Forecast (integration-weather.md §4, §6.1). The first platform_key REST operations
+// and the first with NO path token: the location is a query param the host seeds into params from the
+// connection config (§6.3), so buildQuery composes it with the per-widget static selectors. normalize
+// maps the WMO weather_code to a shared WeatherCondition and zips the columnar daily[] arrays into rows.
+// Verified against the live keyless Open-Meteo API on 2026-06-27 (integration-weather.md §12).
+// ---------------------------------------------------------------------------------------------------
+
+/** The coarse condition bucket the renderer (AOD-35) maps to an icon, never the ~28 raw WMO codes. */
+export type WeatherGroup =
+  | "clear"
+  | "cloudy"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "snow"
+  | "showers"
+  | "thunderstorm";
+
+/** A WMO weather_code resolved to a renderable condition (integration-weather.md §4.0). */
+export interface WeatherCondition {
+  code: number; // the raw WMO weather_code, preserved for completeness
+  label: string; // human string from the verified WMO map (§12), e.g. "Partly cloudy"
+  group: WeatherGroup; // the coarse bucket the renderer maps to an icon
+  isDay: boolean; // current: from is_day (1/0); forecast days: true (daytime icon)
+}
+
+/** Echoed provider unit strings so the renderer labels values without hard-coding a unit (§4.0). */
+export interface WeatherUnits {
+  temperature: string; // "°C"
+  windSpeed?: string; // "km/h" (Current only)
+  humidity?: string; // "%"   (Current only)
+}
+
+/** Normalized Current Weather payload the renderer receives (integration-weather.md §4.1). */
+export interface CurrentWeatherData {
+  observedAt: string; // current.time (local ISO); the connection tz gives the offset
+  condition: WeatherCondition;
+  temperature: number;
+  apparentTemperature: number;
+  humidityPct: number;
+  windSpeed: number;
+  windDirectionDeg: number; // 0-360
+  units: WeatherUnits;
+}
+
+/** One normalized forecast day (integration-weather.md §4.2), zipped from the columnar daily arrays. */
+export interface ForecastDay {
+  date: string; // daily.time[i] ("YYYY-MM-DD")
+  condition: WeatherCondition; // from daily.weather_code[i]; isDay true (day icon)
+  tempMax: number;
+  tempMin: number;
+  precipProbabilityPct: number | null; // daily.precipitation_probability_max[i] (null if absent)
+  sunrise: string; // local ISO
+  sunset: string; // local ISO
+}
+
+export interface ForecastData {
+  days: ForecastDay[]; // forecast_days entries, today first, index-aligned from the columnar arrays
+  units: WeatherUnits; // echoed from daily_units (temperature)
+}
+
+// The per-widget static selectors: which Open-Meteo blocks each widget requests. Held server-side so the
+// client never carries Open-Meteo's field vocabulary (the operation seam's purpose, §6.4).
+const CURRENT_FIELDS =
+  "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,wind_direction_10m";
+const DAILY_FIELDS =
+  "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset";
+const FORECAST_DAYS = 7;
+
+// The verified WMO weather_code interpretation (integration-weather.md §4.0 / §12): code -> human label
+// + the coarse group the renderer maps to an icon. The group buckets follow the spec exactly (1/2/3 are
+// `cloudy`). An unknown code degrades to a neutral `cloudy` bucket, never a throw.
+const WMO_BY_CODE: Record<number, { label: string; group: WeatherGroup }> = {
+  0: { label: "Clear sky", group: "clear" },
+  1: { label: "Mainly clear", group: "cloudy" },
+  2: { label: "Partly cloudy", group: "cloudy" },
+  3: { label: "Overcast", group: "cloudy" },
+  45: { label: "Fog", group: "fog" },
+  48: { label: "Depositing rime fog", group: "fog" },
+  51: { label: "Light drizzle", group: "drizzle" },
+  53: { label: "Moderate drizzle", group: "drizzle" },
+  55: { label: "Dense drizzle", group: "drizzle" },
+  56: { label: "Light freezing drizzle", group: "drizzle" },
+  57: { label: "Dense freezing drizzle", group: "drizzle" },
+  61: { label: "Slight rain", group: "rain" },
+  63: { label: "Moderate rain", group: "rain" },
+  65: { label: "Heavy rain", group: "rain" },
+  66: { label: "Light freezing rain", group: "rain" },
+  67: { label: "Heavy freezing rain", group: "rain" },
+  71: { label: "Slight snowfall", group: "snow" },
+  73: { label: "Moderate snowfall", group: "snow" },
+  75: { label: "Heavy snowfall", group: "snow" },
+  77: { label: "Snow grains", group: "snow" },
+  80: { label: "Slight rain showers", group: "showers" },
+  81: { label: "Moderate rain showers", group: "showers" },
+  82: { label: "Violent rain showers", group: "showers" },
+  85: { label: "Slight snow showers", group: "snow" },
+  86: { label: "Heavy snow showers", group: "snow" },
+  95: { label: "Thunderstorm", group: "thunderstorm" },
+  96: { label: "Thunderstorm with slight hail", group: "thunderstorm" },
+  99: { label: "Thunderstorm with heavy hail", group: "thunderstorm" },
+};
+
+/** A finite number from an unknown, else the fallback (defensive against a partial provider body). */
+function wNum(v: unknown, fallback = 0): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+}
+
+/** A finite number or null (for an optional field like precipitation probability, §4.2). */
+function wNumOrNull(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+/** A string from an unknown, else "" (defensive against a missing ISO field). */
+function wStr(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+/** Map a raw weather_code + day flag to a WeatherCondition; an unknown code degrades, never throws. */
+function toCondition(code: unknown, isDay: boolean): WeatherCondition {
+  const c = typeof code === "number" && Number.isFinite(code) ? code : -1;
+  const entry = WMO_BY_CODE[c] ?? { label: "Unknown", group: "cloudy" as WeatherGroup };
+  return { code: c, label: entry.label, group: entry.group, isDay };
+}
+
+/**
+ * The connection location, delivered into params by the platform_key host seeding (§6.3): latitude /
+ * longitude (required) + timezone (IANA name or "auto"). The display-only `name` is NOT forwarded to the
+ * provider. The per-widget selectors are added below; they never enter params or the cache key (§6.3).
+ */
+function locationQuery(params: Record<string, unknown>): Record<string, unknown> {
+  return {
+    latitude: params.latitude,
+    longitude: params.longitude,
+    timezone: params.timezone ?? "auto",
+  };
+}
+
+/** Current Weather query (§4.1): the location + the static `current=` selector. */
+function buildCurrentQuery(params: Record<string, unknown>): Record<string, unknown> {
+  return { ...locationQuery(params), current: CURRENT_FIELDS };
+}
+
+/** Forecast query (§4.2): the location + the static `daily=` selector + a fixed 7-day horizon. */
+function buildForecastQuery(params: Record<string, unknown>): Record<string, unknown> {
+  return { ...locationQuery(params), daily: DAILY_FIELDS, forecast_days: FORECAST_DAYS };
+}
+
+/** The raw current{} block Open-Meteo returns (integration-weather.md §12). */
+interface RawCurrent {
+  time?: unknown;
+  is_day?: unknown;
+  weather_code?: unknown;
+  temperature_2m?: unknown;
+  apparent_temperature?: unknown;
+  relative_humidity_2m?: unknown;
+  wind_speed_10m?: unknown;
+  wind_direction_10m?: unknown;
+}
+
+/**
+ * current{} + current_units{} -> CurrentWeatherData (§4.1). A connected location always has current
+ * conditions, so there is no empty state; a missing field defaults (never throws). Units echo the
+ * provider's strings, defaulting to the metric v1 units when absent.
+ */
+function normalizeCurrent(raw: unknown): CurrentWeatherData {
+  const body = (raw ?? {}) as { current?: RawCurrent | null; current_units?: Record<string, unknown> | null };
+  const c = body.current ?? {};
+  const u = body.current_units ?? {};
+  return {
+    observedAt: wStr(c.time),
+    condition: toCondition(c.weather_code, wNum(c.is_day) === 1),
+    temperature: wNum(c.temperature_2m),
+    apparentTemperature: wNum(c.apparent_temperature),
+    humidityPct: wNum(c.relative_humidity_2m),
+    windSpeed: wNum(c.wind_speed_10m),
+    windDirectionDeg: wNum(c.wind_direction_10m),
+    units: {
+      temperature: typeof u.temperature_2m === "string" ? u.temperature_2m : "°C",
+      windSpeed: typeof u.wind_speed_10m === "string" ? u.wind_speed_10m : "km/h",
+      humidity: typeof u.relative_humidity_2m === "string" ? u.relative_humidity_2m : "%",
+    },
+  };
+}
+
+/** A columnar daily array by key, or [] if absent. The zip below is index-aligned on daily.time (§4.2). */
+function dailyColumn(daily: Record<string, unknown> | null | undefined, key: string): unknown[] {
+  const col = daily?.[key];
+  return Array.isArray(col) ? col : [];
+}
+
+/**
+ * daily{} columns -> ForecastData (§4.2): the columnar parallel arrays are zipped into ForecastDay rows.
+ * Anchored on daily.time (the row count), so a missing daily.time yields days: []; a short or ragged
+ * column degrades only its own cell (the host shows an empty/partial card, never a crash), the way
+ * Calendar's and Linear's normalizers guard their inputs.
+ */
+function normalizeForecast(raw: unknown): ForecastData {
+  const body = (raw ?? {}) as { daily?: Record<string, unknown> | null; daily_units?: Record<string, unknown> | null };
+  const daily = body.daily ?? {};
+  const u = body.daily_units ?? {};
+  const times = dailyColumn(daily, "time");
+  const codes = dailyColumn(daily, "weather_code");
+  const maxes = dailyColumn(daily, "temperature_2m_max");
+  const mins = dailyColumn(daily, "temperature_2m_min");
+  const precips = dailyColumn(daily, "precipitation_probability_max");
+  const sunrises = dailyColumn(daily, "sunrise");
+  const sunsets = dailyColumn(daily, "sunset");
+  const days: ForecastDay[] = times.map((t, i) => ({
+    date: wStr(t),
+    condition: toCondition(codes[i], true), // forecast days use the daytime icon (§4.0)
+    tempMax: wNum(maxes[i]),
+    tempMin: wNum(mins[i]),
+    precipProbabilityPct: wNumOrNull(precips[i]),
+    sunrise: wStr(sunrises[i]),
+    sunset: wStr(sunsets[i]),
+  }));
+  return {
+    days,
+    units: { temperature: typeof u.temperature_2m_max === "string" ? u.temperature_2m_max : "°C" },
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------
 // The registry + lookup (mirrors getEndpoint / getOptionSource).
 // ---------------------------------------------------------------------------------------------------
 
@@ -335,6 +559,13 @@ export const OPERATION_REGISTRY: WidgetOperationRegistry = {
   google_calendar: {
     next_event: { buildQuery: buildNextEventQuery, normalize: normalizeNextEvent },
     agenda: { buildQuery: buildAgendaQuery, normalize: normalizeAgenda },
+  },
+  // Weather: REST operations on the same seam, with ZERO seam edits (integration-weather.md §6, §8).
+  // No buildBody (a GET), no path token (the location is a query param the host seeds from the
+  // connection config, §6.3); buildQuery composes that location with the per-widget static selectors.
+  weather: {
+    current: { buildQuery: buildCurrentQuery, normalize: normalizeCurrent },
+    forecast: { buildQuery: buildForecastQuery, normalize: normalizeForecast },
   },
 };
 

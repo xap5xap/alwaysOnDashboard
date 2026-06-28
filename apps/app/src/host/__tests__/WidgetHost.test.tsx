@@ -11,6 +11,13 @@ import { WidgetDataSourceProvider, type WidgetDataSource } from '../WidgetDataSo
 import { RegistryProvider } from '../../registry/RegistryProvider';
 import type { WidgetInstance } from '../../registry/types';
 
+// The host reads useConnections() for the generic platform_key params-seeding (integration-weather.md
+// §6.3). Stub it to an empty map so the host has no AuthProvider/supabase dependency here; the stub
+// service is platform_key, so with no connection its seeded params stay {} (unchanged from before).
+jest.mock('../../connections/useConnections', () => ({
+  useConnections: () => ({ connections: new Map(), isLoading: false, isError: false, error: null }),
+}));
+
 const instance: WidgetInstance = {
   instanceId: 'i1',
   serviceId: 'stub',

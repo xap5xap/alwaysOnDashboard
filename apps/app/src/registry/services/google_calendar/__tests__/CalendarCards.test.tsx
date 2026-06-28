@@ -12,6 +12,13 @@ import { RegistryProvider } from '../../../RegistryProvider';
 import type { WidgetInstance } from '../../../types';
 import type { AgendaData, CalendarEvent, NextEventData } from '../types';
 
+// The host reads useConnections() for the generic platform_key params-seeding (integration-weather.md
+// §6.3). google_calendar is oauth2, so seeding is a no-op (params = instance.config); stub the hook so
+// the host needs no AuthProvider/supabase here.
+jest.mock('../../../../connections/useConnections', () => ({
+  useConnections: () => ({ connections: new Map(), isLoading: false, isError: false, error: null }),
+}));
+
 // The calendarId picker resolves through the same seam; me@example.com is a member so config validates.
 const calendarChoices = [{ value: 'me@example.com', label: 'Personal' }];
 

@@ -1,11 +1,16 @@
-// The generic non-OAuth connect form (AOD-8 §10: render from the class, never the service). One
-// component serves both non-OAuth mechanisms: `key` (api_key/admin_key -> a secret field, sent as
-// { apiKey }) and `location` (platform_key -> a plain field, sent as { location: { city } } per
-// AOD-9 §5.1). It is NOT per-service: any future api_key or platform_key integration reuses it as-is.
+// The generic non-OAuth connect form (AOD-8 §10: render from the class, never the service). It serves
+// both non-OAuth mechanisms by dispatching on the mechanism, NOT the service, so any future api_key or
+// platform_key integration reuses it as-is:
+//   - `key` (api_key/admin_key): a secret field, submitted as { apiKey } (AOD-9 §7.2). Unchanged.
+//   - `location` (platform_key, e.g. Weather): a keyless city geocoding search; picking a result submits
+//     the coordinate { location } the /v1/forecast API consumes (integration-weather.md §5.2/§5.3). This
+//     replaces the prior free-text { city } placeholder, because the forecast API cannot consume a bare
+//     city. A richer onboarding picker is AOD-26; this is the minimal capture the build owns (§10).
 import React, { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ConnectMechanism } from './affordance';
+import { geocodeLabel, type GeocodeResult, searchLocations, toWeatherLocation } from './geocoding';
 
 export interface CredentialFormProps {
   mechanism: Extract<ConnectMechanism, 'key' | 'location'>;
@@ -15,36 +20,34 @@ export interface CredentialFormProps {
   onCancel(): void;
 }
 
-const COPY: Record<CredentialFormProps['mechanism'], { label: string; placeholder: string; secure: boolean }> = {
-  key: { label: 'API key', placeholder: 'Paste your key', secure: true },
-  location: { label: 'Location', placeholder: 'City, e.g. Quito', secure: false },
-};
+export function CredentialForm(props: CredentialFormProps) {
+  return props.mechanism === 'location' ? <LocationForm {...props} /> : <KeyForm {...props} />;
+}
 
-export function CredentialForm({ mechanism, pending, error, onSubmit, onCancel }: CredentialFormProps) {
+/** api_key / admin_key: a single secret field, submitted as { apiKey } (AOD-9 §7.2). */
+function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
   const [value, setValue] = useState('');
-  const copy = COPY[mechanism];
   const trimmed = value.trim();
   const canSubmit = trimmed.length > 0 && !pending;
 
   const submit = () => {
-    if (!canSubmit) return;
-    onSubmit(mechanism === 'key' ? { apiKey: trimmed } : { location: { city: trimmed } });
+    if (canSubmit) onSubmit({ apiKey: trimmed });
   };
 
   return (
     <View style={styles.form} testID="credential-form">
-      <Text style={styles.label}>{copy.label}</Text>
+      <Text style={styles.label}>API key</Text>
       <TextInput
         style={styles.input}
         value={value}
         onChangeText={setValue}
-        placeholder={copy.placeholder}
+        placeholder="Paste your key"
         placeholderTextColor="#6B7280"
-        secureTextEntry={copy.secure}
+        secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
         editable={!pending}
-        accessibilityLabel={copy.label}
+        accessibilityLabel="API key"
         onSubmitEditing={submit}
       />
       {error && (
@@ -56,16 +59,115 @@ export function CredentialForm({ mechanism, pending, error, onSubmit, onCancel }
         <Pressable onPress={onCancel} accessibilityRole="button" disabled={pending}>
           <Text style={styles.cancel}>Cancel</Text>
         </Pressable>
-        <Pressable
-          onPress={submit}
-          accessibilityRole="button"
-          disabled={!canSubmit}
-          testID="credential-form-submit"
-        >
-          <Text style={[styles.submit, !canSubmit && styles.submitDisabled]}>
-            {pending ? 'Saving...' : 'Save'}
-          </Text>
+        <Pressable onPress={submit} accessibilityRole="button" disabled={!canSubmit} testID="credential-form-submit">
+          <Text style={[styles.submit, !canSubmit && styles.submitDisabled]}>{pending ? 'Saving...' : 'Save'}</Text>
         </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * platform_key (Weather): type a city, search Open-Meteo's keyless geocoding API, then pick a result.
+ * Picking submits { location: { latitude, longitude, timezone, name } } (integration-weather.md §5.2),
+ * the coordinate shape the forecast API consumes. `pending` is the connect mutation (credentials-store);
+ * `searching` is the geocoding lookup, kept separate so a failed search never blocks Cancel.
+ */
+function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<GeocodeResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const trimmed = query.trim();
+  const canSearch = trimmed.length > 0 && !searching && !pending;
+
+  const search = async () => {
+    if (!canSearch) return;
+    setSearching(true);
+    setSearchError(null);
+    setResults(null);
+    try {
+      setResults(await searchLocations(trimmed));
+    } catch {
+      setSearchError('Could not search locations. Try again.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const pick = (r: GeocodeResult) => {
+    // Spread into a fresh object literal so the typed WeatherLocation satisfies the generic
+    // { location?: Record<string, unknown> } payload (AOD-9 §7.2); the broker stores it verbatim.
+    if (!pending) onSubmit({ location: { ...toWeatherLocation(r) } });
+  };
+
+  return (
+    <View style={styles.form} testID="credential-form">
+      <Text style={styles.label}>Location</Text>
+      <View style={styles.searchRow}>
+        <TextInput
+          style={[styles.input, styles.searchInput]}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="City, e.g. Quito"
+          placeholderTextColor="#6B7280"
+          autoCapitalize="words"
+          autoCorrect={false}
+          editable={!pending}
+          accessibilityLabel="Location"
+          returnKeyType="search"
+          onSubmitEditing={search}
+        />
+        <Pressable onPress={search} accessibilityRole="button" disabled={!canSearch} testID="location-search-submit">
+          <Text style={[styles.submit, !canSearch && styles.submitDisabled]}>{searching ? '...' : 'Search'}</Text>
+        </Pressable>
+      </View>
+
+      {searching && (
+        <View style={styles.searchHint}>
+          <ActivityIndicator />
+          <Text style={styles.hintText}>Searching...</Text>
+        </View>
+      )}
+      {searchError && (
+        <Text style={styles.error} testID="location-search-error">
+          {searchError}
+        </Text>
+      )}
+      {results && results.length === 0 && !searching && (
+        <Text style={styles.hintText} testID="location-no-results">
+          No matches. Try a different city.
+        </Text>
+      )}
+
+      {results && results.length > 0 && (
+        <View style={styles.results} testID="location-results">
+          {results.map((r, i) => (
+            <Pressable
+              key={`${r.id}-${i}`}
+              onPress={() => pick(r)}
+              accessibilityRole="button"
+              accessibilityLabel={geocodeLabel(r)}
+              disabled={pending}
+              testID={`location-result-${i}`}
+            >
+              <Text style={styles.resultText}>{geocodeLabel(r)}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {error && (
+        <Text style={styles.error} testID="credential-form-error">
+          {error}
+        </Text>
+      )}
+
+      <View style={styles.actions}>
+        <Pressable onPress={onCancel} accessibilityRole="button" disabled={pending}>
+          <Text style={styles.cancel}>Cancel</Text>
+        </Pressable>
+        {pending && <Text style={styles.hintText}>Saving...</Text>}
       </View>
     </View>
   );
@@ -91,6 +193,32 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.spacing(3),
     paddingVertical: theme.spacing(2),
     fontSize: 15,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(3),
+  },
+  searchInput: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  searchHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  hintText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+  },
+  results: {
+    gap: theme.spacing(1),
+  },
+  resultText: {
+    color: theme.colors.text,
+    fontSize: 15,
+    paddingVertical: theme.spacing(2),
   },
   error: {
     color: theme.colors.error,

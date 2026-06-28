@@ -133,17 +133,18 @@ describe("makeProviderCaller (provider-backed option source, AOD-10 §4.3 / §6.
 
   it("attaches the env key and returns the provider JSON on success", async () => {
     Deno.env.set("WEATHER_PROVIDER_KEY", "test-weather-key");
-    let seenKey: string | null = null;
+    let seenAuth: string | null = null;
     mock = mockProvider([
       route("api.open-meteo.com/v1/forecast", (call) => {
-        seenKey = call.headers.get("x-api-key");
+        seenAuth = call.headers.get("authorization");
         return jsonResponse({ temperature: 21 });
       }),
     ]);
     const call = makeProviderCaller(weatherConn, getBackend("weather"));
     const raw = await call({ method: "GET", path: "/v1/forecast" }, { query: { lat: 1 } });
     assertEquals(raw, { temperature: 21 });
-    assertEquals(seenKey, "test-weather-key");
+    // weather rides the bearer style: the vestigial key as an ignored Authorization header (AOD-58, registry.ts).
+    assertEquals(seenAuth, "Bearer test-weather-key");
   });
 
   it("throws a ResponseError carrying the mirrored rate_limited 429", async () => {
