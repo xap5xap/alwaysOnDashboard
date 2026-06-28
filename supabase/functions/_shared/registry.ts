@@ -54,9 +54,16 @@ export const BACKEND_REGISTRY: Record<string, ServiceBackendConfig> = {
     apiBase: "https://api.anthropic.com",
     authHeaderStyle: "anthropic-admin",
     endpoints: {
-      // The only two endpoints the high-sensitivity Admin key is ever attached to (AOD-9 §4).
-      usage: { method: "GET", path: "/v1/organizations/usage_report/messages" },
-      cost: { method: "GET", path: "/v1/organizations/cost_report" },
+      // Both v1 spend widgets read the Cost Report; they differ only in the operation (operations.ts):
+      // the normalize (a single MTD sum vs the daily series). The MTD window is a query param built
+      // server-side (integration-claude.md §6.1), so there is no {path token}. Keyed by WIDGET type
+      // (getEndpoint looks up by widget), reconciling the report-keyed placeholder (usage/cost -> the
+      // two widgets) the way Weather reconciled its lone `current` placeholder (§2, §8).
+      spend_mtd: { method: "GET", path: "/v1/organizations/cost_report" },
+      daily_spend: { method: "GET", path: "/v1/organizations/cost_report" },
+      // Reserved (allow-listed, not yet bound to a v1 widget): a future token-volume widget would ride
+      // the Messages Usage Report instead of the dollar-denominated Cost Report (§8, §10).
+      // usage: { method: "GET", path: "/v1/organizations/usage_report/messages" },
     },
   },
   weather: {

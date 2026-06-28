@@ -109,6 +109,42 @@ const SAMPLE_EVENT = {
   end: { dateTime: "2026-06-26T14:30:00-05:00" },
 };
 
+/** A connected admin_key anthropic_usage connection with a REAL Vault secret (the Admin key). */
+function connectedAnthropicUsage(userId: string) {
+  return makeConnection(userId, {
+    service: "anthropic_usage",
+    auth_class: "admin_key",
+    status: "connected",
+    secrets: { access: "sk-ant-admin-live" },
+  });
+}
+
+/**
+ * A real /v1/organizations/cost_report body (integration-claude.md §12 sample shape): daily buckets,
+ * each results[].amount a decimal string in MINOR units (cents). 150.00 + 250.00 cents = $4.00 MTD. The
+ * proxy's operation (operations.ts) normalizes this to SpendMtdData / DailySpendData before caching.
+ */
+function costReportResponse() {
+  return {
+    data: [
+      { starting_at: "2026-06-01T00:00:00Z", ending_at: "2026-06-02T00:00:00Z", results: [{ amount: "150.00", currency: "USD" }] },
+      { starting_at: "2026-06-02T00:00:00Z", ending_at: "2026-06-03T00:00:00Z", results: [{ amount: "250.00", currency: "USD" }] },
+    ],
+    has_more: false,
+    next_page: null,
+  };
+}
+
+/** Anthropic's error envelope for a revoked/invalid Admin key (integration-claude.md §12): HTTP 401. */
+const ANTHROPIC_401 = { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } };
+
+/** Read a connection's current status straight from the DB (to assert the 401 detector flipped it). */
+async function connectionStatus(userId: string, service: string): Promise<string | undefined> {
+  const sql = db();
+  const [row] = await sql`select status from public.connections where user_id = ${userId} and service = ${service}`;
+  return row?.status as string | undefined;
+}
+
 beforeAll(() => {});
 afterEach(() => {
   mock?.restore();
@@ -380,5 +416,127 @@ describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitize
     // timeMin changes between calls, but the params-hash ({ calendarId }) is identical, so the second
     // poll is served from cache and Google is hit exactly once (integration-calendar.md §6.2).
     assertEquals(mock.countMatching("/events"), 1);
+  });
+
+  // --- Claude usage: the first admin_key data path + the 401 -> reauth credential-death detector
+  // (integration-claude.md §3.3, §6.1). The load-bearing proofs: a NORMALIZED payload through the proxy
+  // (cents -> dollars /100), and that a 401 on a credentialed-class call flips the connection to
+  // reauth_required and returns 409, generically per auth class. -----------------------------------------
+
+  it("anthropic_usage spend_mtd: builds the MTD Cost Report query server-side, attaches the Admin key, normalizes to SpendMtdData ($ /100), caches", async () => {
+    const user = await freshUser();
+    await connectedAnthropicUsage(user.id);
+    let seenUrl = "";
+    let seenKey: string | null = null;
+    let seenVersion: string | null = null;
+    mock = mockProvider([route("api.anthropic.com/v1/organizations/cost_report", (call) => {
+      seenUrl = call.url;
+      seenKey = call.headers.get("x-api-key");
+      seenVersion = call.headers.get("anthropic-version");
+      return jsonResponse(costReportResponse());
+    })]);
+
+    const res = await handler(await userPost("proxy", user, { service: "anthropic_usage", widget: "spend_mtd", params: {} }));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.cached, false);
+    assertEquals(mock.countMatching("cost_report"), 1);
+
+    // The Admin key rode server-side via the anthropic-admin header style (x-api-key + anthropic-version).
+    assertEquals(seenKey, "sk-ant-admin-live");
+    assertEquals(seenVersion, "2023-06-01");
+    // buildQuery built the MTD window server-side: bucket_width=1d, limit=31, a derived starting/ending.
+    assert(seenUrl.includes("bucket_width=1d"), `bucket_width in query: ${seenUrl}`);
+    assert(seenUrl.includes("limit=31"), "one-page month window");
+    assert(seenUrl.includes("starting_at=") && seenUrl.includes("ending_at="), "the MTD window is server-built");
+
+    // ...and normalized to SpendMtdData before returning/caching: 150.00 + 250.00 cents = $4.00, NOT $400.
+    assertEquals(body.data.amount, 4);
+    assertEquals(body.data.currency, "USD");
+    assertEquals(body.data.daysElapsed, 2);
+
+    // A normalized payload was cached, within the 900s ceiling (AOD-5 normalized-only).
+    const sql = db();
+    const [cache] = await sql`
+      select payload, fetched_at, expires_at from public.proxy_cache
+      where user_id = ${user.id} and service = 'anthropic_usage' and widget_type = 'spend_mtd'
+    `;
+    assert(cache, "a proxy_cache row was written");
+    assertEquals((cache.payload as { amount: number }).amount, 4); // the normalized $ figure, not raw cost_report JSON
+    const ttl = (new Date(cache.expires_at).getTime() - new Date(cache.fetched_at).getTime()) / 1000;
+    assert(ttl > 0 && ttl <= 900, `cache TTL ${ttl}s is within the 900s ceiling`);
+  });
+
+  it("anthropic_usage daily_spend: the same Cost Report query normalizes to a DailySpendData series, oldest-first", async () => {
+    const user = await freshUser();
+    await connectedAnthropicUsage(user.id);
+    mock = mockProvider([route("api.anthropic.com/v1/organizations/cost_report", () => jsonResponse(costReportResponse()))]);
+
+    const res = await handler(await userPost("proxy", user, { service: "anthropic_usage", widget: "daily_spend", params: {} }));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.data.days, [
+      { date: "2026-06-01", amount: 1.5 },
+      { date: "2026-06-02", amount: 2.5 },
+    ]);
+    assertEquals(body.data.total, 4);
+    assertEquals(body.data.currency, "USD");
+  });
+
+  it("cache-key: repeated spend_mtd polls within the TTL hit cache once (the MTD window is derived, never in the key)", async () => {
+    const user = await freshUser();
+    await connectedAnthropicUsage(user.id);
+    mock = mockProvider([route("api.anthropic.com/v1/organizations/cost_report", () => jsonResponse(costReportResponse()))]);
+
+    const p = { service: "anthropic_usage", widget: "spend_mtd", params: {} };
+    const first = await handler(await userPost("proxy", user, p));
+    assertEquals((await first.json()).cached, false);
+    const second = await handler(await userPost("proxy", user, p));
+    assertEquals((await second.json()).cached, true);
+    // starting_at/ending_at change between calls, but params is empty, so the params-hash is identical and
+    // Anthropic is hit exactly once (integration-claude.md §6.1 cache-key property).
+    assertEquals(mock.countMatching("cost_report"), 1);
+  });
+
+  it("401 on an admin_key data call flips the connection to reauth_required and returns 409 needs_reconnect (§3.3)", async () => {
+    const user = await freshUser();
+    await connectedAnthropicUsage(user.id);
+    mock = mockProvider([route("api.anthropic.com/v1/organizations/cost_report", () => jsonResponse(ANTHROPIC_401, 401))]);
+
+    const res = await handler(await userPost("proxy", user, { service: "anthropic_usage", widget: "spend_mtd", params: {} }));
+    assertEquals(res.status, 409);
+    assertEquals((await res.json()).error, "needs_reconnect");
+    assertEquals(mock.countMatching("cost_report"), 1); // the dead key was tried once, then short-circuited
+    // The detector flipped the connection so subsequent calls hit the connection gate and short-circuit.
+    assertEquals(await connectionStatus(user.id, "anthropic_usage"), "reauth_required");
+
+    // A second call now hits the gate (isConnectionUsable false) and 409s WITHOUT a provider call.
+    const again = await handler(await userPost("proxy", user, { service: "anthropic_usage", widget: "spend_mtd", params: {} }));
+    assertEquals(again.status, 409);
+    assertEquals(mock.countMatching("cost_report"), 1); // still 1: the gate short-circuited before any call
+  });
+
+  it("401 on an oauth2 (linear) data call is UNCHANGED: upstream_unavailable, status NOT flipped (the detector is per auth class)", async () => {
+    const user = await freshUser();
+    await connectedLinear(user.id);
+    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse({ error: "unauthorized" }, 401))]);
+
+    const res = await handler(await userPost("proxy", user, { service: "linear", widget: "my_issues", params: {} }));
+    // oauth2 takes the generic mapping (a 401 is the rare mid-life-revocation edge the OAuth specs named,
+    // deliberately NOT auto-reauth here), so it stays upstream_unavailable and the connection is untouched.
+    assertEquals(res.status, 502);
+    assertEquals((await res.json()).error, "upstream_unavailable");
+    assertEquals(await connectionStatus(user.id, "linear"), "connected");
+  });
+
+  it("429 on an admin_key data call still maps to rate_limited (the 401 detector does not disturb the 429 path)", async () => {
+    const user = await freshUser();
+    await connectedAnthropicUsage(user.id);
+    mock = mockProvider([route("api.anthropic.com/v1/organizations/cost_report", () => jsonResponse({ error: "slow down" }, 429, { "retry-after": "30" }))]);
+
+    const res = await handler(await userPost("proxy", user, { service: "anthropic_usage", widget: "spend_mtd", params: {} }));
+    assertEquals(res.status, 429);
+    assertEquals((await res.json()).error, "rate_limited");
+    assertEquals(await connectionStatus(user.id, "anthropic_usage"), "connected"); // a 429 is transient, not credential death
   });
 });

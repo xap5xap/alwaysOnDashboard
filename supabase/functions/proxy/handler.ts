@@ -78,6 +78,18 @@ export async function handler(req: Request): Promise<Response> {
     // a token-free path is unchanged, so Linear/Weather/stub/Anthropic are untouched (§6.3c).
     const result = await callProviderApi(backend, endpoint, { secret, query: callQuery, body: callBody, pathParams: params });
 
+    // Credential-death detector (integration-claude.md §3.3): a credentialed-class key that returns 401
+    // is dead (revoked/invalid). Map it to the SAME reauth outcome the oauth2 invalid_grant path produces
+    // (resolveCallSecret above), because admin_key/api_key never refresh, so a 401-on-the-data-call is
+    // their ONLY credential-death signal. Generic PER AUTH CLASS, never per service: it serves
+    // anthropic_usage now and every future admin_key/api_key service, and leaves oauth2/platform_key
+    // untouched (a 401 on an oauth2 data call stays the mid-life-revocation edge the OAuth specs named).
+    // This is the one new generic mechanism Claude usage needs; it is NOT in the operation seam (§6.3).
+    if (result.status === 401 && (conn.auth_class === "admin_key" || conn.auth_class === "api_key")) {
+      await svc.from("connections").update({ status: "reauth_required" }).eq("id", conn.id);
+      return needsReconnect();
+    }
+
     // Map provider failure to the typed result the widget reacts to (AOD-9 §9, AOD-10 §6.4). Shared
     // with the option-source path (providerErrorResponse) so both fail identically.
     const errResponse = providerErrorResponse(result);
