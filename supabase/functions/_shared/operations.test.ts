@@ -8,10 +8,12 @@ import {
   type AgendaData,
   type CurrentCycleData,
   type CurrentWeatherData,
+  type DailySpendData,
   type ForecastData,
   getOperation,
   type MyIssuesData,
   type NextEventData,
+  type SpendMtdData,
 } from "./operations.ts";
 
 const myIssues = () => {
@@ -459,5 +461,152 @@ describe("weather normalize forecast: columnar daily[] -> ForecastDay[] (the zip
     assertEquals(d.days[1].precipProbabilityPct, null);
     assertEquals(d.days[1].tempMin, 0); // absent column cell -> numeric default
     assertEquals(d.days[1].sunrise, "");
+  });
+});
+
+// --- Claude usage (integration-claude.md §4, §6.1): the first admin_key REST operations, no path token,
+// both widgets on one time-derived MTD Cost Report query; the load-bearing test is the cents -> dollars
+// /100 conversion (misreading it inflates spend 100x, §12). --------------------------------------------
+
+const claudeOp = (widget: string) => {
+  const op = getOperation("anthropic_usage", widget);
+  assert(op, `anthropic_usage ${widget} operation is registered`);
+  return op;
+};
+
+// A recorded /v1/organizations/cost_report body (integration-claude.md §12 sample shape): daily buckets,
+// each results[].amount a decimal string in MINOR units (cents), the breakdown dimensions null (no
+// group_by). Cents 150.00 + 250.00 + 100.00 = 500.00 -> $5.00 MTD; per-day $1.50 / $2.50 / $1.00. The
+// buckets are deliberately OUT OF ORDER (Jun 2, Jun 1, Jun 3) to prove the oldest-first sort (§4.2).
+const COST_REPORT_BODY = {
+  data: [
+    {
+      starting_at: "2026-06-02T00:00:00Z",
+      ending_at: "2026-06-03T00:00:00Z",
+      results: [{ amount: "250.00", currency: "USD", workspace_id: null, description: null, model: null }],
+    },
+    {
+      starting_at: "2026-06-01T00:00:00Z",
+      ending_at: "2026-06-02T00:00:00Z",
+      results: [{ amount: "150.00", currency: "USD", workspace_id: null, description: null, model: null }],
+    },
+    {
+      starting_at: "2026-06-03T00:00:00Z",
+      ending_at: "2026-06-04T00:00:00Z",
+      results: [{ amount: "100.00", currency: "USD", workspace_id: null, description: null, model: null }],
+    },
+  ],
+  has_more: false,
+  next_page: null,
+};
+
+describe("anthropic_usage registration: both widgets resolve, an unknown one does not", () => {
+  it("registers spend_mtd and daily_spend; an unknown widget is undefined (the seam holds, §8)", () => {
+    assert(getOperation("anthropic_usage", "spend_mtd"), "spend_mtd registered");
+    assert(getOperation("anthropic_usage", "daily_spend"), "daily_spend registered");
+    assertEquals(getOperation("anthropic_usage", "not_a_widget"), undefined);
+  });
+});
+
+describe("anthropic_usage buildCostMtdQuery: time-derived MTD window, never in the cache key (§6.1)", () => {
+  it("both widgets share ONE query builder (the same function reference)", () => {
+    assertEquals(claudeOp("spend_mtd").buildQuery, claudeOp("daily_spend").buildQuery);
+  });
+
+  it("starting_at is the 1st of the current UTC month 00:00:00Z; ending_at is now; bucket_width 1d; limit 31", () => {
+    const now = new Date();
+    const expectedStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const q = claudeOp("spend_mtd").buildQuery!({});
+    assertEquals(q.starting_at, expectedStart);
+    assertEquals(q.bucket_width, "1d");
+    assertEquals(q.limit, 31);
+    const endingAt = new Date(q.ending_at as string).getTime();
+    assert(Number.isFinite(endingAt), "ending_at is a valid timestamp");
+    assert(endingAt >= new Date(expectedStart).getTime(), "ending_at is at/after the window start");
+  });
+
+  it("is time-derived: it IGNORES params, so the window never enters body.params or the cache key (§6.1)", () => {
+    // The proxy hashes body.params (empty for these zero-config widgets); the window is built HERE, so a
+    // param value cannot leak into the query and the key stays the stable empty params.
+    const fromEmpty = claudeOp("spend_mtd").buildQuery!({});
+    const fromJunk = claudeOp("spend_mtd").buildQuery!({ starting_at: "1999-01-01", limit: 999 });
+    assertEquals(fromJunk.starting_at, fromEmpty.starting_at); // not "1999-01-01"
+    assertEquals(fromJunk.limit, 31); // not 999
+  });
+});
+
+describe("anthropic_usage normalizeSpendMtd: cents -> dollars / 100 is THE load-bearing field (§4.1, §12)", () => {
+  it("sums all buckets' results[].amount (cents) and divides by 100 for the MTD dollar total", () => {
+    const d = claudeOp("spend_mtd").normalize(COST_REPORT_BODY) as SpendMtdData;
+    assertEquals(d.amount, 5); // 150.00 + 250.00 + 100.00 cents = 500.00 cents -> $5.00 (NOT $500, NOT $0.05)
+    assertEquals(d.currency, "USD");
+    assertEquals(d.daysElapsed, 3); // three daily buckets covered
+  });
+
+  it("derives the MTD window anchors from now: windowStart = 1st of UTC month, asOf = today (UTC)", () => {
+    const now = new Date();
+    const expectedStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+    const d = claudeOp("spend_mtd").normalize(COST_REPORT_BODY) as SpendMtdData;
+    assertEquals(d.windowStart, expectedStart);
+    assertEquals(d.asOf, now.toISOString().slice(0, 10));
+  });
+
+  it("preserves the cent decimals exactly (the docs' 123.78912 cents -> $1.2378912, §12)", () => {
+    const d = claudeOp("spend_mtd").normalize({
+      data: [{ starting_at: "2026-06-01T00:00:00Z", results: [{ amount: "123.78912", currency: "USD" }] }],
+    }) as SpendMtdData;
+    assertEquals(d.amount, 1.2378912);
+  });
+
+  it("sums MULTIPLE results in one bucket (defensive; no group_by normally yields one, but it is robust)", () => {
+    const d = claudeOp("spend_mtd").normalize({
+      data: [{ starting_at: "2026-06-01T00:00:00Z", results: [
+        { amount: "100.00", currency: "USD" },
+        { amount: "50.00", currency: "USD" },
+      ] }],
+    }) as SpendMtdData;
+    assertEquals(d.amount, 1.5); // (100 + 50) cents -> $1.50
+  });
+
+  it("is defensive: a missing/ragged data[] yields amount 0 (a connected org with no spend, not empty/error)", () => {
+    const empty = claudeOp("spend_mtd").normalize({ data: [] }) as SpendMtdData;
+    assertEquals(empty.amount, 0);
+    assertEquals(empty.daysElapsed, 0);
+    assertEquals(empty.currency, "USD"); // defaults when no result carries a currency
+    const missing = claudeOp("spend_mtd").normalize({}) as SpendMtdData;
+    assertEquals(missing.amount, 0);
+    const ragged = claudeOp("spend_mtd").normalize({ data: [{ starting_at: "2026-06-01T00:00:00Z" }] }) as SpendMtdData;
+    assertEquals(ragged.amount, 0); // a bucket with no results[] contributes 0, never throws
+    assertEquals(ragged.daysElapsed, 1);
+  });
+});
+
+describe("anthropic_usage normalizeDailySpend: bucket -> DailyCost series, oldest-first, /100 (§4.2)", () => {
+  it("maps each bucket to a row (date + per-day dollars), sorted oldest-first regardless of page order", () => {
+    const d = claudeOp("daily_spend").normalize(COST_REPORT_BODY) as DailySpendData;
+    assertEquals(d.days.length, 3);
+    assertEquals(d.days, [
+      { date: "2026-06-01", amount: 1.5 }, // 150.00 cents -> $1.50 (input was 2nd in the body)
+      { date: "2026-06-02", amount: 2.5 }, // 250.00 cents -> $2.50 (input was 1st in the body)
+      { date: "2026-06-03", amount: 1 }, //   100.00 cents -> $1.00
+    ]);
+    assertEquals(d.currency, "USD");
+  });
+
+  it("total equals the Spend MTD amount over the same window (§4.2 convenience field)", () => {
+    const daily = claudeOp("daily_spend").normalize(COST_REPORT_BODY) as DailySpendData;
+    const mtd = claudeOp("spend_mtd").normalize(COST_REPORT_BODY) as SpendMtdData;
+    assertEquals(daily.total, 5);
+    assertEquals(daily.total, mtd.amount);
+  });
+
+  it("is defensive: a missing/ragged data[] yields days: [] (a flat sparkline, the normal no-spend state)", () => {
+    assertEquals(claudeOp("daily_spend").normalize({}), { days: [], currency: "USD", total: 0 });
+    assertEquals(claudeOp("daily_spend").normalize({ data: "not-an-array" }), { days: [], currency: "USD", total: 0 });
+    const ragged = claudeOp("daily_spend").normalize({
+      data: [{ starting_at: "2026-06-01T00:00:00Z" }], // no results[]
+    }) as DailySpendData;
+    assertEquals(ragged.days, [{ date: "2026-06-01", amount: 0 }]);
+    assertEquals(ragged.total, 0);
   });
 });

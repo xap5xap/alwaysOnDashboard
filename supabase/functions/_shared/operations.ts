@@ -547,6 +547,159 @@ function normalizeForecast(raw: unknown): ForecastData {
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Claude usage: Spend MTD + Daily Spend Sparkline (integration-claude.md §4, §6.1). The first admin_key
+// REST operations and the first credentialed, org-wide service. Both widgets read the SAME Cost Report
+// (/v1/organizations/cost_report) over a shared, TIME-DERIVED month-to-date window, so they share one
+// buildQuery and differ only in normalize (a single MTD sum vs the daily series). No buildBody (a GET),
+// no path token (the window is a query param, §6.2). The Cost Report's `amount` is a decimal string in
+// MINOR units (cents): "123.45" in USD is $1.23, so the normalizers sum in cents and divide by 100 (the
+// single load-bearing conversion, §4.0a / §12). Defensive against a missing data[]/results[] (amount 0 /
+// days []). Doc-verified 2026-06-28 (no live Admin key at build); re-verify live and update spec §12.
+// ---------------------------------------------------------------------------------------------------
+
+/** One day's normalized spend (integration-claude.md §4.0a). The shared element both widgets reduce. */
+export interface DailyCost {
+  date: string; // the bucket's calendar day, "YYYY-MM-DD" (UTC; the API snaps buckets to UTC day starts)
+  amount: number; // that day's total spend in MAJOR units (USD dollars): sum of results[].amount, / 100
+}
+
+/** Normalized Spend MTD payload (integration-claude.md §4.1): the month-to-date headline glance. */
+export interface SpendMtdData {
+  amount: number; // month-to-date total spend, major units (sum of all buckets' results, / 100)
+  currency: string; // "USD" (echoed from results[].currency)
+  windowStart: string; // the MTD window start, "YYYY-MM-DD" (1st of the current UTC month)
+  asOf: string; // the last covered day, "YYYY-MM-DD" (today, UTC)
+  daysElapsed: number; // count of daily buckets covered, so the renderer can derive a run-rate/projection
+}
+
+/** Normalized Daily Spend payload (integration-claude.md §4.2): the daily series for the sparkline. */
+export interface DailySpendData {
+  days: DailyCost[]; // one entry per daily bucket, oldest-first (month-to-date)
+  currency: string; // "USD" (echoed from results[].currency)
+  total: number; // convenience: sum of days[].amount; equals SpendMtdData.amount over the same window
+}
+
+/** First of `now`'s UTC month at 00:00:00Z: the MTD window anchor (integration-claude.md §6.1). */
+function monthStartUtc(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+/** A Date -> "YYYY-MM-DD" in UTC (the API's native day bucketing). */
+function ymdUtc(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** An RFC-3339 bucket timestamp ("2025-08-01T00:00:00Z") -> its UTC calendar day "YYYY-MM-DD", else "". */
+function ymdFromIso(v: unknown): string {
+  return typeof v === "string" && v.length >= 10 ? v.slice(0, 10) : "";
+}
+
+/**
+ * The month-to-date Cost Report query (integration-claude.md §6.1). The window is TIME-DERIVED (it
+ * depends on `now`), so like Calendar's timeMin it is computed at call time and never enters the cache
+ * key: the proxy hashes body.params, which is EMPTY for these zero-config widgets (§5.1), so the key is
+ * the stable empty params and the window is recomputed each fetch. starting_at is the 1st of the current
+ * UTC month at 00:00:00Z; ending_at is now; bucket_width=1d (the only granularity the Cost Report
+ * supports); limit=31 covers a whole month in one page (a month has <=31 daily buckets, §7).
+ */
+function buildCostMtdQuery(_params: Record<string, unknown>): Record<string, unknown> {
+  const now = new Date();
+  return {
+    starting_at: monthStartUtc(now).toISOString(),
+    ending_at: now.toISOString(),
+    bucket_width: "1d",
+    limit: 31,
+  };
+}
+
+/** A daily Cost Report bucket: `starting_at` (the UTC day) + `results[]` (one total per day, no group_by). */
+interface RawCostBucket {
+  starting_at?: unknown;
+  ending_at?: unknown;
+  results?: unknown;
+}
+/** A Cost Report result line: `amount` is a decimal string in MINOR units (cents), `currency` a string. */
+interface RawCostResult {
+  amount?: unknown;
+  currency?: unknown;
+}
+
+/** Pull the data[] daily buckets from a cost_report body, defensive against a missing array (§4.0a). */
+function costBuckets(raw: unknown): RawCostBucket[] {
+  const data = (raw as { data?: unknown })?.data;
+  return Array.isArray(data) ? (data as RawCostBucket[]) : [];
+}
+
+/** Pull a bucket's results[] line items, defensive against a missing array. */
+function bucketResults(bucket: RawCostBucket): RawCostResult[] {
+  return Array.isArray(bucket.results) ? (bucket.results as RawCostResult[]) : [];
+}
+
+/**
+ * Parse an `amount` to MINOR units (cents) as a number. The Cost Report sends a decimal STRING in cents
+ * ("123.78912"); a non-numeric or absent value degrades to 0 (a missing line is no spend, never a throw).
+ * The caller divides the cents SUM by 100 once for major units (§4.0a: sum in minor units, then / 100).
+ */
+function amountCents(amount: unknown): number {
+  const n = typeof amount === "string" || typeof amount === "number" ? parseFloat(String(amount)) : NaN;
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Sum one bucket's results[].amount in cents, and surface the last non-empty currency seen. */
+function sumBucketCents(bucket: RawCostBucket): { cents: number; currency: string | null } {
+  let cents = 0;
+  let currency: string | null = null;
+  for (const r of bucketResults(bucket)) {
+    cents += amountCents(r.amount);
+    if (typeof r.currency === "string" && r.currency) currency = r.currency;
+  }
+  return { cents, currency };
+}
+
+/**
+ * Sum ALL buckets' results[].amount (cents) and divide by 100 for the MTD dollar total (§4.1). With no
+ * group_by each daily bucket carries a single org-wide total result, so this is the org's month-to-date
+ * spend. The window anchors are derived from `now` (mirroring buildCostMtdQuery) so they hold even for a
+ * zero-bucket month (a new org with no spend yet -> amount 0, daysElapsed 0, a valid figure, not empty).
+ */
+function normalizeSpendMtd(raw: unknown): SpendMtdData {
+  const buckets = costBuckets(raw);
+  let totalCents = 0;
+  let currency = "USD";
+  for (const b of buckets) {
+    const { cents, currency: c } = sumBucketCents(b);
+    totalCents += cents;
+    if (c) currency = c;
+  }
+  const now = new Date();
+  return {
+    amount: totalCents / 100, // cents -> dollars (the single load-bearing conversion, §4.0a / §12)
+    currency,
+    windowStart: ymdUtc(monthStartUtc(now)),
+    asOf: ymdUtc(now),
+    daysElapsed: buckets.length,
+  };
+}
+
+/**
+ * Map each daily bucket to a DailyCost row (its results[].amount summed in cents, / 100), oldest-first
+ * (§4.2). The series is sorted ascending by the bucket's UTC day so the contract holds regardless of the
+ * provider's page order; an empty days[] is the normal "no spend yet this month" state (a flat sparkline),
+ * never a crash.
+ */
+function normalizeDailySpend(raw: unknown): DailySpendData {
+  let currency = "USD";
+  const days: DailyCost[] = costBuckets(raw).map((b) => {
+    const { cents, currency: c } = sumBucketCents(b);
+    if (c) currency = c;
+    return { date: ymdFromIso(b.starting_at), amount: cents / 100 };
+  });
+  days.sort((a, b) => a.date.localeCompare(b.date)); // oldest-first, lexicographic == chronological on YYYY-MM-DD
+  const total = days.reduce((sum, d) => sum + d.amount, 0);
+  return { days, currency, total };
+}
+
+// ---------------------------------------------------------------------------------------------------
 // The registry + lookup (mirrors getEndpoint / getOptionSource).
 // ---------------------------------------------------------------------------------------------------
 
@@ -566,6 +719,13 @@ export const OPERATION_REGISTRY: WidgetOperationRegistry = {
   weather: {
     current: { buildQuery: buildCurrentQuery, normalize: normalizeCurrent },
     forecast: { buildQuery: buildForecastQuery, normalize: normalizeForecast },
+  },
+  // Claude usage: the first admin_key REST operations, ZERO seam edits (integration-claude.md §6, §8).
+  // Both widgets share one time-derived MTD query (buildCostMtdQuery) over the Cost Report and differ
+  // only in normalize; no buildBody (a GET), no path token (the window is a query param, §6.2).
+  anthropic_usage: {
+    spend_mtd: { buildQuery: buildCostMtdQuery, normalize: normalizeSpendMtd },
+    daily_spend: { buildQuery: buildCostMtdQuery, normalize: normalizeDailySpend },
   },
 };
 
