@@ -1,0 +1,167 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Claude Daily Spend face: the sparkline at wide and large, the total + series composition, and the empty body</title>
+  <desc>The Daily Spend card at its two supported sizes plus the empty state. At wide it is a banner: a quiet caption header and refresh cluster on top, the month-to-date total on the left as a supporting figure, and the sparkline filling the right as a horizontal strip with today bright and the earlier days receding. At large it is a roomy square: the caption header, a more prominent total, a taller sparkline filling the card with the today bar labelled with its value, and oldest-to-today axis endpoints. On this widget the chart is the hero and the total supports it, the inverse of Spend MTD where the number is the hero. The empty card shows the fresh-but-empty body the renderer draws when the days array is empty: a calm centred flat-chart glyph, a muted No spend yet this month line, and a quiet subline, with no action because nothing is wrong. A panel records that this is the second consumer of the AOD-35 empty-body convention and recommends promoting it into AOD-37.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .axis{font-size:10.5px;fill:#8A8A97;}
+    .axisb{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .mtd{font-size:9.5px;font-weight:700;fill:#8A8A97;letter-spacing:1px;}
+    .today{font-size:11px;font-weight:600;fill:#6E8BFF;font-variant:tabular-nums;}
+    .empty{font-size:14px;font-weight:600;fill:#9B9BA8;}
+    .emptysub{font-size:12px;fill:#8A8A97;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .symX{font-weight:700;fill:#F4F4F8;}
+    .dolX{font-weight:700;fill:#F4F4F8;font-variant:tabular-nums;}
+    .ctsX{font-weight:700;fill:#9B9BA8;font-variant:tabular-nums;}
+    .barPast{fill:#6E8BFF;fill-opacity:0.5;}
+    .barToday{fill:#6E8BFF;}
+    .base{stroke:#2A2A36;stroke-width:1;}
+    .eglyph{fill:#6E8BFF;fill-opacity:0.55;}
+    .ebase{stroke:#6E8BFF;stroke-opacity:0.55;stroke-width:1.5;stroke-linecap:round;}
+  </style>
+
+  <defs>
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5"/><path d="M-7 -6 L-7 -1 L-2 -1"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Claude Daily Spend: the chart is the hero, the total supports it</text>
+  <text x="32" y="58" class="sub">The sparkline (§4) applied across the two sizes. Inverts Spend MTD: here the series leads and the MTD total is the anchor. supportedSizes: wide, large.</text>
+
+  <!-- ===== WIDE banner ===== -->
+  <text x="32" y="92" class="sec">WIDE (3×1) · BANNER STRIP</text>
+  <rect x="32" y="104" width="560" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="130" class="cap">CLAUDE · DAILY SPEND</text>
+  <use href="#refresh" transform="translate(574 126)"/>
+  <!-- total (supporting anchor) -->
+  <text x="50"  y="190" font-size="17" class="symX">$</text>
+  <text x="64"  y="190" font-size="28" class="dolX">97</text>
+  <text x="102" y="190" font-size="17" class="ctsX">.50</text>
+  <text x="50" y="208" class="mtd">MONTH TO DATE</text>
+  <!-- sparkline (baseline 232) -->
+  <line x1="214" y1="232" x2="566" y2="232" class="base"/>
+  <rect class="barPast" x="214.0" y="209.6" width="10" height="22.4" rx="1.5"/>
+  <rect class="barPast" x="226.6" y="195.8" width="10" height="36.2" rx="1.5"/>
+  <rect class="barPast" x="239.2" y="230.0" width="10" height="2.0" rx="1.5"/>
+  <rect class="barPast" x="251.8" y="180.9" width="10" height="51.1" rx="1.5"/>
+  <rect class="barPast" x="264.4" y="177.7" width="10" height="54.3" rx="1.5"/>
+  <rect class="barPast" x="277.0" y="210.7" width="10" height="21.3" rx="1.5"/>
+  <rect class="barPast" x="289.6" y="196.9" width="10" height="35.1" rx="1.5"/>
+  <rect class="barPast" x="302.2" y="166.0" width="10" height="66.0" rx="1.5"/>
+  <rect class="barPast" x="314.8" y="189.4" width="10" height="42.6" rx="1.5"/>
+  <rect class="barPast" x="327.4" y="220.3" width="10" height="11.7" rx="1.5"/>
+  <rect class="barPast" x="340.0" y="227.7" width="10" height="4.3" rx="1.5"/>
+  <rect class="barPast" x="352.6" y="202.2" width="10" height="29.8" rx="1.5"/>
+  <rect class="barPast" x="365.2" y="190.5" width="10" height="41.5" rx="1.5"/>
+  <rect class="barPast" x="377.8" y="173.5" width="10" height="58.5" rx="1.5"/>
+  <rect class="barPast" x="390.4" y="187.3" width="10" height="44.7" rx="1.5"/>
+  <rect class="barPast" x="403.0" y="208.6" width="10" height="23.4" rx="1.5"/>
+  <rect class="barPast" x="415.6" y="200.1" width="10" height="31.9" rx="1.5"/>
+  <rect class="barPast" x="428.2" y="183.0" width="10" height="49.0" rx="1.5"/>
+  <rect class="barPast" x="440.8" y="178.8" width="10" height="53.2" rx="1.5"/>
+  <rect class="barPast" x="453.4" y="199.0" width="10" height="33.0" rx="1.5"/>
+  <rect class="barPast" x="466.0" y="212.8" width="10" height="19.2" rx="1.5"/>
+  <rect class="barPast" x="478.6" y="185.2" width="10" height="46.8" rx="1.5"/>
+  <rect class="barPast" x="491.2" y="170.3" width="10" height="61.7" rx="1.5"/>
+  <rect class="barPast" x="503.8" y="193.7" width="10" height="38.3" rx="1.5"/>
+  <rect class="barPast" x="516.4" y="206.5" width="10" height="25.5" rx="1.5"/>
+  <rect class="barPast" x="529.0" y="179.8" width="10" height="52.2" rx="1.5"/>
+  <rect class="barPast" x="541.6" y="168.1" width="10" height="63.9" rx="1.5"/>
+  <rect class="barToday" x="554.2" y="211.8" width="10" height="20.2" rx="1.5"/>
+  <text x="214" y="248" class="axis">Jun 1</text>
+  <text x="564" y="248" text-anchor="end" class="axisb">Today</text>
+
+  <!-- wide note -->
+  <rect x="608" y="104" width="220" height="150" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="626" y="128" class="ph">Banner composition</text>
+  <text x="626" y="150" class="pb">Left: the MTD total, a</text>
+  <text x="626" y="167" class="pb">supporting type.title anchor</text>
+  <text x="626" y="184" class="pb">(equals Spend MTD's amount).</text>
+  <text x="626" y="206" class="pb">Right: the sparkline strip,</text>
+  <text x="626" y="223" class="pb">the hero. Today bright; all</text>
+  <text x="626" y="240" class="pb">MTD days shown, bars flex.</text>
+
+  <!-- ===== LARGE + EMPTY ===== -->
+  <text x="32" y="288" class="sec">LARGE (2×2) · TALL CHART        ·        EMPTY STATE (days[] empty)</text>
+
+  <!-- EMPTY (left) -->
+  <rect x="32" y="300" width="288" height="172" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="326" class="cap">CLAUDE · DAILY SPEND</text>
+  <use href="#refresh" transform="translate(302 322)"/>
+  <!-- calm empty body: a flat 'empty chart' glyph -->
+  <line x1="146" y1="392" x2="206" y2="392" class="ebase"/>
+  <rect class="eglyph" x="150" y="388" width="8" height="4" rx="1.5"/>
+  <rect class="eglyph" x="162" y="388" width="8" height="4" rx="1.5"/>
+  <rect class="eglyph" x="174" y="388" width="8" height="4" rx="1.5"/>
+  <rect class="eglyph" x="186" y="388" width="8" height="4" rx="1.5"/>
+  <rect class="eglyph" x="198" y="388" width="8" height="4" rx="1.5"/>
+  <text x="176" y="420" text-anchor="middle" class="empty">No spend yet this month</text>
+  <text x="176" y="438" text-anchor="middle" class="emptysub">Costs appear as you use the API</text>
+  <text x="32" y="492" class="lab">empty <tspan class="labn">· renderer-drawn (days[] empty), not a host state</tspan></text>
+
+  <!-- empty-body convention note -->
+  <rect x="32" y="506" width="288" height="80" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="50" y="528" class="ph">Empty body — the AOD-35 convention</text>
+  <text x="50" y="548" class="pb">Calm centred glyph + type.body textMuted line +</text>
+  <text x="50" y="564" class="pb">subline. No action. AOD-36 is the 2nd consumer →</text>
+  <text x="50" y="580" class="pb">promote into AOD-37 as a shared body (§9).</text>
+
+  <!-- LARGE (right) -->
+  <rect x="340" y="300" width="456" height="286" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="358" y="326" class="cap">CLAUDE · DAILY SPEND</text>
+  <use href="#refresh" transform="translate(778 322)"/>
+  <!-- total -->
+  <text x="358" y="368" font-size="18" class="symX">$</text>
+  <text x="372" y="368" font-size="30" class="dolX">97</text>
+  <text x="412" y="368" font-size="18" class="ctsX">.50</text>
+  <text x="358" y="386" class="mtd">MONTH TO DATE</text>
+  <!-- today value label (a large-only affordance) -->
+  <text x="761" y="416" text-anchor="end" class="today">today $1.90</text>
+  <!-- sparkline (baseline 470) -->
+  <line x1="372" y1="470" x2="761" y2="470" class="base"/>
+  <rect class="barPast" x="372.0" y="419.2" width="11" height="50.8" rx="1.5"/>
+  <rect class="barPast" x="386.0" y="387.7" width="11" height="82.3" rx="1.5"/>
+  <rect class="barPast" x="400.0" y="468.0" width="11" height="2.0" rx="1.5"/>
+  <rect class="barPast" x="414.0" y="353.9" width="11" height="116.1" rx="1.5"/>
+  <rect class="barPast" x="428.0" y="346.6" width="11" height="123.4" rx="1.5"/>
+  <rect class="barPast" x="442.0" y="421.6" width="11" height="48.4" rx="1.5"/>
+  <rect class="barPast" x="456.0" y="390.2" width="11" height="79.8" rx="1.5"/>
+  <rect class="barPast" x="470.0" y="320.0" width="11" height="150.0" rx="1.5"/>
+  <rect class="barPast" x="484.0" y="373.2" width="11" height="96.8" rx="1.5"/>
+  <rect class="barPast" x="498.0" y="443.4" width="11" height="26.6" rx="1.5"/>
+  <rect class="barPast" x="512.0" y="460.3" width="11" height="9.7" rx="1.5"/>
+  <rect class="barPast" x="526.0" y="402.3" width="11" height="67.7" rx="1.5"/>
+  <rect class="barPast" x="540.0" y="375.6" width="11" height="94.4" rx="1.5"/>
+  <rect class="barPast" x="554.0" y="336.9" width="11" height="133.1" rx="1.5"/>
+  <rect class="barPast" x="568.0" y="368.4" width="11" height="101.6" rx="1.5"/>
+  <rect class="barPast" x="582.0" y="416.8" width="11" height="53.2" rx="1.5"/>
+  <rect class="barPast" x="596.0" y="397.4" width="11" height="72.6" rx="1.5"/>
+  <rect class="barPast" x="610.0" y="358.7" width="11" height="111.3" rx="1.5"/>
+  <rect class="barPast" x="624.0" y="349.0" width="11" height="121.0" rx="1.5"/>
+  <rect class="barPast" x="638.0" y="395.0" width="11" height="75.0" rx="1.5"/>
+  <rect class="barPast" x="652.0" y="426.5" width="11" height="43.5" rx="1.5"/>
+  <rect class="barPast" x="666.0" y="363.5" width="11" height="106.5" rx="1.5"/>
+  <rect class="barPast" x="680.0" y="329.7" width="11" height="140.3" rx="1.5"/>
+  <rect class="barPast" x="694.0" y="382.9" width="11" height="87.1" rx="1.5"/>
+  <rect class="barPast" x="708.0" y="411.9" width="11" height="58.1" rx="1.5"/>
+  <rect class="barPast" x="722.0" y="351.5" width="11" height="118.5" rx="1.5"/>
+  <rect class="barPast" x="736.0" y="324.8" width="11" height="145.2" rx="1.5"/>
+  <rect class="barToday" x="750.0" y="424.0" width="11" height="46.0" rx="1.5"/>
+  <text x="372" y="488" class="axis">Jun 1</text>
+  <text x="760" y="488" text-anchor="end" class="axisb">Today</text>
+  <text x="358" y="520" class="lab">large (2×2) <tspan class="labn">· taller chart fills the square; today value labelled; oldest → today axis</tspan></text>
+  <text x="358" y="544" class="anno"><tspan class="annob">Reuses AOD-37:</tspan> frame, quiet header + cluster (§4), the six states (§5), idle refresh (§6), overlay night (§7).</text>
+  <text x="358" y="562" class="anno"><tspan class="annob">Bespoke to AOD-36:</tspan> the sparkline (§4) and the total + series composition; no new chrome or state.</text>
+</svg>

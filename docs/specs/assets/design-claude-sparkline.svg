@@ -1,0 +1,130 @@
+<svg width="100%" viewBox="0 0 860 580" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Claude Daily Spend: the sparkline / chart treatment (the bespoke centerpiece)</title>
+  <desc>An enlarged, annotated daily-spend sparkline, the bespoke design problem AOD-36 owns, the parallel to AOD-35's weather icon set. The chart is a row of bars, one per day of the month to date, oldest on the left and today on the right. Each bar's height is its day's spend divided by the window's peak spend, times the chart height, so the tallest bar is the highest-spend day. A 1px baseline in the border colour grounds the bars. Today's bar, the rightmost, is drawn in the full accent blue while every earlier day recedes to the same accent at about half opacity, so the eye lands on now without a second colour. A minimum bar height means a zero or tiny day still shows a small baseline tick rather than vanishing, which keeps a present-but-zero day distinct from a gap. Five numbered markers on the chart key a legend on the right. Two variant strips show an all-zero flat series and a sparse early-month series. A token panel records the sparkline sizing and opacity values and notes that the empty days state is drawn as a calm empty body in the Daily Spend face mockup.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .axis{font-size:10.5px;fill:#8A8A97;}
+    .axisb{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .guide{font-size:10px;font-weight:600;fill:#8A8A97;letter-spacing:0.5px;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .idx{font-size:10px;font-weight:700;fill:#0B0B0F;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .barPast{fill:#6E8BFF;fill-opacity:0.5;}
+    .barToday{fill:#6E8BFF;}
+    .base{stroke:#2A2A36;stroke-width:1;}
+    .maxline{stroke:#33333F;stroke-width:1;stroke-dasharray:4 4;}
+  </style>
+
+  <rect x="0.5" y="0.5" width="859" height="579" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Daily Spend sparkline: one bar per day, today bright, the month receding behind it</text>
+  <text x="32" y="58" class="sub">The bespoke chart, the parallel to AOD-35's icon set. Bars scale to the window peak; one accent at two intensities; a floor keeps zero days visible.</text>
+
+  <!-- ===== enlarged annotated chart ===== -->
+  <text x="32" y="92" class="sec">THE BAR TREATMENT (enlarged)</text>
+  <rect x="32" y="104" width="556" height="250" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="130" class="cap">CLAUDE · DAILY SPEND</text>
+
+  <!-- window-max guide -->
+  <line x1="50" y1="170" x2="540" y2="170" class="maxline"/>
+  <text x="540" y="164" text-anchor="end" class="guide">WINDOW MAX  $6.20</text>
+
+  <!-- baseline -->
+  <line x1="50" y1="300" x2="570" y2="300" class="base"/>
+
+  <!-- bars: baseline y=300, barW 28, step 34 -->
+  <rect class="barPast"  x="70"  y="256" width="28" height="44"  rx="2"/>
+  <rect class="barPast"  x="104" y="229" width="28" height="71"  rx="2"/>
+  <rect class="barPast"  x="138" y="296" width="28" height="4"   rx="2"/>
+  <rect class="barPast"  x="172" y="199" width="28" height="101" rx="2"/>
+  <rect class="barPast"  x="206" y="193" width="28" height="107" rx="2"/>
+  <rect class="barPast"  x="240" y="170" width="28" height="130" rx="2"/>
+  <rect class="barPast"  x="274" y="277" width="28" height="23"  rx="2"/>
+  <rect class="barPast"  x="308" y="292" width="28" height="8"   rx="2"/>
+  <rect class="barPast"  x="342" y="218" width="28" height="82"  rx="2"/>
+  <rect class="barPast"  x="376" y="185" width="28" height="115" rx="2"/>
+  <rect class="barPast"  x="410" y="212" width="28" height="88"  rx="2"/>
+  <rect class="barPast"  x="444" y="237" width="28" height="63"  rx="2"/>
+  <rect class="barPast"  x="478" y="203" width="28" height="97"  rx="2"/>
+  <rect class="barToday" x="512" y="262" width="28" height="38"  rx="2"/>
+
+  <!-- x-axis endpoints -->
+  <text x="70"  y="322" class="axis">Jun 1</text>
+  <text x="540" y="322" text-anchor="end" class="axisb">Today</text>
+
+  <!-- on-chart numbered markers -->
+  <circle cx="526" cy="246" r="8" fill="#6E8BFF"/><text x="526" y="250" text-anchor="middle" class="idx">1</text>
+  <circle cx="58"  cy="170" r="8" fill="#6E8BFF"/><text x="58"  y="174" text-anchor="middle" class="idx">2</text>
+  <circle cx="152" cy="282" r="8" fill="#6E8BFF"/><text x="152" y="286" text-anchor="middle" class="idx">3</text>
+  <circle cx="558" cy="300" r="8" fill="#6E8BFF"/><text x="558" y="304" text-anchor="middle" class="idx">4</text>
+  <circle cx="305" cy="334" r="8" fill="#6E8BFF"/><text x="305" y="338" text-anchor="middle" class="idx">5</text>
+
+  <!-- ===== keyed legend ===== -->
+  <circle cx="612" cy="130" r="9" fill="#6E8BFF"/><text x="612" y="134" text-anchor="middle" class="idx">1</text>
+  <text x="630" y="127" class="annob">Today emphasis</text>
+  <text x="630" y="143" class="anno">rightmost bar full colors.accent; earlier days @ 0.5.</text>
+
+  <circle cx="612" cy="176" r="9" fill="#6E8BFF"/><text x="612" y="180" text-anchor="middle" class="idx">2</text>
+  <text x="630" y="173" class="annob">Window-max scale</text>
+  <text x="630" y="189" class="anno">height = amount / windowMax × chartHeight.</text>
+
+  <circle cx="612" cy="222" r="9" fill="#6E8BFF"/><text x="612" y="226" text-anchor="middle" class="idx">3</text>
+  <text x="630" y="219" class="annob">minBarHeight floor</text>
+  <text x="630" y="235" class="anno">a zero / tiny day still shows a tick, so $0 ≠ a gap.</text>
+
+  <circle cx="612" cy="268" r="9" fill="#6E8BFF"/><text x="612" y="272" text-anchor="middle" class="idx">4</text>
+  <text x="630" y="265" class="annob">Baseline</text>
+  <text x="630" y="281" class="anno">1px colors.border; the bars sit on it.</text>
+
+  <circle cx="612" cy="314" r="9" fill="#6E8BFF"/><text x="612" y="318" text-anchor="middle" class="idx">5</text>
+  <text x="630" y="311" class="annob">Direction &amp; density</text>
+  <text x="630" y="327" class="anno">oldest → today; all MTD days shown (bars flex,</text>
+  <text x="630" y="343" class="anno">no VISIBLE_BY_SIZE slice).</text>
+
+  <!-- ===== variants ===== -->
+  <text x="32" y="392" class="sec">SERIES VARIANTS</text>
+
+  <!-- flat / all-zero -->
+  <rect x="32" y="404" width="264" height="92" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <line x1="50" y1="470" x2="278" y2="470" class="base"/>
+  <rect class="barPast"  x="60"  y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="84"  y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="108" y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="132" y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="156" y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="180" y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="204" y="466" width="16" height="4" rx="2"/>
+  <rect class="barPast"  x="228" y="466" width="16" height="4" rx="2"/>
+  <rect class="barToday" x="252" y="466" width="16" height="4" rx="2"/>
+  <text x="50" y="424" class="lab">Flat <tspan class="labn">· all-zero days (max 0)</tspan></text>
+  <text x="50" y="441" class="labn">every bar at the floor: a quiet baseline, no divide-by-zero.</text>
+
+  <!-- sparse / early month -->
+  <rect x="316" y="404" width="272" height="92" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <line x1="334" y1="470" x2="570" y2="470" class="base"/>
+  <rect class="barPast"  x="346" y="436" width="24" height="34" rx="2"/>
+  <rect class="barPast"  x="380" y="448" width="24" height="22" rx="2"/>
+  <rect class="barToday" x="414" y="430" width="24" height="40" rx="2"/>
+  <text x="334" y="424" class="lab">Sparse <tspan class="labn">· 1-3 days (early month)</tspan></text>
+  <text x="334" y="441" class="labn">few bars, left-anchored; today still the bright one.</text>
+
+  <!-- right note -->
+  <rect x="604" y="404" width="224" height="92" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="622" y="428" class="ph">Honest emphasis</text>
+  <text x="622" y="450" class="pb">Today is a partial, still-</text>
+  <text x="622" y="467" class="pb">growing day, so it is marked</text>
+  <text x="622" y="484" class="pb">by colour, not by height.</text>
+
+  <!-- ===== token panel ===== -->
+  <rect x="32" y="510" width="796" height="54" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="50" y="532" class="ph">sparkline token group <tspan class="pb" font-weight="400">(the one new chart token; specified, not coded; reuses colors.accent / colors.border, no new colour)</tspan></text>
+  <text x="50" y="553" class="pb"><tspan class="pk">chartHeight</tspan> wide 44 / large 96 · <tspan class="pk">barGap</tspan> 2 · <tspan class="pk">barRadius</tspan> 1 · <tspan class="pk">minBarHeight</tspan> 2 · <tspan class="pk">todayOpacity</tspan> 1 / <tspan class="pk">pastOpacity</tspan> 0.5 · <tspan class="pk">baseline</tspan> colors.border</text>
+</svg>
