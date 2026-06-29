@@ -17,6 +17,10 @@ export function validateConfig(
   schema: WidgetConfigSchema,
   raw: Record<string, unknown>,
   resolvedOptions?: Record<string, Choice[]>,
+  // Save-time only: when set, a string field's optional `validate` runs after the static checks
+  // (integration-clock.md §5.2, the Intl time-zone check). The config form passes this; the host's
+  // render-time check does NOT, so a value that can degrade gracefully never trips needs_config (§5.4).
+  opts?: { runFieldValidators?: boolean },
 ): ConfigValidation {
   const errors: ConfigError[] = [];
   const values: Record<string, unknown> = {};
@@ -51,6 +55,13 @@ export function validateConfig(
         if (field.pattern != null && !new RegExp(field.pattern).test(value)) {
           errors.push({ key: field.key, message: `${field.label} is invalid` });
           break;
+        }
+        if (opts?.runFieldValidators && field.validate) {
+          const msg = field.validate(value);
+          if (msg) {
+            errors.push({ key: field.key, message: msg });
+            break;
+          }
         }
         values[field.key] = value;
         break;

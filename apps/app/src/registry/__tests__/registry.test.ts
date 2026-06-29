@@ -4,20 +4,24 @@
 // its definition (invariant 1).
 import { addableWidgets, getService, getWidgetDef } from '../registry';
 
-describe('addableWidgets (AOD-8 §9 invariant 2: connected-only)', () => {
-  it('offers nothing when no service is connected (the stub is platform_key, not exempt)', () => {
-    expect(addableWidgets(new Set())).toEqual([]);
+describe('addableWidgets (AOD-8 §9 invariant 2: connected-only, with the authClass none exemption)', () => {
+  it('offers only Clock (the sole none exemption) when nothing is connected', () => {
+    // The stub/Linear/Calendar/Weather/Claude services are all gated; Clock (authClass none) alone is
+    // exempt (integration-clock.md §3.1), so it is the only widget offered with no connection.
+    expect(addableWidgets(new Set()).map((w) => w.serviceId)).toEqual(['clock']);
   });
 
-  it("offers a service's widgets once it is connected", () => {
+  it("offers a connected service's widgets alongside the always-on Clock", () => {
     const widgets = addableWidgets(new Set(['stub']));
     // The stub service publishes the bootstrap widget plus the AOD-53 remote-options vehicle.
-    expect(widgets.map((w) => w.type)).toEqual(['placeholder', 'placeholder_remote']);
-    expect(widgets.every((w) => w.serviceId === 'stub')).toBe(true);
+    const stub = widgets.filter((w) => w.serviceId === 'stub');
+    expect(stub.map((w) => w.type)).toEqual(['placeholder', 'placeholder_remote']);
+    // Clock is always addable, even when another service is connected.
+    expect(widgets.some((w) => w.serviceId === 'clock')).toBe(true);
   });
 
-  it('ignores connected ids that are not in the registry', () => {
-    expect(addableWidgets(new Set(['not-a-service']))).toEqual([]);
+  it('ignores connected ids that are not in the registry (only the none-exempt Clock remains)', () => {
+    expect(addableWidgets(new Set(['not-a-service'])).map((w) => w.serviceId)).toEqual(['clock']);
   });
 });
 
@@ -116,5 +120,40 @@ describe('Google Calendar service registration (AOD-56, integration-calendar.md 
     expect(addableWidgets(new Set()).some((w) => w.serviceId === 'google_calendar')).toBe(false);
     const calWidgets = addableWidgets(new Set(['google_calendar'])).filter((w) => w.serviceId === 'google_calendar');
     expect(calWidgets.map((w) => w.type)).toEqual(['next_event', 'agenda']);
+  });
+});
+
+describe('Clock service registration (AOD-60, integration-clock.md §8): the authClass none bookend', () => {
+  it('registers Clock as the only authClass none service, one widget, no server half to mirror', () => {
+    const clock = getService('clock');
+    expect(clock?.displayName).toBe('Clock');
+    expect(clock?.authClass).toBe('none');
+    expect(clock?.icon).toBe('clock');
+    expect(clock?.widgets.map((w) => w.type)).toEqual(['clock']);
+  });
+
+  it('Clock declares manual refresh and OMITS the provider cache knobs (no provider to protect, §7)', () => {
+    const def = getWidgetDef('clock', 'clock')!;
+    expect(def.title).toBe('Clock');
+    expect(def.supportedSizes).toEqual(['small', 'medium', 'wide', 'large']);
+    expect(def.defaultRefresh).toBe('manual');
+    expect(def.cacheTtlSeconds).toBeUndefined();
+    expect(def.minRefreshSeconds).toBeUndefined();
+    expect(def.dimsWithAmbient).toBe(true);
+  });
+
+  it('declares the §5 static config: 12/24h, seconds, date + format, and a string timezone (no remote-options)', () => {
+    const fields = getWidgetDef('clock', 'clock')!.configSchema.fields;
+    expect(fields.map((f) => f.key)).toEqual(['clockFormat', 'showSeconds', 'showDate', 'dateFormat', 'timezone']);
+    // No field is required (ready on add, §9.1); none is remote-options (no option source / no needs_config
+    // edge, §5.3/§5.4); the timezone is a plain string validated client-side at save (§5.2).
+    expect(fields.every((f) => f.required === false)).toBe(true);
+    expect(fields.every((f) => f.kind !== 'remote-options')).toBe(true);
+    expect(fields.find((f) => f.key === 'timezone')!.kind).toBe('string');
+  });
+
+  it('Clock is addable with NO connection (the sole none exemption, §3.1)', () => {
+    const clockWidgets = addableWidgets(new Set()).filter((w) => w.serviceId === 'clock');
+    expect(clockWidgets.map((w) => w.type)).toEqual(['clock']);
   });
 });

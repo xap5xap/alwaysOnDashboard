@@ -2,8 +2,9 @@
 // "Config form UI: renders a form from WidgetConfigSchema. Generic over field kinds."). Pure and
 // presentational like WidgetHostView: it renders one input per STATIC field kind (string / number /
 // boolean / enum) from a WidgetConfigSchema, pre-filled from the instance's current config, validates
-// on save with the EXISTING validateConfig (never a second validator), surfaces field-level errors, and
-// hands the caller the normalized values. It names no service and reads no registry beyond the schema
+// on save with the EXISTING validateConfig (never a second validator; save-time field validators like
+// Clock's Intl time-zone check are run by passing runFieldValidators, not a parallel validator), surfaces
+// field-level errors, and hands the caller the normalized values. It names no service and reads no registry beyond the schema
 // it is given, so it works for every widget. Persistence and the entry-point wiring live elsewhere
 // (dashboardRepo / the picker / the dashboard); this component only collects and validates.
 //
@@ -131,7 +132,12 @@ export function ConfigForm({
         if (state?.status === 'ready') resolvedOptions[field.key] = state.choices;
       }
     }
-    const result = validateConfig(schema, coerceForValidation(schema, draft), resolvedOptions);
+    // runFieldValidators: this is the SAVE path, so run any string field's optional client validator
+    // (integration-clock.md §5.2, the Intl time-zone check) on top of the static checks. The host's
+    // render-time validateConfig omits this flag, so a gracefully-degrading value never trips needs_config.
+    const result = validateConfig(schema, coerceForValidation(schema, draft), resolvedOptions, {
+      runFieldValidators: true,
+    });
     if (!result.ok) {
       setErrors(Object.fromEntries(result.errors.map((e) => [e.key, e.message])));
       return;
