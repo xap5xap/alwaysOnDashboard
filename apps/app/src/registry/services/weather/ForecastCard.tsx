@@ -1,13 +1,21 @@
-// The "Forecast" leaf renderer (AOD-8 §6.1, integration-weather.md §4.2). Reached only on data-bearing
-// lifecycle states; the host draws every other state. Receives only { data, config, size }. The server
-// zips the columnar daily arrays into ForecastDay rows (§6.1); this card lays them out, today first, and
-// scopes how many rows show to the widget size. The weekday label is computed against the DEVICE clock
-// (the date strings are local, §4.2). Functional and on-brand-enough; the icon set is AOD-35.
+// The "Forecast" leaf renderer (AOD-8 §6.1, integration-weather.md §4.2, design-calendar-weather.md §6).
+// Reached only on data-bearing lifecycle states; the host draws every other state. Receives only
+// { data, config, size }. The server zips the columnar daily arrays into ForecastDay rows (§6.1); this
+// card lays them out today first, scoped to the widget size. The weekday label is computed against the
+// DEVICE clock (the date strings are local, §4.2).
+//
+// AOD-35 polish: one payload, two layouts. At wide a banner STRIP of day columns (weekday / day-form icon
+// / hi over lo / precip); at large a row LIST under the quiet header (weekday / icon / condition + precip
+// / right-aligned hi-lo). The high is the bright figure (colors.text), the low recedes (colors.textMuted),
+// both tabular so the column aligns; Today is bright and later weekdays recede (the relative-time
+// emphasis). Forecast days always use the day form (§4.2). Precip shows in accent at wide, muted at large,
+// and is omitted when null. The degree string is echoed from the payload units (§6.2).
 import React from 'react';
 import { Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { ForecastData, ForecastDay, WeatherCondition } from './types';
+import { WeatherIcon } from './WeatherIcon';
 
 // How many days fit a glance at each size. Forecast ships at wide/large; the others are defensive
 // defaults so the card never reads an undefined count if mounted at an unexpected size.
@@ -28,22 +36,28 @@ function parseLocalYmd(ymd: string): Date | null {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
+/** Whether a "YYYY-MM-DD" is the current device-local day (Today gets the bright emphasis). */
+function isToday(date: string, now: Date): boolean {
+  const d = parseLocalYmd(date);
+  return (
+    !!d &&
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 /** "Today" for the current device-local day, else a short weekday ("Mon"). */
 function dayLabel(date: string, now: Date): string {
   const d = parseLocalYmd(date);
   if (!d) return '';
-  if (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  ) {
-    return 'Today';
-  }
-  return d.toLocaleDateString(undefined, { weekday: 'short' });
+  return isToday(date, now) ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' });
 }
 
 export function ForecastCard({ data, size }: WidgetRenderProps) {
+  const { theme } = useUnistyles();
   const { days, units } = asForecast(data);
+  const unit = units.temperature ?? '°';
   const now = new Date();
   const visible = days.slice(0, VISIBLE_BY_SIZE[size] ?? 5);
 
@@ -57,24 +71,69 @@ export function ForecastCard({ data, size }: WidgetRenderProps) {
     );
   }
 
+  // Forecast days carry the day form (§4.2), so every icon is a day glyph.
+  const icon = (group: WeatherCondition['group'], px: number) => (
+    <WeatherIcon
+      group={group}
+      isDay
+      size={px}
+      color={theme.colors.text}
+      surface={theme.colors.surface}
+      strokeWidth={theme.weatherIcon.stroke}
+    />
+  );
+
+  // wide (3x1): the banner strip. Day columns left to right; weekday / icon / hi-lo / precip stacked.
+  if (size === 'wide') {
+    return (
+      <View style={styles.strip} accessibilityRole="summary" testID="weather-forecast">
+        {visible.map((day) => {
+          const condition = day.condition ?? FALLBACK_CONDITION;
+          const today = isToday(day.date, now);
+          return (
+            <View key={day.date} style={styles.col}>
+              <Text style={[styles.day, today ? styles.dayToday : styles.dayMuted]} numberOfLines={1}>
+                {dayLabel(day.date, now)}
+              </Text>
+              {icon(condition.group, theme.weatherIcon.forecastStrip)}
+              <Text style={styles.temps} numberOfLines={1}>
+                <Text style={styles.hi}>{Math.round(day.tempMax)}{unit}</Text>
+                {'  '}
+                <Text style={styles.lo}>{Math.round(day.tempMin)}{unit}</Text>
+              </Text>
+              {day.precipProbabilityPct != null ? (
+                <Text style={styles.precipWide} numberOfLines={1}>
+                  {day.precipProbabilityPct}%
+                </Text>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
+  // large (and any other reconciled size): the row list under the quiet header.
   return (
     <View style={styles.list} accessibilityRole="summary" testID="weather-forecast">
       {visible.map((day) => {
         const condition = day.condition ?? FALLBACK_CONDITION;
-        const precip = typeof day.precipProbabilityPct === 'number' ? ` · ${day.precipProbabilityPct}%` : '';
+        const today = isToday(day.date, now);
+        const precip = day.precipProbabilityPct != null ? ` · ${day.precipProbabilityPct}%` : '';
         return (
           <View key={day.date} style={styles.row}>
-            <Text style={styles.day} numberOfLines={1}>
+            <Text style={[styles.day, styles.dayRow, today ? styles.dayToday : styles.dayMuted]} numberOfLines={1}>
               {dayLabel(day.date, now)}
             </Text>
-            <Text style={styles.condition} numberOfLines={1}>
+            {icon(condition.group, theme.weatherIcon.forecastRow)}
+            <Text style={styles.condRow} numberOfLines={1}>
               {condition.label}
               {precip}
             </Text>
-            <Text style={styles.temps} numberOfLines={1}>
-              <Text style={styles.tempMax}>{Math.round(day.tempMax)}°</Text>
-              {' / '}
-              <Text style={styles.tempMin}>{Math.round(day.tempMin)}°</Text>
+            <Text style={styles.tempsRow} numberOfLines={1}>
+              <Text style={styles.hi}>{Math.round(day.tempMax)}{unit}</Text>
+              {'  '}
+              <Text style={styles.lo}>{Math.round(day.tempMin)}{unit}</Text>
             </Text>
           </View>
         );
@@ -84,13 +143,37 @@ export function ForecastCard({ data, size }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  list: { gap: theme.spacing(1.5) },
   empty: { paddingVertical: theme.spacing(2) },
-  emptyText: { color: theme.colors.textMuted, fontSize: 14 },
+  emptyText: { ...theme.type.body, color: theme.colors.textMuted },
+
+  // wide banner strip
+  strip: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flex: 1 },
+  col: { flex: 1, alignItems: 'center', gap: theme.spacing(1.5) },
+
+  // large row list
+  list: { gap: theme.spacing(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2) },
-  day: { color: theme.colors.text, fontSize: 13, fontWeight: '700', width: 56 },
-  condition: { color: theme.colors.textMuted, fontSize: 13, flexShrink: 1, flexGrow: 1 },
-  temps: { fontSize: 13, fontVariant: ['tabular-nums'] },
-  tempMax: { color: theme.colors.text, fontWeight: '600' },
-  tempMin: { color: theme.colors.textMuted },
+
+  // weekday: Today bright, later days recede (the relative-time emphasis)
+  day: { ...theme.type.label },
+  dayRow: { width: 52 }, // fixed-width left column for the large row list; the wide column centres instead
+  dayToday: { color: theme.colors.text },
+  dayMuted: { color: theme.colors.textMuted },
+
+  // hi (bright) / lo (muted), tabular so columns align
+  temps: { ...theme.type.body, fontVariant: ['tabular-nums'], textAlign: 'center' },
+  tempsRow: { ...theme.type.body, fontVariant: ['tabular-nums'], textAlign: 'right', minWidth: 64 },
+  hi: { color: theme.colors.text },
+  lo: { color: theme.colors.textMuted },
+
+  // condition label (large only), with precip appended muted
+  condRow: { ...theme.type.meta, color: theme.colors.textMuted, flexShrink: 1, flexGrow: 1 },
+
+  // precip: accent at wide (its own line), muted-appended at large (above)
+  precipWide: {
+    ...theme.type.caption,
+    letterSpacing: 0,
+    fontVariant: ['tabular-nums'],
+    color: theme.colors.accent,
+  },
 }));
