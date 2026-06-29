@@ -1,0 +1,123 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Weather Forecast face: the wide banner strip and the large row list</title>
+  <desc>The Forecast card at its two supported sizes. At wide it is a banner: a horizontal strip of day columns, each stacking a weekday label, a day-form condition icon, a high over low temperature, and a precipitation percentage. The first column reads Today in the bright text colour while the other weekdays recede as muted, echoing the relative-time emphasis the calendar uses. At large it is a vertical list of rows under the quiet header, each row carrying the weekday, the icon, a muted condition label with its precipitation chance, and the high and low aligned to the right, with the high bright and the low muted. The number of days shown follows the renderer's visible-by-size count: five at wide, seven at large. A panel records the high/low and Today emphasis, that units are echoed from the payload, and the reuse of the AOD-37 chrome.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .dayToday{font-size:12.5px;font-weight:700;fill:#F4F4F8;}
+    .day{font-size:12.5px;font-weight:600;fill:#9B9BA8;}
+    .hi{font-size:14px;font-weight:700;fill:#F4F4F8;font-variant:tabular-nums;}
+    .lo{font-size:14px;font-weight:500;fill:#9B9BA8;font-variant:tabular-nums;}
+    .precip{font-size:11px;font-weight:600;fill:#6E8BFF;font-variant:tabular-nums;}
+    .condrow{font-size:12.5px;fill:#9B9BA8;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .gly{fill:none;stroke:#F4F4F8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .gly *{vector-effect:non-scaling-stroke;}
+    .fillsurf{fill:#16161D;}
+  </style>
+
+  <defs>
+    <g id="f-sun" class="gly">
+      <circle cx="12" cy="12" r="4.4"/>
+      <line x1="12" y1="1.6" x2="12" y2="4.2"/><line x1="12" y1="19.8" x2="12" y2="22.4"/>
+      <line x1="1.6" y1="12" x2="4.2" y2="12"/><line x1="19.8" y1="12" x2="22.4" y2="12"/>
+      <line x1="4.6" y1="4.6" x2="6.5" y2="6.5"/><line x1="17.5" y1="17.5" x2="19.4" y2="19.4"/>
+      <line x1="4.6" y1="19.4" x2="6.5" y2="17.5"/><line x1="17.5" y1="6.5" x2="19.4" y2="4.6"/>
+    </g>
+    <g id="f-cloudy" class="gly">
+      <g transform="translate(8 7.5)">
+        <circle cx="0" cy="0" r="2.5"/>
+        <line x1="0" y1="-5.6" x2="0" y2="-3.8"/><line x1="-5.6" y1="0" x2="-3.8" y2="0"/>
+        <line x1="-4" y1="-4" x2="-2.7" y2="-2.7"/><line x1="-4" y1="4" x2="-2.7" y2="2.7"/><line x1="4" y1="-4" x2="2.7" y2="-2.7"/>
+      </g>
+      <path class="fillsurf" d="M18 11h-1.26A8 8 0 1 0 9 21h9a5 5 0 0 0 0-10z" transform="translate(1.5 -1) scale(0.84)"/>
+    </g>
+    <g id="f-rain" class="gly">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" transform="translate(1.8 -3.4) scale(0.78)"/>
+      <line x1="8.6" y1="16.4" x2="6.9" y2="21.2"/><line x1="12.6" y1="16.4" x2="10.9" y2="21.2"/><line x1="16.6" y1="16.4" x2="14.9" y2="21.2"/>
+    </g>
+    <g id="f-showers" class="gly">
+      <g transform="translate(8 7)">
+        <circle cx="0" cy="0" r="2.3"/>
+        <line x1="0" y1="-5.2" x2="0" y2="-3.6"/><line x1="-5.2" y1="0" x2="-3.6" y2="0"/>
+        <line x1="-3.7" y1="-3.7" x2="-2.5" y2="-2.5"/><line x1="3.7" y1="-3.7" x2="2.5" y2="-2.5"/>
+      </g>
+      <path class="fillsurf" d="M18 11h-1.26A8 8 0 1 0 9 21h9a5 5 0 0 0 0-10z" transform="translate(2 -1.6) scale(0.78)"/>
+      <line x1="9.5" y1="16.6" x2="7.4" y2="22"/><line x1="15" y1="16.6" x2="12.9" y2="22"/>
+    </g>
+    <g id="f-storm" class="gly">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" transform="translate(1.8 -3.6) scale(0.78)"/>
+      <path d="M13.4 15.6 L9.6 20.2 H12.2 L10.6 23.4"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Weather Forecast: wide banner strip, large row list</text>
+  <text x="32" y="58" class="sub">Same data, two layouts. High temps brightest, lows muted; Today emphasized; per-day icon carries the day form. supportedSizes: wide, large.</text>
+
+  <!-- ===== WIDE banner ===== -->
+  <text x="32" y="94" class="sec">WIDE (3×1) · BANNER STRIP · 5 days</text>
+  <rect x="32" y="106" width="560" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+
+  <!-- col 0 Today -->
+  <text x="100" y="138" text-anchor="middle" class="dayToday">Today</text>
+  <use href="#f-cloudy" transform="translate(85 150) scale(1.25)"/>
+  <text x="100" y="214" text-anchor="middle"><tspan class="hi">21°</tspan> <tspan class="lo">12°</tspan></text>
+  <text x="100" y="232" text-anchor="middle" class="precip">10%</text>
+  <!-- col 1 -->
+  <text x="208" y="138" text-anchor="middle" class="day">Wed</text>
+  <use href="#f-rain" transform="translate(193 150) scale(1.25)"/>
+  <text x="208" y="214" text-anchor="middle"><tspan class="hi">19°</tspan> <tspan class="lo">11°</tspan></text>
+  <text x="208" y="232" text-anchor="middle" class="precip">60%</text>
+  <!-- col 2 -->
+  <text x="316" y="138" text-anchor="middle" class="day">Thu</text>
+  <use href="#f-showers" transform="translate(301 150) scale(1.25)"/>
+  <text x="316" y="214" text-anchor="middle"><tspan class="hi">18°</tspan> <tspan class="lo">10°</tspan></text>
+  <text x="316" y="232" text-anchor="middle" class="precip">40%</text>
+  <!-- col 3 -->
+  <text x="424" y="138" text-anchor="middle" class="day">Fri</text>
+  <use href="#f-sun" transform="translate(409 150) scale(1.25)"/>
+  <text x="424" y="214" text-anchor="middle"><tspan class="hi">23°</tspan> <tspan class="lo">13°</tspan></text>
+  <!-- col 4 -->
+  <text x="532" y="138" text-anchor="middle" class="day">Sat</text>
+  <use href="#f-cloudy" transform="translate(517 150) scale(1.25)"/>
+  <text x="532" y="214" text-anchor="middle"><tspan class="hi">20°</tspan> <tspan class="lo">12°</tspan></text>
+  <text x="532" y="232" text-anchor="middle" class="precip">20%</text>
+
+  <text x="32" y="278" class="lab">wide <tspan class="labn">· weekday / icon / hi · lo / precip · Today is bright, the rest recede</tspan></text>
+
+  <!-- ===== LARGE row list ===== -->
+  <text x="32" y="312" class="sec">LARGE (2×2) · ROW LIST · 7 days</text>
+  <rect x="32" y="324" width="300" height="224" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="350" class="cap">WEATHER · FORECAST</text>
+
+  <!-- rows -->
+  <g>
+    <text x="50" y="378" class="dayToday">Today</text><use href="#f-cloudy" transform="translate(107 364) scale(0.92)"/><text x="132" y="378" class="condrow">Partly cloudy · 10%</text><text x="314" y="378" text-anchor="end"><tspan class="hi">21°</tspan> <tspan class="lo">12°</tspan></text>
+    <text x="50" y="404" class="day">Wed</text><use href="#f-rain" transform="translate(107 390) scale(0.92)"/><text x="132" y="404" class="condrow">Rain · 60%</text><text x="314" y="404" text-anchor="end"><tspan class="hi">19°</tspan> <tspan class="lo">11°</tspan></text>
+    <text x="50" y="430" class="day">Thu</text><use href="#f-showers" transform="translate(107 416) scale(0.92)"/><text x="132" y="430" class="condrow">Showers · 40%</text><text x="314" y="430" text-anchor="end"><tspan class="hi">18°</tspan> <tspan class="lo">10°</tspan></text>
+    <text x="50" y="456" class="day">Fri</text><use href="#f-sun" transform="translate(107 442) scale(0.92)"/><text x="132" y="456" class="condrow">Clear</text><text x="314" y="456" text-anchor="end"><tspan class="hi">23°</tspan> <tspan class="lo">13°</tspan></text>
+    <text x="50" y="482" class="day">Sat</text><use href="#f-cloudy" transform="translate(107 468) scale(0.92)"/><text x="132" y="482" class="condrow">Partly cloudy · 20%</text><text x="314" y="482" text-anchor="end"><tspan class="hi">20°</tspan> <tspan class="lo">12°</tspan></text>
+    <text x="50" y="508" class="day">Sun</text><use href="#f-storm" transform="translate(107 494) scale(0.92)"/><text x="132" y="508" class="condrow">Thunderstorm · 70%</text><text x="314" y="508" text-anchor="end"><tspan class="hi">22°</tspan> <tspan class="lo">14°</tspan></text>
+    <text x="50" y="534" class="day">Mon</text><use href="#f-sun" transform="translate(107 520) scale(0.92)"/><text x="132" y="534" class="condrow">Clear</text><text x="314" y="534" text-anchor="end"><tspan class="hi">24°</tspan> <tspan class="lo">14°</tspan></text>
+  </g>
+
+  <!-- ===== panel ===== -->
+  <rect x="356" y="324" width="472" height="224" rx="14" fill="#121219" stroke="#2A2A36"/>
+  <text x="378" y="352" class="ph">Forecast body (bespoke arrangement; reuses §3 type + §4 chrome)</text>
+  <text x="378" y="380" class="pb"><tspan class="pk">High / low</tspan>: high in type.body/colors.text, low in colors.textMuted. Tabular figures.</text>
+  <text x="378" y="402" class="pb"><tspan class="pk">Today</tspan>: weekday in colors.text; later days in textMuted (relative-time emphasis).</text>
+  <text x="378" y="424" class="pb"><tspan class="pk">Icon</tspan>: the day-form glyph (forecast days carry isDay = true, §4).</text>
+  <text x="378" y="446" class="pb"><tspan class="pk">Precip</tspan>: precipProbabilityMax in accent (wide) / muted (large); omitted when null.</text>
+  <text x="378" y="468" class="pb"><tspan class="pk">Units</tspan>: the ° string is echoed from the payload; no imperial/metric redesign.</text>
+  <text x="378" y="490" class="pb"><tspan class="pk">Density</tspan>: visible days follow the renderer count, 5 at wide and 7 at large.</text>
+  <text x="378" y="512" class="pb">Reuses the frame, the quiet header, and the loading / stale / error</text>
+  <text x="378" y="529" class="pb">chrome from AOD-37 unchanged; only the row/column body is new.</text>
+</svg>
