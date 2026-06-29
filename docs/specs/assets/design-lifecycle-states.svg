@@ -1,0 +1,83 @@
+<svg width="100%" viewBox="0 0 860 540" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The six lifecycle-state visuals, drawn generically by the host</title>
+  <desc>A three by two grid of the same widget in each of the six render lifecycle states. Loading shows a host skeleton of shimmer bars and the renderer is not invoked. Fresh shows the renderer drawing live data with a quiet header and no badge. Stale shows the same last-known data with a small amber status dot and an updated-minutes-ago caption. Error with data shows the last-known data with a red status dot and a could-not-refresh caption. Needs config and Disconnected are host prompts with an icon, a muted line, and an accent action (Reconfigure, or Connect Linear); the renderer is not invoked for either. The host draws every state by branching on the view state, never on which service, so all five v1 widgets get these visuals for free.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:10.5px;font-weight:600;fill:#9B9BA8;letter-spacing:0.8px;}
+    .hero{font-size:40px;font-weight:700;fill:#F4F4F8;}
+    .cond{font-size:13px;font-weight:600;fill:#6E8BFF;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .warn{font-size:11px;font-weight:600;fill:#F2B84B;}
+    .err{font-size:11px;font-weight:600;fill:#FF6B6B;}
+    .prompt{font-size:13px;fill:#9B9BA8;}
+    .action{font-size:13px;font-weight:700;fill:#6E8BFF;}
+    .stname{font-size:12.5px;font-weight:700;fill:#F4F4F8;}
+    .stnote{font-size:11px;fill:#8A8A97;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="539" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The six lifecycle states: generic host chrome</text>
+  <text x="32" y="60" class="sub">One renderer, six states. The host branches on the view state (lifecycle.ts), never on the service.</text>
+
+  <!-- ===================== ROW 1 ===================== -->
+  <!-- 1 loading -->
+  <rect x="32" y="92" width="236" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="50" y="112" width="120" height="11" rx="5" fill="#23232E"/>
+  <rect x="50" y="146" width="140" height="30" rx="6" fill="#23232E"/>
+  <rect x="50" y="190" width="168" height="10" rx="5" fill="#23232E"/>
+  <rect x="50" y="210" width="104" height="10" rx="5" fill="#23232E"/>
+  <text x="32" y="262" class="stname">loading <tspan class="stnote">· host skeleton, renderer not invoked</tspan></text>
+
+  <!-- 2 fresh -->
+  <rect x="312" y="92" width="236" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="330" y="121" class="cap">WEATHER · CURRENT</text>
+  <text x="328" y="172" class="hero">18°</text>
+  <text x="330" y="196" class="cond">Partly cloudy</text>
+  <text x="330" y="220" class="meta">Feels 17° · 64% · 9 km/h NE</text>
+  <text x="312" y="262" class="stname">fresh <tspan class="stnote">· renderer draws, no badge</tspan></text>
+
+  <!-- 3 stale -->
+  <rect x="592" y="92" width="236" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="610" y="121" class="cap">WEATHER · CURRENT</text>
+  <circle cx="806" cy="117" r="4.5" fill="#F2B84B"/>
+  <text x="608" y="172" class="hero">18°</text>
+  <text x="610" y="196" class="cond">Partly cloudy</text>
+  <text x="610" y="220" class="warn">updated 12m ago</text>
+  <text x="592" y="262" class="stname">stale <tspan class="stnote">· last data + amber dot</tspan></text>
+
+  <!-- ===================== ROW 2 ===================== -->
+  <!-- 4 error -->
+  <rect x="32" y="300" width="236" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="329" class="cap">WEATHER · CURRENT</text>
+  <circle cx="246" cy="325" r="4.5" fill="#FF6B6B"/>
+  <text x="48" y="380" class="hero">18°</text>
+  <text x="50" y="404" class="cond">Partly cloudy</text>
+  <text x="50" y="428" class="err">couldn’t refresh</text>
+  <text x="32" y="470" class="stname">error (with data) <tspan class="stnote">· last data + red dot</tspan></text>
+
+  <!-- 5 needs_config -->
+  <rect x="312" y="300" width="236" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <g transform="translate(430,348)" stroke="#9B9BA8" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <line x1="-16" y1="-6" x2="16" y2="-6"/><circle cx="6" cy="-6" r="4" fill="#16161D"/>
+    <line x1="-16" y1="6" x2="16" y2="6"/><circle cx="-6" cy="6" r="4" fill="#16161D"/>
+  </g>
+  <text x="430" y="392" text-anchor="middle" class="prompt">Reconfigure this widget</text>
+  <text x="430" y="416" text-anchor="middle" class="action">Reconfigure</text>
+  <text x="312" y="470" class="stname">needs_config <tspan class="stnote">· host prompt, no render</tspan></text>
+
+  <!-- 6 disconnected -->
+  <rect x="592" y="300" width="236" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <g transform="translate(710,348)" stroke="#9B9BA8" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <rect x="-15" y="-7" width="16" height="14" rx="7"/>
+    <rect x="-1" y="-7" width="16" height="14" rx="7"/>
+    <line x1="-5" y1="0" x2="5" y2="0"/>
+  </g>
+  <text x="710" y="392" text-anchor="middle" class="prompt">Connect Linear to use this</text>
+  <text x="710" y="416" text-anchor="middle" class="action">Connect</text>
+  <text x="592" y="470" class="stname">disconnected <tspan class="stnote">· host prompt, no render</tspan></text>
+
+  <!-- footer -->
+  <line x1="32" y1="496" x2="828" y2="496" stroke="#22222C"/>
+  <text x="32" y="520" class="sub">Renderer reached only on fresh / stale / error-with-data. Error without data → the host “Couldn’t load · Retry” placeholder.</text>
+</svg>

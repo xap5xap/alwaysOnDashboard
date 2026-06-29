@@ -1,0 +1,78 @@
+<svg width="100%" viewBox="0 0 860 470" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Shared card chrome: anatomy of a Vela widget card</title>
+  <desc>An enlarged single widget card on a dark ambient dashboard, annotated with the design tokens that compose it. The card is a surface-filled rectangle with a 1px border and the md corner radius. Its quiet header runs a muted, letter-spaced service and widget title on the left and a status-and-refresh cluster (host chrome) on the right. The body holds a hero value in the largest type step with tabular figures, a muted label beneath it, and a muted caption line at the foot. Padding is spacing(3) which is 12 units and the vertical rhythm is spacing(2) which is 8 units. Every value is a named token, not a magic number, so the implementing build extends the theme rather than hardcoding.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .hero{font-size:52px;font-weight:700;fill:#F4F4F8;}
+    .lab{font-size:13px;fill:#9B9BA8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .idx{font-size:10px;font-weight:700;fill:#0B0B0F;}
+    .lead{fill:none;stroke:#3A3A46;stroke-width:1;stroke-dasharray:3 3;}
+  </style>
+  <!-- dashboard backdrop -->
+  <rect x="0.5" y="0.5" width="859" height="469" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Shared card chrome: anatomy</text>
+  <text x="32" y="60" class="sub">Every widget renders inside this generic frame (WidgetHostView). The renderer fills the body; the host owns the rest.</text>
+
+  <!-- the card -->
+  <rect x="70" y="120" width="300" height="220" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <!-- header -->
+  <text x="90" y="151" class="cap">LINEAR · MY ISSUES</text>
+  <!-- status + refresh cluster (right) -->
+  <circle cx="316" cy="146" r="4.5" fill="#F2B84B"/>
+  <g transform="translate(338,146)" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+    <path d="M-7 -1 A7 7 0 1 1 -5 5"/>
+    <path d="M-7 -6 L-7 -1 L-2 -1"/>
+  </g>
+  <!-- body -->
+  <text x="89" y="247" class="hero">12</text>
+  <text x="91" y="274" class="lab">open issues · AOD</text>
+  <text x="91" y="320" class="meta">updated 2m ago</text>
+
+  <!-- ===== callouts ===== -->
+  <!-- 1 frame -->
+  <path d="M370 130 H470" class="lead"/>
+  <circle cx="486" cy="130" r="9" fill="#6E8BFF"/><text x="486" y="134" text-anchor="middle" class="idx">1</text>
+  <text x="502" y="127" class="annob">Card frame</text>
+  <text x="502" y="143" class="anno">colors.surface · 1px colors.border · radius.md (14)</text>
+
+  <!-- 2 header title -->
+  <path d="M210 156 V176 H470" class="lead"/>
+  <circle cx="486" cy="176" r="9" fill="#6E8BFF"/><text x="486" y="180" text-anchor="middle" class="idx">2</text>
+  <text x="502" y="173" class="annob">Quiet header: service · widget</text>
+  <text x="502" y="189" class="anno">type.caption (11/600) · textMuted · tracking +1</text>
+
+  <!-- 3 status + refresh -->
+  <path d="M338 158 V222 H470" class="lead"/>
+  <circle cx="486" cy="222" r="9" fill="#6E8BFF"/><text x="486" y="226" text-anchor="middle" class="idx">3</text>
+  <text x="502" y="219" class="annob">Status + refresh cluster (host chrome)</text>
+  <text x="502" y="235" class="anno">stale/error dot (§5) · refresh control (§6) · never per-widget</text>
+
+  <!-- 4 hero -->
+  <path d="M170 235 H300 M370 268 H470" class="lead"/>
+  <circle cx="486" cy="268" r="9" fill="#6E8BFF"/><text x="486" y="272" text-anchor="middle" class="idx">4</text>
+  <text x="502" y="265" class="annob">Hero value</text>
+  <text x="502" y="281" class="anno">type.hero (44/700) · tabular-nums · colors.text</text>
+
+  <!-- 5 meta -->
+  <path d="M180 316 H370 V314 H470" class="lead"/>
+  <circle cx="486" cy="314" r="9" fill="#6E8BFF"/><text x="486" y="318" text-anchor="middle" class="idx">5</text>
+  <text x="502" y="311" class="annob">Label / meta</text>
+  <text x="502" y="327" class="anno">type.label (13) + type.meta (11) · textMuted</text>
+
+  <!-- 6 padding/gap -->
+  <path d="M86 300 V336 H470 V360" class="lead"/>
+  <circle cx="486" cy="360" r="9" fill="#6E8BFF"/><text x="486" y="364" text-anchor="middle" class="idx">6</text>
+  <text x="502" y="357" class="annob">Spacing</text>
+  <text x="502" y="373" class="anno">padding spacing(3)=12 · row gap spacing(2)=8</text>
+
+  <!-- footer rule + note -->
+  <line x1="32" y1="410" x2="828" y2="410" stroke="#22222C"/>
+  <text x="32" y="436" class="anno">Reusable system: Linear, Calendar, Weather, Claude and Clock all mount inside this one frame: only the body changes.</text>
+  <text x="32" y="454" class="anno">The renderer receives { data, config, size } and draws the body; auth / loading / stale / error chrome is the host's (AOD-8 §6.1).</text>
+</svg>

@@ -1,0 +1,92 @@
+<svg width="100%" viewBox="0 0 860 454" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Day/night dimming: the global overlay default and the deep-red useAmbient opt-in</title>
+  <desc>On the left, the default global dim overlay: the same Claude spend card shown at dimLevel 0 in full day, at 0.35 at dusk, and at 0.70 at night, where a host overlay uniformly darkens the whole card with no per-widget code. On the right, the opt-in: a Clock that sets dimsWithAmbient false and reads useAmbient, rendering in normal light type by day and switching to a deep-red low-light palette at night, which the global overlay cannot do because it can only darken, not recolour. Along the bottom, a dim curve shows AOD-11 computeAmbient easing dimLevel from 0 in the day up to about 0.7 at night across a smoothstep ramp at the day-start and night-start boundaries; this design consumes phase and dimLevel and does not build the schedule.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .seclab{font-size:11.5px;font-weight:700;fill:#C9C9D4;}
+    .cap{font-size:9.5px;font-weight:600;fill:#9B9BA8;letter-spacing:0.6px;}
+    .val{font-size:30px;font-weight:700;fill:#F4F4F8;}
+    .vmeta{font-size:10px;fill:#9B9BA8;}
+    .clab{font-size:10.5px;fill:#9B9BA8;}
+    .clabb{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .ctime{font-size:30px;font-weight:700;fill:#F4F4F8;}
+    .cdate{font-size:10px;font-weight:600;fill:#9B9BA8;}
+    .ntime{font-size:30px;font-weight:700;fill:#C2362B;}
+    .ndate{font-size:10px;font-weight:600;fill:#8A201B;}
+    .axis{stroke:#2A2A36;stroke-width:1;}
+    .guide{stroke:#2A2A36;stroke-width:1;stroke-dasharray:3 3;}
+    .curve{fill:none;stroke:#6E8BFF;stroke-width:2;}
+    .tick{font-size:9.5px;fill:#8A8A97;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="453" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Day / night dimming: consume phase + dimLevel</text>
+  <text x="32" y="58" class="sub">The host owns the schedule (AOD-11). A widget either dims with the overlay (default) or recolours itself (opt-in).</text>
+
+  <!-- divider -->
+  <line x1="520" y1="80" x2="520" y2="266" stroke="#22222C"/>
+
+  <!-- ===== A: global overlay ramp ===== -->
+  <text x="32" y="92" class="seclab">Default · global dim overlay (dimsWithAmbient: true)</text>
+  <!-- card day -->
+  <g>
+    <rect x="32" y="104" width="148" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="48" y="128" class="cap">CLAUDE · SPEND</text>
+    <text x="47" y="170" class="val">$42</text>
+    <text x="48" y="192" class="vmeta">$1.40/day · 30 days</text>
+  </g>
+  <text x="48" y="240" class="clabb">dimLevel 0</text>
+  <text x="48" y="255" class="clab">day · full brightness</text>
+  <!-- card dusk -->
+  <g>
+    <rect x="194" y="104" width="148" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="210" y="128" class="cap">CLAUDE · SPEND</text>
+    <text x="209" y="170" class="val">$42</text>
+    <text x="210" y="192" class="vmeta">$1.40/day · 30 days</text>
+    <rect x="194" y="104" width="148" height="116" rx="14" fill="#000000" opacity="0.35"/>
+  </g>
+  <text x="210" y="240" class="clabb">dimLevel 0.35</text>
+  <text x="210" y="255" class="clab">dusk · overlay darkens</text>
+  <!-- card night -->
+  <g>
+    <rect x="356" y="104" width="148" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="372" y="128" class="cap">CLAUDE · SPEND</text>
+    <text x="371" y="170" class="val">$42</text>
+    <text x="372" y="192" class="vmeta">$1.40/day · 30 days</text>
+    <rect x="356" y="104" width="148" height="116" rx="14" fill="#000000" opacity="0.70"/>
+  </g>
+  <text x="372" y="240" class="clabb">dimLevel 0.70</text>
+  <text x="372" y="255" class="clab">night · uniform, no widget code</text>
+
+  <!-- ===== B: useAmbient deep-red ===== -->
+  <text x="540" y="92" class="seclab">Opt-in · useAmbient() deep-red night</text>
+  <!-- day clock -->
+  <g>
+    <rect x="540" y="104" width="138" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="556" y="128" class="clab">CLOCK</text>
+    <text x="555" y="172" class="ctime">14:05</text>
+    <text x="556" y="196" class="cdate">Monday, June 28</text>
+  </g>
+  <text x="556" y="240" class="clabb">phase day</text>
+  <text x="556" y="255" class="clab">light type</text>
+  <!-- night clock (deep red) -->
+  <g>
+    <rect x="690" y="104" width="138" height="116" rx="14" fill="#140709" stroke="#2E1214"/>
+    <text x="706" y="128" class="ndate">CLOCK</text>
+    <text x="705" y="172" class="ntime">21:48</text>
+    <text x="706" y="196" class="ndate">Monday, June 28</text>
+  </g>
+  <text x="706" y="240" class="clabb">phase night</text>
+  <text x="706" y="255" class="clab">deep red, low-light</text>
+
+  <!-- ===== curve ===== -->
+  <line x1="32" y1="384" x2="828" y2="384" class="axis"/>
+  <line x1="32" y1="316" x2="828" y2="316" class="guide"/>
+  <text x="36" y="312" class="tick">nightDim 0.70</text>
+  <text x="36" y="380" class="tick">dayDim 0</text>
+  <path d="M32 316 L250 316 C272 316 282 384 304 384 L686 384 C708 384 718 316 740 316 L828 316" class="curve"/>
+  <line x1="304" y1="384" x2="304" y2="392" class="axis"/><text x="304" y="406" text-anchor="middle" class="tick">07:00 dayStart</text>
+  <line x1="686" y1="384" x2="686" y2="392" class="axis"/><text x="686" y="406" text-anchor="middle" class="tick">21:00 nightStart</text>
+  <text x="32" y="438" class="sub">AOD-11 computeAmbient(now) → { phase, dimLevel } via a smoothstep ramp; this design consumes them, it does not build the schedule.</text>
+</svg>
