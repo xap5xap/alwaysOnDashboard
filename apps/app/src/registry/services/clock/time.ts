@@ -58,6 +58,28 @@ export function resolveConfig(raw: Record<string, unknown> | undefined): ClockCo
   };
 }
 
+/** AOD-37 §8.4: derive a human zone label from an IANA id by humanizing its last path segment
+ *  (America/New_York -> "New York", Europe/Madrid -> "Madrid"). Not stored; derived at render. */
+export function humanizeZone(ianaId: string): string {
+  const segment = ianaId.split('/').pop() ?? ianaId;
+  return segment.replace(/_/g, ' ');
+}
+
+/** AOD-37 §8.4: the short GMT offset for the wide second-clock layout ("GMT-4"), via Intl. Returns null
+ *  if the runtime's Intl does not support the shortOffset token, so the offset degrades away cleanly. */
+export function zoneShortOffset(now: Date, ianaId: string, locale?: string): string | null {
+  try {
+    const parts = new Intl.DateTimeFormat(locale ?? 'en-US', {
+      timeZone: ianaId,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(now);
+    const tz = parts.find((p) => p.type === 'timeZoneName')?.value;
+    return tz && /\d/.test(tz) ? tz : null; // require a digit so a bare "GMT" is treated as absent
+  } catch {
+    return null;
+  }
+}
+
 /** Format the device clock into a ClockView (integration-clock.md §4.1). Defensive on the zone: a
  *  malformed stored zone degrades to device-local (§7.3) and never throws to the host. `locale` defaults
  *  to the device locale (undefined => Intl uses the runtime default); tests pass an explicit locale for
@@ -83,5 +105,11 @@ export function formatClock(now: Date, config: ClockConfig, locale?: string): Cl
     ? new Intl.DateTimeFormat(locale, { dateStyle: config.dateFormat, timeZone: zoneForIntl }).format(now)
     : null;
 
-  return { time, date, zone };
+  // §8.4 the zone label/offset mark a SECOND clock: shown only when a valid override is set (zoneForIntl
+  // defined). A device-local clock (no override, or an override that degraded) carries neither.
+  const isSecondClock = zoneForIntl != null;
+  const zoneLabel = isSecondClock ? humanizeZone(zoneForIntl) : null;
+  const zoneOffset = isSecondClock ? zoneShortOffset(now, zoneForIntl, locale) : null;
+
+  return { time, date, zone, zoneLabel, zoneOffset };
 }

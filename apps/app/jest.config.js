@@ -10,6 +10,7 @@ module.exports = {
   setupFiles: [
     'react-native-unistyles/mocks',
     '<rootDir>/unistyles.ts',
+    '<rootDir>/jest.setup.js',
   ],
   moduleNameMapper: {
     '^@vela/shared$': path.resolve(__dirname, '../../packages/shared/src/index.ts'),

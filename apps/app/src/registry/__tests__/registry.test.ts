@@ -139,7 +139,10 @@ describe('Clock service registration (AOD-60, integration-clock.md §8): the aut
     expect(def.defaultRefresh).toBe('manual');
     expect(def.cacheTtlSeconds).toBeUndefined();
     expect(def.minRefreshSeconds).toBeUndefined();
-    expect(def.dimsWithAmbient).toBe(true);
+    // AOD-37 §8.5: the Clock is the deep-red useAmbient() opt-in, so it OPTS OUT of the global dim
+    // overlay (false), and §4.2 it suppresses the host header at small (a 1x1 glance is just the time).
+    expect(def.dimsWithAmbient).toBe(false);
+    expect(def.hideHeaderAtSizes).toEqual(['small']);
   });
 
   it('declares the §5 static config: 12/24h, seconds, date + format, and a string timezone (no remote-options)', () => {

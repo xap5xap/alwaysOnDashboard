@@ -19,6 +19,7 @@ import {
 } from '../widgets/lifecycle';
 import { effectiveInterval, nextDelaySeconds, requestKey } from '../widgets/scheduler';
 import { useWidgetDataSource } from './WidgetDataSource';
+import { useManualRefresh } from './useManualRefresh';
 import { WidgetHostView } from './WidgetHostView';
 
 // A stable empty schema for an unresolved instance, so useOptionSources runs no queries (hooks must
@@ -93,6 +94,20 @@ export function WidgetHost({
   // the field, so validateConfig accepts it as unverified and a still-valid selection survives.
   const { resolved: resolvedOptions } = useOptionSources(def?.configSchema ?? EMPTY_SCHEMA, instance.serviceId);
 
+  // AOD-15 §6 on-demand refresh control state. A none widget (Clock) never fetches, so the host hides the
+  // control (below); every fetching widget shows it. The floor check here is UX-only (a tap inside the
+  // AOD-12 §6.4 fetch-floor is confirmed "up to date" rather than spinning); the server floor is
+  // authoritative. Hooks run unconditionally, before the !def early return.
+  const lastFetchedAt = query.data?.fetchedAt;
+  const withinFloor = React.useCallback(
+    () =>
+      entitlementFloorSeconds > 0 &&
+      lastFetchedAt != null &&
+      now() - lastFetchedAt < entitlementFloorSeconds * 1000,
+    [entitlementFloorSeconds, lastFetchedAt, now],
+  );
+  const manualRefresh = useManualRefresh({ refetch: query.refetch, withinFloor });
+
   // AOD-8 invariant 1: an unresolved instance is invalid (it would be dropped on a real layout).
   if (!def) {
     return (
@@ -148,6 +163,8 @@ export function WidgetHost({
       onRetry={() => {
         void query.refetch();
       }}
+      refresh={isLocal ? undefined : manualRefresh}
+      now={now}
     />
   );
 }

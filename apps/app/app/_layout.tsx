@@ -13,6 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AuthProvider } from '../src/auth/AuthProvider';
+import { AmbientProvider } from '../src/ambient/AmbientContext';
 import { RegistryProvider } from '../src/registry/RegistryProvider';
 import { CustomerInfoProvider } from '../src/entitlements/CustomerInfoContext';
 import { WidgetDataSourceProvider } from '../src/host/WidgetDataSource';
@@ -44,7 +45,10 @@ export default function RootLayout() {
             <RegistryProvider>
               <CustomerInfoProvider value={{ activeEntitlementIds: [] }}>
                 <WidgetDataSourceProvider source={dataSource}>
-                  <Stack screenOptions={{ headerShown: false }} />
+                  {/* AOD-10 §8 ambient signal. Defaults to day; AOD-11's kiosk runtime drives it. */}
+                  <AmbientProvider>
+                    <Stack screenOptions={{ headerShown: false }} />
+                  </AmbientProvider>
                 </WidgetDataSourceProvider>
               </CustomerInfoProvider>
             </RegistryProvider>

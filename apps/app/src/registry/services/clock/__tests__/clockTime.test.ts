@@ -6,9 +6,11 @@
 import {
   deviceTimeZone,
   formatClock,
+  humanizeZone,
   isValidTimeZone,
   resolveConfig,
   validateTimeZone,
+  zoneShortOffset,
 } from '../time';
 import { CLOCK_CONFIG_DEFAULTS, type ClockConfig } from '../types';
 
@@ -126,5 +128,32 @@ describe('resolveConfig defensive read (integration-clock.md §5.1)', () => {
     expect(c.clockFormat).toBe('24h');
     expect(c.showSeconds).toBe(false);
     expect(c.dateFormat).toBe('full');
+  });
+});
+
+describe('AOD-37 §8.4 second-clock zone label/offset', () => {
+  it('humanizeZone humanizes the last IANA path segment', () => {
+    expect(humanizeZone('America/New_York')).toBe('New York');
+    expect(humanizeZone('Europe/Madrid')).toBe('Madrid');
+    expect(humanizeZone('America/Argentina/Buenos_Aires')).toBe('Buenos Aires');
+  });
+
+  it('zoneShortOffset returns a GMT offset for a real zone (or null if Intl lacks shortOffset)', () => {
+    const off = zoneShortOffset(INSTANT, 'America/New_York', EN);
+    // shortOffset support is runtime-dependent; when present it carries a digit (e.g. "GMT-4").
+    if (off !== null) expect(off).toMatch(/GMT[+-]?\d/);
+  });
+
+  it('formatClock exposes a zone label only when a valid override is set (a second clock)', () => {
+    const second = formatClock(INSTANT, config({ timezone: 'America/New_York' }), EN);
+    expect(second.zoneLabel).toBe('New York');
+
+    const local = formatClock(INSTANT, config({ timezone: '' }), EN);
+    expect(local.zoneLabel).toBeNull();
+    expect(local.zoneOffset).toBeNull();
+
+    // A degraded (invalid) override is device-local, so it carries no kicker either (§7.3).
+    const degraded = formatClock(INSTANT, config({ timezone: 'Mars/Phobos' }), EN);
+    expect(degraded.zoneLabel).toBeNull();
   });
 });
