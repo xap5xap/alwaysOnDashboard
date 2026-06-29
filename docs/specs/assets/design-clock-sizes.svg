@@ -1,0 +1,57 @@
+<svg width="100%" viewBox="0 0 860 492" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The Clock face across the four supported sizes</title>
+  <desc>The digital Clock rendered at each of its supported size classes. Small is a one-by-one glance showing just the time with no header and no date. Medium is the default two-by-one card showing the time over a date line. Wide is a three-by-one banner showing a second-clock example: a New York zone kicker, the time, and the date, because a zone label appears only when a timezone override is set. Large is the two-by-two wall-dominating hero with the time in the largest display step over the date. A panel lists the per-size time type step, the date-line treatment, the second-clock zone-label rule that derives a human label from the IANA id, and that v1 is digital with the analog face deferred.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .kick{font-size:10px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .date{font-size:13px;font-weight:600;fill:#9B9BA8;}
+    .dateSm{font-size:11px;font-weight:600;fill:#9B9BA8;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .time{fill:#F4F4F8;font-weight:700;}
+    .ph{font-size:12.5px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="491" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Clock face: across small / medium / wide / large</text>
+  <text x="32" y="58" class="sub">Digital, v1. Self-ticks from the device clock; tabular figures so digits don’t jitter. The host draws no chrome on the (always) Fresh state.</text>
+
+  <!-- small 1x1 -->
+  <rect x="32" y="92" width="116" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="90" y="158" text-anchor="middle" class="time" font-size="28">14:05</text>
+  <text x="32" y="230" class="lab">small (1×1) <tspan class="labn">· time only</tspan></text>
+
+  <!-- medium 2x1 -->
+  <rect x="180" y="92" width="244" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="198" y="166" class="time" font-size="52">14:05</text>
+  <text x="200" y="190" class="date">Monday, June 28</text>
+  <text x="180" y="230" class="lab">medium (2×1) <tspan class="labn">· time + date: the default</tspan></text>
+
+  <!-- wide 3x1 (second-clock example) -->
+  <rect x="456" y="92" width="372" height="116" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="474" y="120" class="kick">NEW YORK</text>
+  <text x="474" y="178" class="time" font-size="50">21:48</text>
+  <text x="810" y="150" text-anchor="end" class="date">Monday, June 28</text>
+  <text x="810" y="172" text-anchor="end" class="dateSm">GMT−4</text>
+  <text x="456" y="230" class="lab">wide (3×1) <tspan class="labn">· banner · second-clock zone label</tspan></text>
+
+  <!-- large 2x2 -->
+  <rect x="32" y="268" width="272" height="192" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="56" y="372" class="time" font-size="78">14:05</text>
+  <text x="58" y="406" class="date" font-size="15">Monday, June 28</text>
+  <text x="32" y="482" class="lab">large (2×2) <tspan class="labn">· wall hero · type.display (96)</tspan></text>
+
+  <!-- panel -->
+  <rect x="336" y="268" width="492" height="192" rx="14" fill="#121219" stroke="#2A2A36"/>
+  <text x="356" y="296" class="ph">Clock face: digital (v1). Analog face deferred (§10).</text>
+  <text x="356" y="324" class="pb">Per-size time step:  <tspan class="pk">small 34</tspan>  ·  <tspan class="pk">medium 56</tspan>  ·  <tspan class="pk">wide 64</tspan>  ·  <tspan class="pk">large 96</tspan></text>
+  <text x="356" y="350" class="pb">Date line: below the time, textMuted, per dateFormat.</text>
+  <text x="356" y="368" class="pb">Hidden at small, or when showDate = false.</text>
+  <text x="356" y="396" class="pb">Zone label (second clock): shown only with a timezone</text>
+  <text x="356" y="414" class="pb">override. IANA id → human label: America/New_York → “New York”.</text>
+  <text x="356" y="432" class="pb">A device-local clock shows no kicker.</text>
+  <text x="356" y="452" class="pb">Night: deep-red useAmbient palette (see the ambient mockup).</text>
+</svg>

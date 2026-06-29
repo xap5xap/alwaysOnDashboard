@@ -107,6 +107,7 @@ Exactly one `type:` per issue. Colon prefix is mandatory (playbook's single high
 |---|---|---|
 | `type:decision` | An open question / choice. Body is ADR-shaped. | Decision recorded in the issue (the ADR) + mirrored to vision doc |
 | `type:spec` | A specification to author. | A markdown doc under `docs/specs/` |
+| `type:design` | A visual / interaction design to produce (Phase 1+). | A design doc under `docs/specs/` (`design-` prefix) + rendered SVG mockups in `docs/specs/assets/` |
 | `type:tech-task` | Infra / setup / scaffolding (Phase 1+). | Code or config |
 | `type:bug` | Defect against existing behavior (Phase 1+). | Fix |
 
@@ -116,6 +117,7 @@ Exactly one `type:` per issue. Colon prefix is mandatory (playbook's single high
 
 - `[Decision] …` — decision issues (already in use on AOD-1/AOD-2)
 - `[Spec] …` — spec issues
+- `[Design] …` — design issues
 - `[Tech] …` — tech tasks
 
 ---
@@ -162,6 +164,19 @@ When the issue closes, add the one-line outcome to `product-vision.md` "Decision
 
 ---
 
+## Design deliverable convention (`type:design`)
+
+A `type:design` issue turns a written spec into a **visual + interaction contract** before the implementing `type:tech-task` builds it. It is the design-first counterpart to a build: the visual seam a spec named (for example `integration-clock.md` §10, "the Clock visual design") is fixed as a design that others apply, not redesigned in code. It follows the same Backlog → In Progress → Done loop as a spec, and its Done output mirrors the spec convention:
+
+- **A design doc** under `docs/specs/`, named with a `design-` prefix (e.g. `design-widget-system.md`), written to the rigor of a spec: it fixes the visual contract (design tokens, type scale, per-state and per-size visuals) and names its open seams in a "seams left open" section.
+- **Rendered SVG mockups** in `docs/specs/assets/` (the same home as spec diagrams), `design-`-prefixed, embedded in the doc with a collapsible source/token block. This is the rendered-asset + collapsible-source pattern the spec diagrams already use; for a UI mockup the collapsible block holds the design tokens and measurements rather than a Mermaid source.
+- **Tokens, not magic numbers.** A design expresses its values as design tokens to be added to the theme (`apps/app/unistyles.ts`), so the implementing tech-task *extends the token set* rather than hardcoding. The design doc specifies the token additions; it does not edit `unistyles.ts` (that is the build's job, the same way a spec does not write the code it specifies).
+- **Merged via PR**, like a spec. The implementing polish is a separate `type:tech-task`, the same way each integration spec was separate from its build.
+
+A design holds the visual contract only; it does not change the registry/host/layout architecture or the AOD-8 §6.1 render contract. A reusable design **system** (card chrome, type scale, the lifecycle-state visuals) is designed once so sibling per-widget designs are *applications* of it, not redesigns.
+
+---
+
 ## Traceability chain
 
 ```
@@ -169,8 +184,11 @@ Vision doc open question (product-vision.md "Open questions")
   → Decision issue (AOD-N, type:decision)
     → Decision recorded (ADR in the closed issue) + vision-doc one-liner
       → Spec issue (AOD-M, type:spec) → docs/specs/*.md
-        → Tech task (AOD-K, type:tech-task) → code
+        → Design issue (AOD-D, type:design) → docs/specs/design-*.md + assets/ (the visual contract)
+          → Tech task (AOD-K, type:tech-task) → code
 ```
+
+A `type:design` sits between the spec and the build for any work with a visual surface: the spec fixes the data and the seam, the design fixes how it looks and behaves, the tech-task implements it. Not every spec spawns a design (a backend spec goes straight to a tech-task); a design exists when a spec explicitly leaves a visual seam open (for example `integration-clock.md` §10 names the Clock visual design as AOD-37's).
 
 When you are deep in Build wondering "why is auth structured this way?", you trace the code → the tech task → the spec → `AOD-2` → the option comparison that picked Supabase. The decision is grounded, not guessed.
 
@@ -239,3 +257,4 @@ First decision up: **AOD-2 (backend stack)** — Supabase is the leading recomme
 | Date | Change |
 |---|---|
 | 2026-06-17 | Initial draft. Defined the 4-phase model, the decision-driven loop, the Linear structure (Initiative + Product definition project), the ADR-in-issue convention, and the seed backlog mapping from the vision doc. |
+| 2026-06-28 | Added the `type:design` issue type, the `[Design]` title prefix, the design deliverable convention, and its place in the traceability chain (spec → design → tech-task). First used by AOD-37 (`design-widget-system.md`). |
