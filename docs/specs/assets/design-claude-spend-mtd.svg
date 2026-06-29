@@ -1,0 +1,109 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Claude Spend MTD face: cents-precision money typography, run-rate emphasis, and the valid $0.00 state</title>
+  <desc>The Spend MTD card. At the top, an enlarged month-to-date money figure shows the three-tier typography: a reduced raised currency symbol, the dollars at the extra-large type step in tabular figures as the magnitude that dominates, and the cents at a reduced size in the muted colour as precision that recedes. Three numbered markers key a legend describing each tier and the non-USD code-suffix rule. Below, the face at three states: small is a one-by-one glance of a compact caption over the amount with no run-rate; medium adds the quiet caption header with refresh cluster, the amount hero, and a run-rate meta line reading dollars per day average and the day count; and the $0.00 card shows that a zero total is a valid figure rendered as the hero, not an empty body. A token panel records the money token group and the zero-is-valid rule, and a note panel records the run-rate derivation.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .capS{font-size:9.5px;font-weight:600;fill:#9B9BA8;letter-spacing:0.8px;}
+    .meta{font-size:13px;fill:#9B9BA8;}
+    .metaStrong{font-size:13px;font-weight:600;fill:#F4F4F8;font-variant:tabular-nums;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .idx{font-size:10px;font-weight:700;fill:#0B0B0F;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .symX{font-weight:700;fill:#F4F4F8;}
+    .dolX{font-weight:700;fill:#F4F4F8;font-variant:tabular-nums;}
+    .ctsX{font-weight:700;fill:#9B9BA8;font-variant:tabular-nums;}
+  </style>
+
+  <defs>
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5"/><path d="M-7 -6 L-7 -1 L-2 -1"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Claude Spend MTD: the dollars dominate, the cents recede, $0.00 is a real figure</text>
+  <text x="32" y="58" class="sub">Value-first money: type.xl amount with tabular-nums; a within-value hierarchy makes the magnitude the glance. supportedSizes: small, medium.</text>
+
+  <!-- ===== money typography anatomy ===== -->
+  <text x="32" y="92" class="sec">MONEY TYPOGRAPHY (enlarged)</text>
+  <rect x="32" y="104" width="452" height="166" rx="14" fill="#16161D" stroke="#2A2A36"/>
+
+  <text x="58"  y="188" font-size="48" class="symX">$</text>
+  <text x="92"  y="212" font-size="84" class="dolX">1,234</text>
+  <text x="330" y="212" font-size="48" class="ctsX">.56</text>
+
+  <!-- markers on the tiers -->
+  <circle cx="72"  cy="150" r="8" fill="#6E8BFF"/><text x="72"  y="154" text-anchor="middle" class="idx">1</text>
+  <circle cx="206" cy="138" r="8" fill="#6E8BFF"/><text x="206" y="142" text-anchor="middle" class="idx">2</text>
+  <circle cx="356" cy="150" r="8" fill="#6E8BFF"/><text x="356" y="154" text-anchor="middle" class="idx">3</text>
+
+  <!-- legend -->
+  <circle cx="512" cy="132" r="9" fill="#6E8BFF"/><text x="512" y="136" text-anchor="middle" class="idx">1</text>
+  <text x="530" y="129" class="annob">Currency symbol</text>
+  <text x="530" y="145" class="anno">money.symbolScale 0.62 · raised · colors.text.</text>
+
+  <circle cx="512" cy="174" r="9" fill="#6E8BFF"/><text x="512" y="178" text-anchor="middle" class="idx">2</text>
+  <text x="530" y="171" class="annob">Dollars — the magnitude</text>
+  <text x="530" y="187" class="anno">type.xl (40/700) · tabular-nums · colors.text.</text>
+
+  <circle cx="512" cy="216" r="9" fill="#6E8BFF"/><text x="512" y="220" text-anchor="middle" class="idx">3</text>
+  <text x="530" y="213" class="annob">Cents — the precision</text>
+  <text x="530" y="229" class="anno">money.fractionScale 0.62 · colors.textMuted,</text>
+  <text x="530" y="245" class="anno">baseline-aligned (not raised: calm, not retail).</text>
+
+  <text x="32" y="292" class="labn">Non-USD: identical numerals; the currency CODE trails as a muted type.meta suffix (e.g. 1,234.56 EUR). No symbol in v1, echoed from the payload.</text>
+
+  <!-- ===== the face ===== -->
+  <text x="32" y="328" class="sec">THE FACE — small · medium · the $0.00 valid-zero state</text>
+
+  <!-- small -->
+  <rect x="32" y="340" width="120" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="46" y="366" class="capS">SPEND · MTD</text>
+  <text x="46"  y="416" font-size="20" class="symX">$</text>
+  <text x="62"  y="416" font-size="32" class="dolX">842</text>
+  <text x="118" y="416" font-size="20" class="ctsX">.50</text>
+  <text x="32" y="480" class="lab">small (1×1) <tspan class="labn">· caption + amount</tspan></text>
+  <text x="32" y="496" class="labn">money needs a label, so the caption stays; no run-rate.</text>
+
+  <!-- medium -->
+  <rect x="180" y="340" width="276" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="198" y="366" class="cap">CLAUDE · SPEND (MTD)</text>
+  <use href="#refresh" transform="translate(438 362)"/>
+  <text x="196" y="414" font-size="26" class="symX">$</text>
+  <text x="216" y="414" font-size="42" class="dolX">1,284</text>
+  <text x="346" y="414" font-size="26" class="ctsX">.50</text>
+  <text x="198" y="440"><tspan class="metaStrong">$42.82</tspan><tspan class="meta">/day avg  ·  30 days this month</tspan></text>
+  <text x="180" y="480" class="lab">medium (2×1) <tspan class="labn">· caption + cluster + amount + run-rate</tspan></text>
+  <text x="180" y="496" class="labn">the run-rate is the emphasised derived figure.</text>
+
+  <!-- zero -->
+  <rect x="484" y="340" width="276" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="502" y="366" class="cap">CLAUDE · SPEND (MTD)</text>
+  <use href="#refresh" transform="translate(742 362)"/>
+  <text x="500" y="414" font-size="26" class="symX">$</text>
+  <text x="520" y="414" font-size="42" class="dolX">0</text>
+  <text x="540" y="414" font-size="26" class="ctsX">.00</text>
+  <text x="502" y="440"><tspan class="metaStrong">$0.00</tspan><tspan class="meta">/day avg  ·  12 days this month</tspan></text>
+  <text x="484" y="480" class="lab">$0.00 <tspan class="labn">· a VALID figure, the normal body</tspan></text>
+  <text x="484" y="496" class="labn">NOT an empty state (contrast Daily's empty days[]).</text>
+
+  <!-- ===== bottom panels ===== -->
+  <rect x="32" y="512" width="468" height="72" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="50" y="534" class="ph">money token group <tspan class="pb" font-weight="400">(specified, not coded; reuses colors.text / colors.textMuted)</tspan></text>
+  <text x="50" y="554" class="pb"><tspan class="pk">symbolScale</tspan> 0.62 · <tspan class="pk">fractionScale</tspan> 0.62 · <tspan class="pk">fractionColor</tspan> colors.textMuted · dollars type.xl tabular</text>
+  <text x="50" y="572" class="pb">$0.00 renders as the hero (a real zero), never the calm empty body Daily Spend uses.</text>
+
+  <rect x="516" y="512" width="312" height="72" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="534" y="534" class="ph">Run-rate emphasis</text>
+  <text x="534" y="554" class="pb">perDay = amount / daysElapsed — derived in the</text>
+  <text x="534" y="572" class="pb">renderer, no extra request. Projection is a seam.</text>
+</svg>
