@@ -1,0 +1,185 @@
+<svg width="100%" viewBox="0 0 900 808" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Linear My Issues face: priority carried by shape, a count leads, density across medium, large, tall</title>
+  <desc>The My Issues card across its three supported sizes plus the priority indication and the empty body. The top band enlarges the per-issue priority indication: five monochrome glyphs in Linear's own language, drawn by shape and ink-weight rather than colour, so they neither break the one-accent rule nor collide with the amber stale and red error status dots. No priority is three dim dashes, low through high are one, two, then three filled ascending bars, and urgent is a filled block with an exclamation. Below, three cards show the row density per size: medium fits four rows, large seven with a due date on the right, and tall a deep narrow column of ten, each row a priority glyph then the issue identifier then the title, with a count of the total assigned issues leading the body and a plus-more footer folding the overflow. A fourth card shows the renderer-drawn empty body when no issues are assigned: a calm centred checkbox glyph, a muted No assigned issues line, and a quiet subline, carrying no action. A panel records the priorityIcon token group and notes the chrome, states, refresh, dim, and empty-body convention are all reused from the system unchanged.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:10.5px;font-weight:600;fill:#9B9BA8;letter-spacing:0.8px;}
+    .count{font-weight:700;fill:#F4F4F8;font-variant:tabular-nums;}
+    .countq{fill:#9B9BA8;}
+    .id{font-size:11.5px;font-weight:700;fill:#9B9BA8;font-variant:tabular-nums;}
+    .title{font-size:13px;fill:#F4F4F8;}
+    .due{font-size:10.5px;fill:#8A8A97;font-variant:tabular-nums;}
+    .dueNow{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .more{font-size:12px;font-weight:600;fill:#9B9BA8;}
+    .empty{font-size:14px;font-weight:500;fill:#9B9BA8;}
+    .emptysub{font-size:12px;fill:#8A8A97;}
+    .glab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .gval{font-size:10px;fill:#8A8A97;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .div{stroke:#22222C;stroke-width:1;}
+    .barOn{fill:#F4F4F8;}
+    .barOff{fill:#9B9BA8;fill-opacity:0.30;}
+    .dash{fill:#9B9BA8;fill-opacity:0.5;}
+  </style>
+
+  <defs>
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5" vector-effect="non-scaling-stroke"/>
+      <path d="M-7 -6 L-7 -1 L-2 -1" vector-effect="non-scaling-stroke"/>
+    </g>
+    <!-- priority glyphs (16x16 box, baseline y14, bars ascending; filled count = level; carried by shape) -->
+    <g id="pNone">
+      <rect class="dash" x="2" y="4.2"  width="12.8" height="1.9" rx="0.9"/>
+      <rect class="dash" x="2" y="8.05" width="12.8" height="1.9" rx="0.9"/>
+      <rect class="dash" x="2" y="11.9" width="12.8" height="1.9" rx="0.9"/>
+    </g>
+    <g id="pLow">
+      <rect class="barOn"  x="2"    y="8"   width="3.4" height="6"    rx="1"/>
+      <rect class="barOff" x="6.7"  y="4.5" width="3.4" height="9.5"  rx="1"/>
+      <rect class="barOff" x="11.4" y="1.5" width="3.4" height="12.5" rx="1"/>
+    </g>
+    <g id="pMed">
+      <rect class="barOn"  x="2"    y="8"   width="3.4" height="6"    rx="1"/>
+      <rect class="barOn"  x="6.7"  y="4.5" width="3.4" height="9.5"  rx="1"/>
+      <rect class="barOff" x="11.4" y="1.5" width="3.4" height="12.5" rx="1"/>
+    </g>
+    <g id="pHigh">
+      <rect class="barOn" x="2"    y="8"   width="3.4" height="6"    rx="1"/>
+      <rect class="barOn" x="6.7"  y="4.5" width="3.4" height="9.5"  rx="1"/>
+      <rect class="barOn" x="11.4" y="1.5" width="3.4" height="12.5" rx="1"/>
+    </g>
+    <g id="pUrgent">
+      <rect x="1.5" y="1.5" width="13" height="13" rx="3.2" fill="#F4F4F8"/>
+      <rect x="7.15" y="4" width="1.7" height="5.2" rx="0.7" fill="#16161D"/>
+      <circle cx="8" cy="11.1" r="1.0" fill="#16161D"/>
+    </g>
+    <!-- My Issues empty glyph: a checkbox (issues clear), accent line family -->
+    <g id="mi-empty" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="20" height="20" rx="4.5" vector-effect="non-scaling-stroke"/>
+      <path d="M8 13 l3.6 3.6 l7 -8" vector-effect="non-scaling-stroke"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="899" height="807" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">My Issues: a calm issue list, priority carried by shape</text>
+  <text x="32" y="58" class="sub">Per-issue priority as monochrome Linear glyphs (shape, not colour); the assigned count leads; "+N more" folds overflow. supportedSizes: medium, large, tall.</text>
+
+  <!-- ===================== PRIORITY GLYPHS (enlarged) ===================== -->
+  <text x="32" y="92" class="sec">THE PRIORITY INDICATION · monochrome, carried by shape (the §3 one-accent rule, no status-hue collision)</text>
+
+  <rect x="32" y="104" width="520" height="176" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <use href="#pNone"   transform="translate(99.2 142) scale(2.1)"/>
+  <use href="#pLow"    transform="translate(183.2 142) scale(2.1)"/>
+  <use href="#pMed"    transform="translate(267.2 142) scale(2.1)"/>
+  <use href="#pHigh"   transform="translate(351.2 142) scale(2.1)"/>
+  <use href="#pUrgent" transform="translate(435.2 142) scale(2.1)"/>
+  <text x="116" y="216" text-anchor="middle" class="glab">None</text>
+  <text x="200" y="216" text-anchor="middle" class="glab">Low</text>
+  <text x="284" y="216" text-anchor="middle" class="glab">Medium</text>
+  <text x="368" y="216" text-anchor="middle" class="glab">High</text>
+  <text x="452" y="216" text-anchor="middle" class="glab">Urgent</text>
+  <text x="116" y="232" text-anchor="middle" class="gval">priority 0</text>
+  <text x="200" y="232" text-anchor="middle" class="gval">4</text>
+  <text x="284" y="232" text-anchor="middle" class="gval">3</text>
+  <text x="368" y="232" text-anchor="middle" class="gval">2</text>
+  <text x="452" y="232" text-anchor="middle" class="gval">1</text>
+  <line x1="50" y1="250" x2="534" y2="250" class="div"/>
+  <text x="50" y="269" class="labn">Filled-bar count is the level; urgent is the filled block; none is the dim dashes. One neutral ink, no rainbow.</text>
+
+  <!-- discipline note -->
+  <rect x="568" y="104" width="300" height="176" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="586" y="128" class="ph">Carried by shape, not colour</text>
+  <text x="586" y="150" class="pb"><tspan class="pk">①</tspan> One accent (§3): a red/amber/blue</text>
+  <text x="586" y="166" class="pb">dot rainbow would break it.</text>
+  <text x="586" y="186" class="pb"><tspan class="pk">②</tspan> Status owns warning/error hues</text>
+  <text x="586" y="202" class="pb">(§5); priority stays neutral, no clash.</text>
+  <text x="586" y="222" class="pb"><tspan class="pk">③</tspan> Linear's own glyph language;</text>
+  <text x="586" y="238" class="pb">instantly read by any Linear user.</text>
+  <text x="586" y="258" class="pb"><tspan class="pk">④</tspan> Calm on a wall; ink-weight ascends</text>
+  <text x="586" y="274" class="pb">none &lt; low &lt; med &lt; high &lt; urgent.</text>
+
+  <line x1="32" y1="300" x2="868" y2="300" class="div"/>
+
+  <!-- ===================== DENSITY ACROSS SIZES ===================== -->
+  <text x="32" y="326" class="sec">DENSITY ACROSS SIZES · a count leads, rows below, "+N more" folds overflow</text>
+
+  <!-- ===== TALL (1x2) ===== -->
+  <text x="32" y="350" class="cap" style="letter-spacing:1px">TALL (1×2) · DEEP COLUMN · 10 rows</text>
+  <rect x="32" y="362" width="172" height="410" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="388" class="cap">LINEAR · MY ISSUES</text>
+  <use href="#refresh" transform="translate(188 384)"/>
+  <text x="48" y="414"><tspan class="count" font-size="18">12</tspan> <tspan class="countq" font-size="12">open</tspan></text>
+  <line x1="48" y1="426" x2="188" y2="426" class="div"/>
+  <use href="#pUrgent" transform="translate(48 437) scale(0.82)"/><text x="68" y="451" class="id">AOD-30</text><text x="120" y="451" class="title">Linear visuals</text>
+  <use href="#pHigh"   transform="translate(48 465) scale(0.82)"/><text x="68" y="479" class="id">AOD-59</text><text x="120" y="479" class="title">401 reauth</text>
+  <use href="#pHigh"   transform="translate(48 493) scale(0.82)"/><text x="68" y="507" class="id">AOD-61</text><text x="120" y="507" class="title">Empty body</text>
+  <use href="#pMed"    transform="translate(48 521) scale(0.82)"/><text x="68" y="535" class="id">AOD-37</text><text x="120" y="535" class="title">Widget sys</text>
+  <use href="#pMed"    transform="translate(48 549) scale(0.82)"/><text x="68" y="563" class="id">AOD-58</text><text x="120" y="563" class="title">Wx params</text>
+  <use href="#pMed"    transform="translate(48 577) scale(0.82)"/><text x="68" y="591" class="id">AOD-12</text><text x="120" y="591" class="title">Fetch floor</text>
+  <use href="#pLow"    transform="translate(48 605) scale(0.82)"/><text x="68" y="619" class="id">AOD-60</text><text x="120" y="619" class="title">Clock tick</text>
+  <use href="#pLow"    transform="translate(48 633) scale(0.82)"/><text x="68" y="647" class="id">AOD-53</text><text x="120" y="647" class="title">Options</text>
+  <use href="#pNone"   transform="translate(48 661) scale(0.82)"/><text x="68" y="675" class="id">AOD-56</text><text x="120" y="675" class="title">REST seam</text>
+  <use href="#pNone"   transform="translate(48 689) scale(0.82)"/><text x="68" y="703" class="id">AOD-11</text><text x="120" y="703" class="title">Dim curve</text>
+  <text x="48" y="733" class="more">+2 more</text>
+
+  <!-- ===== MEDIUM (2x1) ===== -->
+  <text x="224" y="350" class="cap" style="letter-spacing:1px">MEDIUM (2×1) · 4 rows</text>
+  <rect x="224" y="362" width="320" height="158" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="242" y="388" class="cap">LINEAR · MY ISSUES</text>
+  <use href="#refresh" transform="translate(528 384)"/>
+  <text x="242" y="412"><tspan class="count" font-size="20">12</tspan> <tspan class="countq" font-size="13">open</tspan></text>
+  <use href="#pUrgent" transform="translate(242 427) scale(0.85)"/><text x="264" y="441" class="id">AOD-30</text><text x="320" y="441" class="title">Linear widget visuals</text>
+  <use href="#pHigh"   transform="translate(242 450) scale(0.85)"/><text x="264" y="464" class="id">AOD-59</text><text x="320" y="464" class="title">Claude usage 401 reauth</text>
+  <use href="#pMed"    transform="translate(242 473) scale(0.85)"/><text x="264" y="487" class="id">AOD-37</text><text x="320" y="487" class="title">Widget visual system</text>
+  <use href="#pNone"   transform="translate(242 496) scale(0.85)"/><text x="264" y="510" class="id">AOD-56</text><text x="320" y="510" class="title">REST operation seam</text>
+  <text x="528" y="510" text-anchor="end" class="more">+8 more</text>
+
+  <!-- ===== LARGE (2x2) ===== -->
+  <text x="224" y="544" class="cap" style="letter-spacing:1px">LARGE (2×2) · 7 rows · due date on the right</text>
+  <rect x="224" y="556" width="320" height="216" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="242" y="582" class="cap">LINEAR · MY ISSUES</text>
+  <use href="#refresh" transform="translate(528 578)"/>
+  <text x="242" y="606"><tspan class="count" font-size="22">12</tspan> <tspan class="countq" font-size="13">open · Platform &amp; App Shell</tspan></text>
+  <use href="#pUrgent" transform="translate(242 618) scale(0.85)"/><text x="264" y="632" class="id">AOD-30</text><text x="320" y="632" class="title">Linear widget visuals</text><text x="528" y="632" text-anchor="end" class="dueNow">Today</text>
+  <use href="#pHigh"   transform="translate(242 638) scale(0.85)"/><text x="264" y="652" class="id">AOD-59</text><text x="320" y="652" class="title">Claude usage 401 reauth</text><text x="528" y="652" text-anchor="end" class="due">Jul 2</text>
+  <use href="#pHigh"   transform="translate(242 658) scale(0.85)"/><text x="264" y="672" class="id">AOD-61</text><text x="320" y="672" class="title">Empty body convention</text>
+  <use href="#pMed"    transform="translate(242 678) scale(0.85)"/><text x="264" y="692" class="id">AOD-37</text><text x="320" y="692" class="title">Widget visual system</text><text x="528" y="692" text-anchor="end" class="due">Jul 5</text>
+  <use href="#pMed"    transform="translate(242 698) scale(0.85)"/><text x="264" y="712" class="id">AOD-58</text><text x="320" y="712" class="title">Weather host params</text>
+  <use href="#pLow"    transform="translate(242 718) scale(0.85)"/><text x="264" y="732" class="id">AOD-53</text><text x="320" y="732" class="title">Remote-options engine</text>
+  <use href="#pNone"   transform="translate(242 738) scale(0.85)"/><text x="264" y="752" class="id">AOD-56</text><text x="320" y="752" class="title">REST operation seam</text>
+  <text x="528" y="752" text-anchor="end" class="more">+5 more</text>
+
+  <!-- ===== EMPTY ===== -->
+  <text x="564" y="350" class="cap" style="letter-spacing:1px">EMPTY (totalCount 0)</text>
+  <rect x="564" y="362" width="304" height="158" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="582" y="388" class="cap">LINEAR · MY ISSUES</text>
+  <use href="#refresh" transform="translate(852 384)"/>
+  <use href="#mi-empty" transform="translate(703 406) scale(0.98)"/>
+  <text x="716" y="462" text-anchor="middle" class="empty">No assigned issues</text>
+  <text x="716" y="481" text-anchor="middle" class="emptysub">You're all caught up</text>
+
+  <!-- ===== TOKEN + REUSE PANEL ===== -->
+  <rect x="564" y="556" width="304" height="216" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="582" y="580" class="ph">priorityIcon token group <tspan class="pb" font-weight="400">(specified, not coded)</tspan></text>
+  <text x="582" y="601" class="pb"><tspan class="pk">size</tspan> 14 · filled (no stroke) · <tspan class="pk">on</tspan> colors.text</text>
+  <text x="582" y="617" class="pb"><tspan class="pk">off</tspan> colors.textMuted @ 0.30 · no new colour</text>
+  <line x1="582" y1="630" x2="850" y2="630" class="div"/>
+  <text x="582" y="650" class="pb"><tspan class="pk">count</tspan> total in colors.text + filter qualifier muted</text>
+  <text x="582" y="666" class="pb"><tspan class="pk">row</tspan> glyph · identifier (muted, tabular) · title</text>
+  <text x="582" y="682" class="pb"><tspan class="pk">overflow</tspan> "+N more" (textMuted)</text>
+  <line x1="582" y1="695" x2="850" y2="695" class="div"/>
+  <text x="582" y="715" class="anno"><tspan class="annob">Reuses §3-§7 + §5.1:</tspan> frame, header,</text>
+  <text x="582" y="731" class="anno">cluster, six states, refresh, overlay,</text>
+  <text x="582" y="747" class="anno">and the empty-body convention.</text>
+
+  <text x="32" y="794" class="anno"><tspan class="annob">Reuses AOD-37 unchanged:</tspan> the card chrome (§4), six states (§5), the empty body (§5.1), refresh (§6), overlay dim (§7). <tspan class="annob">Bespoke to AOD-30:</tspan> the priority glyph set, the count, and the row density.</text>
+</svg>
