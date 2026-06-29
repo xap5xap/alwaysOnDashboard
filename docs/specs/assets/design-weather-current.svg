@@ -1,0 +1,121 @@
+<svg width="100%" viewBox="0 0 860 568" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Weather Current face across small and medium, by day and by night</title>
+  <desc>The Current Weather card rendered at its two supported sizes, small and medium, in a day row and a night row. The body is value-first: the temperature is the hero value in the largest type step, the condition icon sits beside it at the same bright text tier as the glance pair, the condition label is an accent line, and the feels-like, humidity and wind read as muted meta. Small is a one-by-one glance of icon over temperature with the header suppressed. Medium adds the quiet WEATHER CURRENT header with the status-and-refresh cluster, the condition label, and the meta line. The night row shows the two changes night brings: the payload is-day flag flips the icon from a sun-behind-cloud to a moon-behind-cloud, and because the widget dims with ambient it takes the AOD-37 global overlay, darkening uniformly. A panel separates these two independent signals and lists which parts reuse the AOD-37 system versus the bespoke icon.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .temp{font-weight:700;fill:#F4F4F8;font-variant:tabular-nums;}
+    .cond{font-size:15px;font-weight:600;fill:#6E8BFF;}
+    .meta{font-size:13px;fill:#9B9BA8;font-variant:tabular-nums;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .lead{fill:none;stroke:#3A3A46;stroke-width:1;stroke-dasharray:3 3;}
+    .gly{fill:none;stroke:#F4F4F8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .gly *{vector-effect:non-scaling-stroke;}
+    .fillsurf{fill:#16161D;}
+  </style>
+
+  <defs>
+    <g id="cur-cloudy-day" class="gly">
+      <g transform="translate(8 7.5)">
+        <circle cx="0" cy="0" r="2.5"/>
+        <line x1="0" y1="-5.6" x2="0" y2="-3.8"/><line x1="-5.6" y1="0" x2="-3.8" y2="0"/>
+        <line x1="-4" y1="-4" x2="-2.7" y2="-2.7"/><line x1="-4" y1="4" x2="-2.7" y2="2.7"/><line x1="4" y1="-4" x2="2.7" y2="-2.7"/>
+      </g>
+      <path class="fillsurf" d="M18 11h-1.26A8 8 0 1 0 9 21h9a5 5 0 0 0 0-10z" transform="translate(1.5 -1) scale(0.84)"/>
+    </g>
+    <g id="cur-cloudy-night" class="gly">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" transform="translate(8 7.6) scale(0.46) translate(-12 -12)"/>
+      <path class="fillsurf" d="M18 11h-1.26A8 8 0 1 0 9 21h9a5 5 0 0 0 0-10z" transform="translate(1.5 -1) scale(0.84)"/>
+    </g>
+    <!-- idle refresh glyph (AOD-37 §6) -->
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5"/><path d="M-7 -6 L-7 -1 L-2 -1"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="859" height="567" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Weather Current: value-first body, small and medium</text>
+  <text x="32" y="58" class="sub">Temperature is the hero; the condition icon joins it at the bright tier; feels / humidity / wind recede as meta. supportedSizes: small, medium.</text>
+
+  <!-- ===== DAY ROW ===== -->
+  <text x="32" y="96" class="sec">DAY · isDay = true</text>
+
+  <!-- small day -->
+  <rect x="32" y="110" width="120" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <use href="#cur-cloudy-day" transform="translate(75 124) scale(1.5)"/>
+  <text x="92" y="210" text-anchor="middle" class="temp" font-size="38">18°</text>
+  <text x="32" y="250" class="lab">small (1×1) <tspan class="labn">· icon + temp · header suppressed</tspan></text>
+
+  <!-- medium day -->
+  <rect x="180" y="110" width="256" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="198" y="136" class="cap">WEATHER · CURRENT</text>
+  <use href="#refresh" transform="translate(418 132)"/>
+  <text x="198" y="184" class="temp" font-size="44">18°</text>
+  <use href="#cur-cloudy-day" transform="translate(372 138) scale(1.83)"/>
+  <text x="198" y="206" class="cond">Partly cloudy</text>
+  <text x="198" y="224" class="meta">Feels 17° · 64% · 9 km/h NE</text>
+  <text x="180" y="250" class="lab">medium (2×1) <tspan class="labn">· header + cluster + condition + meta</tspan></text>
+
+  <!-- ===== NIGHT ROW ===== -->
+  <text x="32" y="296" class="sec">NIGHT · isDay = false, + ambient overlay (dimsWithAmbient)</text>
+
+  <!-- small night -->
+  <rect x="32" y="310" width="120" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <use href="#cur-cloudy-night" transform="translate(75 324) scale(1.5)"/>
+  <text x="92" y="410" text-anchor="middle" class="temp" font-size="38">18°</text>
+  <rect x="32" y="310" width="120" height="120" rx="14" fill="#000000" opacity="0.42"/>
+  <text x="32" y="450" class="lab">small · night <tspan class="labn">· moon + overlay</tspan></text>
+
+  <!-- medium night -->
+  <rect x="180" y="310" width="256" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="198" y="336" class="cap">WEATHER · CURRENT</text>
+  <use href="#refresh" transform="translate(418 332)"/>
+  <text x="198" y="384" class="temp" font-size="44">18°</text>
+  <use href="#cur-cloudy-night" transform="translate(372 338) scale(1.83)"/>
+  <text x="198" y="406" class="cond">Partly cloudy</text>
+  <text x="198" y="424" class="meta">Feels 17° · 64% · 9 km/h NE</text>
+  <rect x="180" y="310" width="256" height="120" rx="14" fill="#000000" opacity="0.42"/>
+  <text x="180" y="450" class="lab">medium · night <tspan class="labn">· same layout, dimmed</tspan></text>
+
+  <!-- ===== callouts (right) ===== -->
+  <path d="M250 178 H300 M300 150 H470" class="lead"/>
+  <circle cx="486" cy="150" r="9" fill="#6E8BFF"/><text x="486" y="154" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">1</text>
+  <text x="502" y="147" class="annob">Hero temperature</text>
+  <text x="502" y="163" class="anno">type.hero (44/700) · tabular-nums · colors.text · units echoed</text>
+
+  <path d="M404 158 H470" class="lead"/>
+  <circle cx="486" cy="200" r="9" fill="#6E8BFF"/><text x="486" y="204" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">2</text>
+  <text x="502" y="197" class="annob">Condition icon (bespoke, §4)</text>
+  <text x="502" y="213" class="anno">weatherIcon, colors.text · day/night by payload isDay</text>
+
+  <path d="M280 206 H470" class="lead"/>
+  <circle cx="486" cy="250" r="9" fill="#6E8BFF"/><text x="486" y="254" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">3</text>
+  <text x="502" y="247" class="annob">Condition label</text>
+  <text x="502" y="263" class="anno">type.heading (15/600) · accent (the one highlighted line)</text>
+
+  <path d="M320 224 H470 M320 332 H470" class="lead"/>
+  <circle cx="486" cy="300" r="9" fill="#6E8BFF"/><text x="486" y="304" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">4</text>
+  <text x="502" y="297" class="annob">Meta · header · cluster (AOD-37 chrome)</text>
+  <text x="502" y="313" class="anno">type.meta + type.caption · refresh idle · no dot on fresh</text>
+
+  <!-- ===== panel ===== -->
+  <rect x="476" y="338" width="352" height="92" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="496" y="364" class="ph">Two independent night signals</text>
+  <text x="496" y="386" class="pb"><tspan class="pk">Icon</tspan>: the payload's condition.isDay picks sun vs moon.</text>
+  <text x="496" y="404" class="pb"><tspan class="pk">Card dim</tspan>: the AOD-37 ambient overlay (Weather is</text>
+  <text x="496" y="421" class="pb">overlay-default, NOT the Clock's deep-red opt-in).</text>
+
+  <line x1="32" y1="478" x2="828" y2="478" stroke="#22222C"/>
+  <text x="32" y="502" class="anno"><tspan class="annob">Reuses AOD-37:</tspan> the card frame and quiet header (§4), the status-and-refresh cluster and idle refresh (§6), type.hero / type.heading / type.meta (§3), the global dim overlay (§7).</text>
+  <text x="32" y="522" class="anno"><tspan class="annob">Bespoke to AOD-35:</tspan> the condition icon and its day/night treatment. No new state, chrome, or dim behavior; only the icon and the body's value-first arrangement.</text>
+  <text x="32" y="542" class="anno">A connected location always has current conditions, so Current has no empty state (integration-weather §4.1); loading / stale / error are the AOD-37 host chrome.</text>
+</svg>

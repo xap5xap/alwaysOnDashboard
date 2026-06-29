@@ -1,0 +1,115 @@
+<svg width="100%" viewBox="0 0 860 544" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Calendar Next Event face: when-emphasis, all-day, and the empty state</title>
+  <desc>The Next Event card at its two supported sizes plus the all-day variant and the empty state. The when is the emphasized figure: a relative-time kicker in the accent colour over the event title, with the clock time riding alongside it muted, all computed against the device clock. Small is a one-by-one glance of the when kicker over a two-line title with the header suppressed. Medium adds the quiet CALENDAR NEXT EVENT header with the refresh cluster, the full when line, the title in the title type step, and a location line with a pin glyph. The all-day variant replaces the relative time with an ALL DAY kicker and drops the clock. The empty state is drawn by the renderer when the payload says hasEvent is false: a calm centred calendar glyph with Nothing next, not a host error. A panel maps each part to the AOD-37 token or chrome it reuses and isolates the bespoke when-emphasis and empty body.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:11px;font-weight:600;fill:#9B9BA8;letter-spacing:1px;}
+    .when{font-size:13px;font-weight:700;fill:#6E8BFF;letter-spacing:0.6px;}
+    .whenmut{font-size:13px;font-weight:600;fill:#9B9BA8;letter-spacing:0.4px;}
+    .title{font-size:18px;font-weight:600;fill:#F4F4F8;}
+    .titlesm{font-size:16px;font-weight:600;fill:#F4F4F8;}
+    .loc{font-size:13px;fill:#9B9BA8;}
+    .empty{font-size:14px;font-weight:600;fill:#9B9BA8;}
+    .emptysub{font-size:12px;fill:#8A8A97;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .lead{fill:none;stroke:#3A3A46;stroke-width:1;stroke-dasharray:3 3;}
+  </style>
+
+  <defs>
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5"/><path d="M-7 -6 L-7 -1 L-2 -1"/>
+    </g>
+    <g id="pin" stroke="#9B9BA8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 4.6 C3.6 4.6 1.8 6.4 1.8 8.8 C1.8 12 6 16.6 6 16.6 C6 16.6 10.2 12 10.2 8.8 C10.2 6.4 8.4 4.6 6 4.6 Z"/>
+      <circle cx="6" cy="8.7" r="1.5"/>
+    </g>
+    <g id="cal-empty" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="20" height="18" rx="2.5"/>
+      <line x1="3" y1="10" x2="23" y2="10"/>
+      <line x1="8" y1="2.5" x2="8" y2="7"/><line x1="18" y1="2.5" x2="18" y2="7"/>
+      <path d="M9.5 16.5 l2.5 2.5 l5 -5"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="859" height="543" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Calendar Next Event: the when leads, the title is the value</text>
+  <text x="32" y="58" class="sub">Relative time in accent over the event title; clock muted alongside; all against the device clock. supportedSizes: small, medium.</text>
+
+  <!-- ===== TIMED ROW ===== -->
+  <text x="32" y="96" class="sec">TIMED EVENT</text>
+
+  <!-- small timed -->
+  <rect x="32" y="110" width="120" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="46" y="146" class="when">IN 25 MIN</text>
+  <text x="46" y="172" class="titlesm">Design</text>
+  <text x="46" y="192" class="titlesm">review</text>
+  <text x="32" y="250" class="lab">small (1×1) <tspan class="labn">· when + title · header suppressed</tspan></text>
+
+  <!-- medium timed -->
+  <rect x="180" y="110" width="256" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="198" y="136" class="cap">CALENDAR · NEXT EVENT</text>
+  <use href="#refresh" transform="translate(418 132)"/>
+  <text x="198" y="166"><tspan class="when">IN 25 MIN</tspan><tspan class="whenmut">  ·  2:30 PM</tspan></text>
+  <text x="198" y="192" class="title">Design review with Carla</text>
+  <use href="#pin" transform="translate(198 204)"/>
+  <text x="214" y="218" class="loc">Zoom</text>
+  <text x="180" y="250" class="lab">medium (2×1) <tspan class="labn">· header + when + title + location</tspan></text>
+
+  <!-- callouts (right) -->
+  <path d="M340 166 L470 150" class="lead"/>
+  <circle cx="486" cy="150" r="9" fill="#6E8BFF"/><text x="486" y="154" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">1</text>
+  <text x="502" y="147" class="annob">When emphasis (bespoke, §7)</text>
+  <text x="502" y="163" class="anno">relative time in accent · clock in textMuted · device clock</text>
+
+  <path d="M418 192 L470 200" class="lead"/>
+  <circle cx="486" cy="200" r="9" fill="#6E8BFF"/><text x="486" y="204" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">2</text>
+  <text x="502" y="197" class="annob">Event title</text>
+  <text x="502" y="213" class="anno">type.title (18/600) · colors.text · up to 2 lines</text>
+
+  <path d="M260 216 L470 250" class="lead"/>
+  <circle cx="486" cy="250" r="9" fill="#6E8BFF"/><text x="486" y="254" text-anchor="middle" font-size="10" font-weight="700" fill="#0B0B0F">3</text>
+  <text x="502" y="247" class="annob">Location + header + cluster (AOD-37)</text>
+  <text x="502" y="263" class="anno">pin + type.meta · type.caption header · idle refresh (§6)</text>
+
+  <!-- ===== ALL-DAY + EMPTY ROW ===== -->
+  <text x="32" y="296" class="sec">ALL-DAY · EMPTY STATE</text>
+
+  <!-- all-day medium -->
+  <rect x="32" y="310" width="256" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="336" class="cap">CALENDAR · NEXT EVENT</text>
+  <use href="#refresh" transform="translate(270 332)"/>
+  <text x="50" y="368" class="when">ALL DAY</text>
+  <text x="50" y="394" class="title">Carla's birthday</text>
+  <text x="32" y="450" class="lab">all-day <tspan class="labn">· ALL DAY kicker, no clock</tspan></text>
+
+  <!-- empty medium -->
+  <rect x="304" y="310" width="256" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="322" y="336" class="cap">CALENDAR · NEXT EVENT</text>
+  <use href="#refresh" transform="translate(542 332)"/>
+  <use href="#cal-empty" transform="translate(420 352) scale(1.0)"/>
+  <text x="432" y="392" text-anchor="middle" class="empty">Nothing next</text>
+  <text x="432" y="410" text-anchor="middle" class="emptysub">You're clear</text>
+  <text x="304" y="450" class="lab">empty <tspan class="labn">· renderer-drawn (hasEvent: false), not a host error</tspan></text>
+
+  <!-- ===== panel ===== -->
+  <rect x="592" y="310" width="236" height="120" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="612" y="336" class="ph">Empty body</text>
+  <text x="612" y="358" class="pb">hasEvent: false is normal</text>
+  <text x="612" y="376" class="pb">data, drawn by the leaf as a</text>
+  <text x="612" y="394" class="pb">calm centred state. Flagged</text>
+  <text x="612" y="412" class="pb">as a shared "empty body"</text>
+  <text x="612" y="430" class="pb">pattern (§10 gap).</text>
+
+  <line x1="32" y1="478" x2="828" y2="478" stroke="#22222C"/>
+  <text x="32" y="502" class="anno"><tspan class="annob">Reuses AOD-37:</tspan> the frame and quiet header (§4), the cluster + idle refresh (§6), type.title / type.caption / type.meta (§3), and needs_config for a deleted calendar (§5).</text>
+  <text x="32" y="522" class="anno"><tspan class="annob">Bespoke to AOD-35:</tspan> the when-emphasis (accent relative time + muted clock), the all-day vs timed kicker, and the empty "Nothing next" body. No new chrome or state.</text>
+</svg>

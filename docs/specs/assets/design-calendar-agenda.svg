@@ -1,0 +1,137 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Calendar Today's Agenda face: density across tall, wide, and large</title>
+  <desc>The Today's Agenda card at three densities. Tall is a deep narrow column of two-line rows, time over title, with all-day events grouped under an ALL DAY label at the top, the next upcoming event marked by an accent left rail and an accent time, and a plus-more footer for overflow. Wide is a banner of event cells laid left to right, each a time over a title, the first cell emphasized as next and a trailing plus-more cell. Large is a single-line row list, time then title, with all-day at the top, the next event on an accent rail, and a location on a second line where present. A small empty card shows the renderer-drawn Nothing left today state. A panel records the row anatomy, the all-day versus timed treatment, the next-event emphasis, the overflow footer, the visible-by-size counts, and the reuse of the AOD-37 chrome. Large is shown as a reconciled density the renderer already counts; whether to declare it a supported size is flagged as a seam.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:10.5px;font-weight:600;fill:#9B9BA8;letter-spacing:0.8px;}
+    .group{font-size:9.5px;font-weight:700;fill:#8A8A97;letter-spacing:1.2px;}
+    .timeNext{font-size:12.5px;font-weight:700;fill:#6E8BFF;font-variant:tabular-nums;}
+    .time{font-size:12.5px;font-weight:600;fill:#9B9BA8;font-variant:tabular-nums;}
+    .allday{font-size:12.5px;font-weight:600;fill:#9B9BA8;}
+    .evt{font-size:13.5px;fill:#F4F4F8;}
+    .evtNext{font-size:13.5px;font-weight:600;fill:#F4F4F8;}
+    .loc{font-size:11px;fill:#8A8A97;}
+    .more{font-size:12px;font-weight:600;fill:#9B9BA8;}
+    .empty{font-size:14px;font-weight:600;fill:#9B9BA8;}
+    .emptysub{font-size:12px;fill:#8A8A97;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11px;fill:#C9C9D4;}
+    .pk{font-size:11px;font-weight:700;fill:#6E8BFF;}
+    .rail{fill:#6E8BFF;}
+    .div{stroke:#22222C;stroke-width:1;}
+  </style>
+
+  <defs>
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5"/><path d="M-7 -6 L-7 -1 L-2 -1"/>
+    </g>
+    <g id="cal-empty" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="20" height="18" rx="2.5"/>
+      <line x1="3" y1="10" x2="23" y2="10"/>
+      <line x1="8" y1="2.5" x2="8" y2="7"/><line x1="18" y1="2.5" x2="18" y2="7"/>
+      <path d="M9.5 16.5 l2.5 2.5 l5 -5"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="38" class="h">Today's Agenda: list density across sizes, the next event leads</text>
+  <text x="32" y="58" class="sub">All-day grouped on top; timed below; the next upcoming event on an accent rail; overflow folds into "+N more". supportedSizes: tall, wide.</text>
+
+  <!-- ===== TALL ===== -->
+  <text x="32" y="92" class="sec">TALL (1×2) · DEEP COLUMN · 2-line rows</text>
+  <rect x="32" y="100" width="176" height="452" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="44" y="126" class="cap">CALENDAR · AGENDA</text>
+  <use href="#refresh" transform="translate(192 122)"/>
+  <!-- all-day group -->
+  <text x="44" y="150" class="group">ALL DAY</text>
+  <text x="44" y="170" class="evt">Carla's birthday</text>
+  <line x1="44" y1="184" x2="196" y2="184" class="div"/>
+  <!-- next -->
+  <rect x="33" y="198" width="3" height="30" class="rail"/>
+  <text x="48" y="214" class="timeNext">11:00 AM</text>
+  <text x="48" y="232" class="evtNext">Design review</text>
+  <!-- timed -->
+  <text x="48" y="262" class="time">1:00 PM</text>
+  <text x="48" y="280" class="evt">Lunch with team</text>
+  <text x="48" y="310" class="time">2:30 PM</text>
+  <text x="48" y="328" class="evt">1:1 with Sam</text>
+  <text x="48" y="358" class="time">4:00 PM</text>
+  <text x="48" y="376" class="evt">Code review</text>
+  <text x="48" y="406" class="time">5:30 PM</text>
+  <text x="48" y="424" class="evt">Standup recap</text>
+  <text x="48" y="462" class="more">+2 more</text>
+
+  <!-- ===== WIDE ===== -->
+  <text x="232" y="92" class="sec">WIDE (3×1) · BANNER · event cells</text>
+  <rect x="232" y="100" width="596" height="128" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="250" y="126" class="cap">CALENDAR · TODAY'S AGENDA</text>
+  <use href="#refresh" transform="translate(810 122)"/>
+  <!-- cell 0 next -->
+  <rect x="249" y="150" width="3" height="46" class="rail"/>
+  <text x="262" y="166" class="timeNext">11:00 AM</text>
+  <text x="262" y="188" class="evtNext">Design review</text>
+  <line x1="372" y1="150" x2="372" y2="196" class="div"/>
+  <!-- cell 1 -->
+  <text x="388" y="166" class="time">1:00 PM</text>
+  <text x="388" y="188" class="evt">Lunch with team</text>
+  <line x1="498" y1="150" x2="498" y2="196" class="div"/>
+  <!-- cell 2 -->
+  <text x="514" y="166" class="time">2:30 PM</text>
+  <text x="514" y="188" class="evt">1:1 with Sam</text>
+  <line x1="624" y1="150" x2="624" y2="196" class="div"/>
+  <!-- cell 3 -->
+  <text x="640" y="166" class="time">4:00 PM</text>
+  <text x="640" y="188" class="evt">Code review</text>
+  <line x1="750" y1="150" x2="750" y2="196" class="div"/>
+  <!-- overflow cell -->
+  <text x="789" y="178" text-anchor="middle" class="more">+3 more</text>
+
+  <!-- ===== LARGE ===== -->
+  <text x="232" y="252" class="sec">LARGE (2×2) · ROW LIST · single-line, location 2nd line</text>
+  <rect x="232" y="262" width="300" height="290" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="250" y="288" class="cap">CALENDAR · TODAY'S AGENDA</text>
+  <use href="#refresh" transform="translate(514 284)"/>
+  <!-- all-day -->
+  <text x="250" y="314" class="allday">All day</text>
+  <text x="322" y="314" class="evt">Carla's birthday</text>
+  <line x1="250" y1="326" x2="514" y2="326" class="div"/>
+  <!-- next -->
+  <rect x="233" y="338" width="3" height="34" class="rail"/>
+  <text x="250" y="352" class="timeNext">11:00 AM</text>
+  <text x="322" y="352" class="evtNext">Design review with Carla</text>
+  <text x="322" y="368" class="loc">Zoom</text>
+  <!-- rows -->
+  <text x="250" y="396" class="time">1:00 PM</text>
+  <text x="322" y="396" class="evt">Lunch with team</text>
+  <text x="250" y="424" class="time">2:30 PM</text>
+  <text x="322" y="424" class="evt">1:1 with Sam</text>
+  <text x="250" y="452" class="time">4:00 PM</text>
+  <text x="322" y="452" class="evt">Code review</text>
+  <text x="250" y="480" class="time">5:30 PM</text>
+  <text x="322" y="480" class="evt">Standup recap</text>
+  <text x="250" y="512" class="more">+2 more</text>
+
+  <!-- ===== EMPTY ===== -->
+  <text x="548" y="252" class="sec">EMPTY</text>
+  <rect x="548" y="262" width="280" height="120" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="566" y="288" class="cap">CALENDAR · TODAY'S AGENDA</text>
+  <use href="#refresh" transform="translate(810 284)"/>
+  <use href="#cal-empty" transform="translate(676 304) scale(0.92)"/>
+  <text x="688" y="342" text-anchor="middle" class="empty">Nothing left today</text>
+  <text x="688" y="360" text-anchor="middle" class="emptysub">Enjoy the quiet</text>
+
+  <!-- ===== PANEL ===== -->
+  <rect x="548" y="398" width="280" height="154" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="568" y="424" class="ph">Bespoke body (reuses §3 type + §4 chrome)</text>
+  <text x="568" y="446" class="pb"><tspan class="pk">Next</tspan>: accent left rail + accent time on the soonest event.</text>
+  <text x="568" y="464" class="pb"><tspan class="pk">All-day</tspan>: grouped on top; "All day" replaces the clock.</text>
+  <text x="568" y="482" class="pb"><tspan class="pk">Timed</tspan>: tabular clock (textMuted) + title (colors.text).</text>
+  <text x="568" y="500" class="pb"><tspan class="pk">Overflow</tspan>: the rest fold into "+N more" (textMuted).</text>
+  <text x="568" y="518" class="pb"><tspan class="pk">Density</tspan>: tall 10 · wide 5 · large 8 (renderer counts).</text>
+  <text x="568" y="536" class="pb">large is a reconciled class today; promoting it is a seam (§10).</text>
+
+  <text x="232" y="578" class="sub"><tspan class="annob" font-weight="700" fill="#F4F4F8">Reuses AOD-37:</tspan> frame, quiet header, cluster + idle refresh, type.* scale, needs_config (deleted calendar), the global overlay. <tspan class="annob" font-weight="700" fill="#F4F4F8">Bespoke:</tspan> the row density, all-day vs timed, and the next-event rail.</text>
+</svg>
