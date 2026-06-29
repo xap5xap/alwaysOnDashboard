@@ -68,6 +68,24 @@ function localAt(dayOffset: number, hour: number): string {
 function mkEvent(id: string, summary: string, startIso: string): CalendarEvent {
   return { id, summary, location: null, start: startIso, end: startIso, allDay: false, htmlLink: `https://cal/${id}` };
 }
+/** An all-day event today (start is the local "YYYY-MM-DD", allDay true; it has no time anchor). */
+function allDayToday(id: string, summary: string): CalendarEvent {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`;
+  return { id, summary, location: null, start: ymd, end: ymd, allDay: true, htmlLink: `https://cal/${id}` };
+}
+/** Today at 23:59 local: a timed event that is upcoming for any realistic run time (so it is the "next"). */
+function lateTodayIso(): string {
+  const d = new Date();
+  d.setHours(23, 59, 0, 0);
+  return d.toISOString();
+}
+
+const mediumNextEventInstance: WidgetInstance = {
+  ...nextEventInstance,
+  size: 'medium',
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+};
 
 describe('Next Event through the host lifecycle (AOD-56)', () => {
   it('resolves loading -> fresh and renders the event with the configured calendarId param', async () => {
@@ -88,14 +106,45 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
     });
   });
 
-  it('renders the empty state when nothing is upcoming (hasEvent:false is a normal state)', async () => {
+  it('renders the §5.1 empty body when nothing is upcoming: glyph + line + subline, and NO action', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { hasEvent: false }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, nextEventInstance);
+    renderHost(source, nextEventInstance); // small: header (and its refresh button) suppressed
     await waitFor(() => expect(screen.getByTestId('gcal-next-event-empty')).toBeTruthy());
     expect(screen.queryByTestId('gcal-next-event')).toBeNull();
+    expect(screen.getByText('Nothing next')).toBeTruthy();
+    expect(screen.getByText("You're clear")).toBeTruthy();
+    // the empty body carries no action (the trait that separates it from the host error/needs_config prompts)
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('emphasizes the when: a timed event leads with the relative-time kicker', async () => {
+    const data: NextEventData = { hasEvent: true, event: mkEvent('e1', 'Design review', lateTodayIso()) };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, nextEventInstance);
+    await waitFor(() => expect(screen.getByTestId('gcal-next-event')).toBeTruthy());
+    // the kicker is the relative time (uppercased by the style); a future event reads "in ..." or "Now"
+    expect(screen.getByTestId('gcal-next-event-when')).toHaveTextContent(/in |Now/);
+    expect(screen.getByText('Design review')).toBeTruthy();
+  });
+
+  it('an all-day event shows the ALL DAY kicker and no clock, with the location at medium', async () => {
+    const event: CalendarEvent = { ...allDayToday('e-ad', "Carla's birthday"), location: 'Home' };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data: { hasEvent: true, event }, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, mediumNextEventInstance);
+    await waitFor(() => expect(screen.getByTestId('gcal-next-event')).toBeTruthy());
+    // the when reads exactly "All day" (no clock rides alongside; an all-day event has no time anchor)
+    expect(screen.getByTestId('gcal-next-event-when')).toHaveTextContent('All day');
+    expect(screen.getByText("Carla's birthday")).toBeTruthy();
+    expect(screen.getByText('Home')).toBeTruthy();
   });
 
   it('maps a needs_reconnect proxy error (409) to the disconnected state, no card', async () => {
@@ -142,7 +191,7 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
     expect(screen.queryByText('Tomorrow planning')).toBeNull();
   });
 
-  it('renders the empty state when the agenda is empty', async () => {
+  it('renders the §5.1 empty body when the agenda is empty: "Nothing left today" + subline', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { events: [] }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
@@ -150,6 +199,41 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
     renderHost(source, agendaInstance);
     await waitFor(() => expect(screen.getByTestId('gcal-agenda-empty')).toBeTruthy());
     expect(screen.queryByTestId('gcal-agenda')).toBeNull();
+    expect(screen.getByText('Nothing left today')).toBeTruthy();
+    expect(screen.getByText('Enjoy the quiet')).toBeTruthy();
+  });
+
+  it('groups all-day on top under the ALL DAY kicker and marks the next event with the accent rail', async () => {
+    const data: AgendaData = {
+      events: [
+        mkEvent('t1', 'Design review', lateTodayIso()), // upcoming today -> the "next"
+        allDayToday('ad1', "Carla's birthday"), // no time anchor -> grouped on top
+      ],
+    };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, agendaInstance); // tall
+    await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
+    expect(screen.getByText('ALL DAY')).toBeTruthy(); // the all-day group kicker (tall density)
+    expect(screen.getByText("Carla's birthday")).toBeTruthy();
+    expect(screen.getByText('Design review')).toBeTruthy();
+    // the soonest upcoming event carries the accent left rail (the agenda points at what is next)
+    expect(screen.getByTestId('gcal-agenda-next-rail')).toBeTruthy();
+  });
+
+  it('folds events beyond the visible count into "+N more" (tall shows 10)', async () => {
+    const data: AgendaData = {
+      events: Array.from({ length: 12 }, (_, i) => mkEvent(`e${i}`, `Event ${i}`, localAt(0, i))),
+    };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, agendaInstance); // tall: VISIBLE_BY_SIZE.tall = 10
+    await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
+    expect(screen.getByTestId('gcal-agenda-more')).toHaveTextContent('+2 more');
   });
 
   it('falls to the empty state when only tomorrow has events (today filter applied)', async () => {

@@ -62,6 +62,16 @@ const clockSize = { small: 34, medium: 56, wide: 64, large: 96 } as const;
 const overlay = { color: '#000000', maxDim: 0.72 } as const;
 // §3.4 status-dot: the chrome indicator size (r 4.5 -> 9px), filled warning (stale) or error (error).
 const dot = { r: 4.5 } as const;
+// AOD-35 §10.1 weatherIcon: the one new token group the Calendar+Weather polish adds, a per-render-context
+// size ramp for the weather glyph family (the way clockSize ramps the Clock time). The glyphs draw in
+// colors.text at this stroke; no colour token is added (design-calendar-weather.md §4.1).
+const weatherIcon = {
+  currentHero: 44, // Current at medium, beside the type.hero temperature
+  currentSmall: 34, // Current at small
+  forecastStrip: 30, // Forecast wide, the column icon
+  forecastRow: 22, // Forecast large, the row icon
+  stroke: 2, // line weight, matching the AOD-37 chrome glyphs
+} as const;
 
 const sharedTokens = {
   spacing: (v: number) => v * 4,
@@ -71,6 +81,7 @@ const sharedTokens = {
   clockSize,
   overlay,
   dot,
+  weatherIcon,
 } as const;
 
 // --- §3.1 colour (shipped, recapped) ----------------------------------------------------------------

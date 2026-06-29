@@ -22,6 +22,8 @@ const current: WidgetDefinition = {
   cacheTtlSeconds: 900, // provider hit at most once / 15 min; matches Open-Meteo's update step (§7.2)
   minRefreshSeconds: 600,
   dimsWithAmbient: true,
+  // §5: the 1x1 glance is self-evident (icon over temperature), so the host suppresses the header there.
+  hideHeaderAtSizes: ['small'],
   configSchema: { fields: [] },
   render: CurrentWeatherCard,
 };

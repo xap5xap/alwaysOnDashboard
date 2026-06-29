@@ -1,22 +1,25 @@
-// The "Today's Agenda" leaf renderer (AOD-8 §6.1, integration-calendar.md §4.2). Reached only on
-// data-bearing lifecycle states; the host draws every other state. Receives only { data, config, size }.
-// The server returns a coarse now -> now+~36h window; THIS renderer scopes events to the current
-// device-local day, because the "today" boundary depends on the device clock + timezone, which live on
-// the device (§4.2, §6.4). Functional and on-brand-enough; pixel polish is AOD-35.
+// The "Today's Agenda" leaf renderer (AOD-8 §6.1, integration-calendar.md §4.2, design-calendar-weather.md
+// §8). Reached only on data-bearing lifecycle states; the host draws every other state. Receives only
+// { data, config, size }. The server returns a coarse now -> now+~36h window; THIS renderer scopes events
+// to the current device-local day, because the "today" boundary depends on the device clock + timezone,
+// which live on the device (§4.2, §6.4).
+//
+// AOD-35 polish: one event list, three densities. All-day events have no time anchor, so they group at the
+// top (separated by a hairline); the soonest upcoming event is the agenda's one emphasis (an accent LEFT
+// RAIL + an accent time), so the list points at what is next. At tall a deep column of 2-line rows; at
+// wide a banner of event cells laid left to right; at large (a reconciled class, §9) single-line rows with
+// a location on a second line. Overflow folds into "+N more". The empty render (no events left today, a
+// normal state, not an error) is the shared §5.1 EmptyBody with the per-widget calendar glyph, no action.
 import React from 'react';
 import { Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { AgendaData, CalendarEvent } from './types';
+import { EmptyBody } from '../../../widgets/EmptyBody';
+import { CalendarGlyph } from './glyphs';
 
 // How many rows fit a glance at each size; the rest collapse into a "+N more" footer.
-const VISIBLE_BY_SIZE: Record<WidgetSize, number> = {
-  small: 4,
-  medium: 5,
-  wide: 5,
-  large: 8,
-  tall: 10,
-};
+const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { small: 4, medium: 5, wide: 5, large: 8, tall: 10 };
 
 /** Defensive read: a renderer must never crash on a partial payload (host shows an empty card instead). */
 function asAgendaData(data: unknown): AgendaData {
@@ -51,55 +54,195 @@ function formatClock(event: CalendarEvent): string {
 }
 
 export function AgendaCard({ data, size }: WidgetRenderProps) {
+  const { theme } = useUnistyles();
   const { events } = asAgendaData(data);
   const now = new Date();
   const today = events.filter((e) => startsToday(e, now));
-  const visible = today.slice(0, VISIBLE_BY_SIZE[size] ?? 6);
-  const remaining = today.length - visible.length;
 
   if (today.length === 0) {
+    // §5.1 empty body: a calm "Nothing left today" with the calendar glyph, no action.
     return (
-      <View style={styles.empty} accessibilityRole="summary">
-        <Text style={styles.emptyText} testID="gcal-agenda-empty">
-          Nothing left today
-        </Text>
+      <View style={styles.fill} testID="gcal-agenda-empty">
+        <EmptyBody
+          line="Nothing left today"
+          subline="Enjoy the quiet"
+          glyph={<CalendarGlyph color={theme.colors.accent} />}
+        />
       </View>
     );
   }
 
+  // All-day grouped on top; timed sorted ascending below; the soonest upcoming timed event is "next".
+  const allDay = today.filter((e) => e.allDay);
+  const timed = today
+    .filter((e) => !e.allDay)
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  const nowMs = now.getTime();
+  const nextId = timed.find((e) => new Date(e.start).getTime() >= nowMs)?.id;
+
+  const ordered = [...allDay, ...timed];
+  const visible = ordered.slice(0, VISIBLE_BY_SIZE[size] ?? 6);
+  const remaining = ordered.length - visible.length;
+  const visibleAllDay = visible.filter((e) => e.allDay);
+  const visibleTimed = visible.filter((e) => !e.allDay);
+  const titleOf = (e: CalendarEvent) => e.summary || '(No title)';
+
+  // wide (3x1): a banner of event cells laid left to right, time over title, hairline dividers between.
+  if (size === 'wide') {
+    return (
+      <View style={styles.wideStrip} accessibilityRole="summary" testID="gcal-agenda">
+        {visible.map((e, i) => {
+          const isNext = e.id === nextId;
+          return (
+            <View key={e.id} style={[styles.wideCell, i > 0 && styles.cellBorder]}>
+              <View
+                style={[styles.rail, isNext && styles.railActive]}
+                testID={isNext ? 'gcal-agenda-next-rail' : undefined}
+              />
+              <View style={styles.cellText}>
+                <Text style={[styles.time, isNext && styles.timeNext]} numberOfLines={1}>
+                  {formatClock(e)}
+                </Text>
+                <Text style={styles.evt} numberOfLines={1}>
+                  {titleOf(e)}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+        {remaining > 0 ? (
+          <View style={[styles.wideCell, styles.cellBorder, styles.moreCell]}>
+            <Text style={styles.more} testID="gcal-agenda-more">
+              +{remaining} more
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  // tall (1x2): a deep column of 2-line rows (time over title); all-day grouped under a kicker on top.
+  if (size === 'tall') {
+    return (
+      <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
+        {visibleAllDay.length > 0 ? (
+          <View style={styles.allDayGroup}>
+            <Text style={styles.groupLabel}>ALL DAY</Text>
+            {visibleAllDay.map((e) => (
+              <Text key={e.id} style={styles.evt} numberOfLines={1}>
+                {titleOf(e)}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+        {visibleAllDay.length > 0 && visibleTimed.length > 0 ? <View style={styles.divider} /> : null}
+        {visibleTimed.map((e) => {
+          const isNext = e.id === nextId;
+          return (
+            <View key={e.id} style={styles.tallRow}>
+              <View
+                style={[styles.rail, isNext && styles.railActive]}
+                testID={isNext ? 'gcal-agenda-next-rail' : undefined}
+              />
+              <View style={styles.tallRowText}>
+                <Text style={[styles.time, isNext && styles.timeNext]} numberOfLines={1}>
+                  {formatClock(e)}
+                </Text>
+                <Text style={styles.evt} numberOfLines={1}>
+                  {titleOf(e)}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+        {remaining > 0 ? (
+          <Text style={styles.more} testID="gcal-agenda-more">
+            +{remaining} more
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  // large (2x2, a reconciled class) and any other size: single-line rows with a 2nd location line.
   return (
     <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
-      {visible.map((event) => (
-        <View key={event.id} style={styles.row}>
-          <Text style={styles.time} numberOfLines={1}>
-            {formatClock(event)}
+      {visibleAllDay.map((e) => (
+        <View key={e.id} style={styles.largeRow}>
+          <View style={styles.rail} />
+          <Text style={styles.timeCol} numberOfLines={1}>
+            {formatClock(e)}
           </Text>
-          <Text style={styles.title} numberOfLines={1}>
-            {event.summary || '(No title)'}
+          <Text style={[styles.evt, styles.largeEvt]} numberOfLines={1}>
+            {titleOf(e)}
           </Text>
         </View>
       ))}
-      {remaining > 0 && (
+      {visibleAllDay.length > 0 && visibleTimed.length > 0 ? <View style={styles.divider} /> : null}
+      {visibleTimed.map((e) => {
+        const isNext = e.id === nextId;
+        return (
+          <View key={e.id} style={styles.largeRow}>
+            <View style={[styles.rail, isNext && styles.railActive]} />
+            <Text style={[styles.timeCol, isNext && styles.timeNext]} numberOfLines={1}>
+              {formatClock(e)}
+            </Text>
+            <View style={styles.largeRowText}>
+              <Text style={styles.evt} numberOfLines={1}>
+                {titleOf(e)}
+              </Text>
+              {e.location ? (
+                <Text style={styles.loc} numberOfLines={1}>
+                  {e.location}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        );
+      })}
+      {remaining > 0 ? (
         <Text style={styles.more} testID="gcal-agenda-more">
           +{remaining} more
         </Text>
-      )}
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
+  fill: { flex: 1 },
   list: { gap: theme.spacing(1.5) },
-  empty: { paddingVertical: theme.spacing(2) },
-  emptyText: { color: theme.colors.textMuted, fontSize: 14 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2) },
-  time: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-    width: 64,
-  },
-  title: { color: theme.colors.text, fontSize: 14, flexShrink: 1 },
-  more: { color: theme.colors.textMuted, fontSize: 12, paddingTop: theme.spacing(0.5) },
+
+  // the next-event accent left rail (3px); transparent on every other row so titles still align
+  rail: { width: 3, borderRadius: 1.5, alignSelf: 'stretch', backgroundColor: 'transparent' },
+  railActive: { backgroundColor: theme.colors.accent },
+
+  // all-day group (tall): a quiet kicker over the all-day titles, then a hairline
+  allDayGroup: { gap: theme.spacing(1) },
+  groupLabel: { ...theme.type.badge, color: theme.colors.textMuted },
+  divider: { height: 1, backgroundColor: theme.colors.border },
+
+  // time + title shared steps; the next event's time is accent
+  time: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'] },
+  timeNext: { color: theme.colors.accent },
+  evt: { ...theme.type.body, color: theme.colors.text },
+  more: { ...theme.type.meta, color: theme.colors.textMuted, paddingTop: theme.spacing(0.5) },
+
+  // tall: 2-line rows
+  tallRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
+  tallRowText: { flexShrink: 1, gap: theme.spacing(0.25) },
+
+  // wide: event cells left to right
+  wideStrip: { flexDirection: 'row', alignItems: 'stretch', flex: 1 },
+  wideCell: { flex: 1, flexDirection: 'row', gap: theme.spacing(1.5), paddingRight: theme.spacing(2) },
+  cellBorder: { borderLeftWidth: 1, borderLeftColor: theme.colors.border, paddingLeft: theme.spacing(2) },
+  cellText: { flexShrink: 1, gap: theme.spacing(0.25) },
+  moreCell: { alignItems: 'center', justifyContent: 'center', flexGrow: 0, flexBasis: 72 },
+
+  // large: single-line rows, location on a 2nd line
+  largeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
+  timeCol: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'], width: 64 },
+  largeRowText: { flexShrink: 1, gap: theme.spacing(0.25) },
+  largeEvt: { flexShrink: 1 },
+  loc: { ...theme.type.caption, letterSpacing: 0, color: theme.colors.textMuted },
 }));

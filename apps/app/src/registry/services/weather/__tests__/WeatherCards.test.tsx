@@ -130,45 +130,111 @@ describe('platform_key host params-seeding (integration-weather.md §6.3)', () =
   });
 });
 
-describe('CurrentWeatherCard through the host lifecycle (AOD-58)', () => {
-  it('resolves loading -> fresh and renders the temperature + condition', async () => {
+const mediumCurrentInstance: WidgetInstance = {
+  ...currentInstance,
+  size: 'medium',
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+};
+
+function currentSource(data: CurrentWeatherData): WidgetDataSource {
+  return {
+    fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+    resolveOptions: jest.fn().mockResolvedValue([]),
+  };
+}
+
+describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
+  it('at small renders the temperature + the day-form condition icon, header/meta suppressed (the glance)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: CURRENT_DATA, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, currentInstance);
+    renderHost(currentSource(CURRENT_DATA), currentInstance); // small
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
-    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C'); // unit echoed from the payload
+    // condition.isDay: true -> the day glyph (the icon's day/night is the payload's, §5.2)
+    expect(screen.getByTestId('weather-icon-cloudy-day')).toBeTruthy();
+    // the 1x1 glance suppresses the condition label and the meta
+    expect(screen.queryByTestId('weather-current-condition')).toBeNull();
+    expect(screen.queryByTestId('weather-current-meta')).toBeNull();
+  });
+
+  it('at medium adds the accent condition and the muted feels/humidity/wind meta line', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    renderHost(currentSource(CURRENT_DATA), mediumCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
     expect(screen.getByText('Partly cloudy')).toBeTruthy();
-    expect(screen.getByText(/Feels like 18°C/)).toBeTruthy();
+    // §5 meta: "Feels {apparent}° · {humidity}% · {wind} {windUnit} {compass}" (bare ° in meta; the hero echoes the unit)
+    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+  });
+
+  it('swaps the condition icon to the night variant when the payload isDay is false', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    const nightData: CurrentWeatherData = {
+      ...CURRENT_DATA,
+      condition: { ...CURRENT_DATA.condition, isDay: false },
+    };
+    renderHost(currentSource(nightData), currentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-icon-cloudy-night')).toBeTruthy();
+    expect(screen.queryByTestId('weather-icon-cloudy-day')).toBeNull();
   });
 });
 
-describe('ForecastCard through the host lifecycle (AOD-58)', () => {
-  it('renders one row per day, labelling the current device-local day "Today"', async () => {
+const largeForecastInstance: WidgetInstance = {
+  ...forecastInstance,
+  size: 'large',
+  rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
+};
+
+function forecastSource(data: ForecastData): WidgetDataSource {
+  return {
+    fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+    resolveOptions: jest.fn().mockResolvedValue([]),
+  };
+}
+
+describe('ForecastCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
+  it('at wide is a banner strip: Today, the day-form per-day icon, and the accent precip (no label)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: FORECAST_DATA, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, forecastInstance);
+    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // wide
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
     expect(screen.getByText('Today')).toBeTruthy();
-    expect(screen.getByText(/Light drizzle · 16%/)).toBeTruthy();
+    // forecast days always use the day form (§4.2), even for showers/cloudy which swap at Current
+    expect(screen.getByTestId('weather-icon-drizzle-day')).toBeTruthy();
+    expect(screen.getByTestId('weather-icon-showers-day')).toBeTruthy();
+    // precip is its own accent element at wide; the condition label is carried by the icon, not text
+    expect(screen.getByText('16%')).toBeTruthy();
+    expect(screen.queryByText(/Light drizzle/)).toBeNull();
+  });
+
+  it('at large is a row list with the condition label + appended precip', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    renderHost(forecastSource(FORECAST_DATA), largeForecastInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
+    expect(screen.getByText('Today')).toBeTruthy();
+    expect(screen.getByText('Light drizzle · 16%')).toBeTruthy();
     expect(screen.getByText('Slight rain showers · 4%')).toBeTruthy();
+  });
+
+  it('omits precip entirely when the payload value is null (wide)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    const noPrecip: ForecastData = {
+      units: { temperature: '°C' },
+      days: [{ ...FORECAST_DATA.days[0], precipProbabilityPct: null }],
+    };
+    renderHost(forecastSource(noPrecip), forecastInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
+    expect(screen.queryByText(/%/)).toBeNull();
   });
 
   it('renders the empty state for a malformed/empty forecast (never crashes)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: { days: [], units: { temperature: '°C' } }, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, forecastInstance);
+    renderHost(forecastSource({ days: [], units: { temperature: '°C' } }), forecastInstance);
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast-empty')).toBeTruthy());
     expect(screen.queryByTestId('weather-forecast')).toBeNull();

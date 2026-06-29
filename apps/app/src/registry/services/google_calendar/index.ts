@@ -21,6 +21,8 @@ const nextEvent: WidgetDefinition = {
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices (AOD-10 §6.1)
   minRefreshSeconds: 120, // never poll Google faster than once every 2 min
   dimsWithAmbient: true,
+  // §7: the 1x1 glance is self-evident (when kicker over the title), so the host suppresses the header there.
+  hideHeaderAtSizes: ['small'],
   configSchema: {
     fields: [
       {
