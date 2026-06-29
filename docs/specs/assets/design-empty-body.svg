@@ -1,0 +1,149 @@
+<svg width="100%" viewBox="0 0 1000 660" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The shared empty body: a renderer-drawn body, distinct from the six host states</title>
+  <desc>The empty body convention shown once and then applied across its v1 instances. The top row contrasts two cards that look similar but are not: on the left the empty body, a renderer-drawn calm centred body with a quiet per-widget glyph, a muted line, and an optional quieter subline, carrying no action; on the right a host prompt (needs config) with the same calm layout but an accent Reconfigure action, drawn by the host. A legend panel breaks down the anatomy and notes it reuses the existing tokens with no new one and a per-widget glyph. The bottom row shows the four v1 renderers that draw this body: Calendar Next Event with Nothing next when hasEvent is false, Calendar Agenda with Nothing left today when the events list is empty, Claude Daily Spend with No spend yet this month when the days array is empty, and Linear Current Cycle with No active cycle when there is no active cycle, each tagged with its data condition and the design that owns it. A footer clarifies that this is not a seventh lifecycle state (the six host states report the data pipeline status while the empty body is fresh content that is empty) and not a zero value (Spend MTD's zero dollars is a valid hero figure, not an empty body), and names Linear My Issues' No assigned issues as a second Linear instance.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .cap{font-size:10.5px;font-weight:600;fill:#9B9BA8;letter-spacing:0.8px;}
+    .empty{font-size:14px;font-weight:500;fill:#9B9BA8;}
+    .emptysub{font-size:12px;fill:#8A8A97;}
+    .prompt{font-size:13px;fill:#9B9BA8;}
+    .action{font-size:13px;font-weight:700;fill:#6E8BFF;}
+    .vs{font-size:12px;font-weight:700;fill:#6B6B78;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .ph{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .pb{font-size:11.5px;fill:#C9C9D4;}
+    .pk{font-size:11.5px;font-weight:700;fill:#6E8BFF;}
+    .anno{font-size:11.5px;fill:#C9C9D4;}
+    .annob{font-size:11.5px;font-weight:700;fill:#F4F4F8;}
+  </style>
+
+  <defs>
+    <g id="refresh" stroke="#9B9BA8" stroke-width="1.6" fill="none" stroke-linecap="round">
+      <path d="M-7 -1 A7 7 0 1 1 -5 5" vector-effect="non-scaling-stroke"/>
+      <path d="M-7 -6 L-7 -1 L-2 -1" vector-effect="non-scaling-stroke"/>
+    </g>
+    <!-- per-widget empty glyphs: line-icons in the AOD-37 chrome family, accent-toned -->
+    <g id="cal-empty" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="20" height="18" rx="2.5" vector-effect="non-scaling-stroke"/>
+      <line x1="3" y1="10" x2="23" y2="10" vector-effect="non-scaling-stroke"/>
+      <line x1="8" y1="2.5" x2="8" y2="7" vector-effect="non-scaling-stroke"/>
+      <line x1="18" y1="2.5" x2="18" y2="7" vector-effect="non-scaling-stroke"/>
+      <path d="M9.5 16.5 l2.5 2.5 l5 -5" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g id="chart-empty" fill="none">
+      <line x1="1.5" y1="19" x2="24.5" y2="19" stroke="#6E8BFF" stroke-opacity="0.6" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <rect x="2.5"  y="14.5" width="3" height="4.5" rx="1" fill="#6E8BFF" fill-opacity="0.5"/>
+      <rect x="7.3"  y="14.5" width="3" height="4.5" rx="1" fill="#6E8BFF" fill-opacity="0.5"/>
+      <rect x="12.0" y="14.5" width="3" height="4.5" rx="1" fill="#6E8BFF" fill-opacity="0.5"/>
+      <rect x="16.8" y="14.5" width="3" height="4.5" rx="1" fill="#6E8BFF" fill-opacity="0.5"/>
+      <rect x="21.5" y="14.5" width="3" height="4.5" rx="1" fill="#6E8BFF" fill-opacity="0.5"/>
+    </g>
+    <g id="cycle-empty" fill="none">
+      <path d="M16.58 3.66 A10 10 0 1 1 9.42 3.66" stroke="#6E8BFF" stroke-opacity="0.65" stroke-width="1.7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <circle cx="13" cy="2.8" r="1.35" fill="#6E8BFF" fill-opacity="0.65"/>
+    </g>
+    <!-- host needs_config glyph (muted), origin-centred -->
+    <g id="sliders" stroke="#9B9BA8" stroke-width="1.8" fill="none" stroke-linecap="round">
+      <line x1="-16" y1="-6" x2="16" y2="-6" vector-effect="non-scaling-stroke"/>
+      <circle cx="6" cy="-6" r="4" fill="#16161D" vector-effect="non-scaling-stroke"/>
+      <line x1="-16" y1="6" x2="16" y2="6" vector-effect="non-scaling-stroke"/>
+      <circle cx="-6" cy="6" r="4" fill="#16161D" vector-effect="non-scaling-stroke"/>
+    </g>
+    <!-- placeholder "per-widget glyph goes here" (dotted accent) -->
+    <g id="ring-ph" fill="none">
+      <circle cx="13" cy="13" r="10" stroke="#6E8BFF" stroke-opacity="0.55" stroke-width="1.6" stroke-dasharray="2.4 3.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </g>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="999" height="659" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The empty body: a renderer-drawn body, distinct from the six host states</text>
+  <text x="32" y="60" class="sub">A fresh render whose content is legitimately empty (no events, no spend, no cycle). Centred and calm, drawn by the leaf, and carrying no action.</text>
+
+  <!-- ===================== ROW 1: THE CONVENTION vs A HOST PROMPT ===================== -->
+  <text x="32" y="96" class="sec">THE CONVENTION (renderer-drawn)      vs      A HOST PROMPT (host-drawn, §5)</text>
+
+  <!-- convention card (the empty body) -->
+  <rect x="32" y="110" width="300" height="176" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="136" class="cap">SERVICE · WIDGET</text>
+  <use href="#refresh" transform="translate(308 132)"/>
+  <use href="#ring-ph" transform="translate(169 155)"/>
+  <text x="182" y="214" text-anchor="middle" class="empty">Nothing here yet</text>
+  <text x="182" y="234" text-anchor="middle" class="emptysub">You're all caught up</text>
+  <text x="32" y="306" class="lab">Empty body <tspan class="labn">· renderer-drawn · carries no action</tspan></text>
+
+  <text x="344" y="202" text-anchor="middle" class="vs">vs</text>
+
+  <!-- host prompt card (needs_config) -->
+  <rect x="356" y="110" width="300" height="176" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="374" y="136" class="cap">SERVICE · WIDGET</text>
+  <use href="#refresh" transform="translate(632 132)"/>
+  <use href="#sliders" transform="translate(506 170)"/>
+  <text x="506" y="214" text-anchor="middle" class="prompt">Reconfigure this widget</text>
+  <text x="506" y="236" text-anchor="middle" class="action">Reconfigure</text>
+  <text x="356" y="306" class="lab">Host prompt (needs_config) <tspan class="labn">· host-drawn §5 · carries an action</tspan></text>
+
+  <!-- anatomy legend -->
+  <rect x="696" y="110" width="272" height="176" rx="12" fill="#121219" stroke="#2A2A36"/>
+  <text x="716" y="134" class="ph">Anatomy — reuses §3 tokens</text>
+  <text x="716" y="158" class="pb"><tspan class="pk">① Glyph</tspan> per-widget line-icon,</text>
+  <text x="716" y="174" class="pb">colors.accent or colors.textMuted</text>
+  <text x="716" y="198" class="pb"><tspan class="pk">② Line</tspan> type.body, colors.textMuted</text>
+  <text x="716" y="220" class="pb"><tspan class="pk">③ Subline</tspan> optional, quieter, textMuted</text>
+  <text x="716" y="242" class="pb"><tspan class="pk">④ No action</tspan> nothing is wrong to fix</text>
+  <line x1="716" y1="256" x2="948" y2="256" stroke="#2A2A36"/>
+  <text x="716" y="274" class="pb">No new shared token; glyph is per-widget.</text>
+
+  <line x1="32" y1="330" x2="968" y2="330" stroke="#22222C"/>
+
+  <!-- ===================== ROW 2: v1 INSTANCES ===================== -->
+  <text x="32" y="358" class="sec">v1 INSTANCES — one definition, four renderers (+ a second Linear case)</text>
+
+  <!-- 1 Next Event -->
+  <rect x="32" y="372" width="216" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="50" y="398" class="cap">CALENDAR · NEXT EVENT</text>
+  <use href="#refresh" transform="translate(226 394)"/>
+  <use href="#cal-empty" transform="translate(127 416)"/>
+  <text x="140" y="468" text-anchor="middle" class="empty">Nothing next</text>
+  <text x="140" y="488" text-anchor="middle" class="emptysub">You're clear</text>
+  <text x="32" y="542" class="lab">Calendar · Next Event</text>
+  <text x="32" y="558" class="labn">hasEvent: false · AOD-35</text>
+
+  <!-- 2 Agenda -->
+  <rect x="272" y="372" width="216" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="290" y="398" class="cap">CALENDAR · AGENDA</text>
+  <use href="#refresh" transform="translate(466 394)"/>
+  <use href="#cal-empty" transform="translate(367 416)"/>
+  <text x="380" y="468" text-anchor="middle" class="empty">Nothing left today</text>
+  <text x="380" y="488" text-anchor="middle" class="emptysub">Enjoy the quiet</text>
+  <text x="272" y="542" class="lab">Calendar · Agenda</text>
+  <text x="272" y="558" class="labn">events: [] · AOD-35</text>
+
+  <!-- 3 Daily Spend -->
+  <rect x="512" y="372" width="216" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="530" y="398" class="cap">CLAUDE · DAILY SPEND</text>
+  <use href="#refresh" transform="translate(706 394)"/>
+  <use href="#chart-empty" transform="translate(607 417)"/>
+  <text x="620" y="468" text-anchor="middle" class="empty">No spend yet this month</text>
+  <text x="620" y="488" text-anchor="middle" class="emptysub">Appears as you use the API</text>
+  <text x="512" y="542" class="lab">Claude · Daily Spend</text>
+  <text x="512" y="558" class="labn">days: [] · AOD-36</text>
+
+  <!-- 4 Current Cycle -->
+  <rect x="752" y="372" width="216" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="770" y="398" class="cap">LINEAR · CURRENT CYCLE</text>
+  <use href="#refresh" transform="translate(946 394)"/>
+  <use href="#cycle-empty" transform="translate(847 417)"/>
+  <text x="860" y="468" text-anchor="middle" class="empty">No active cycle</text>
+  <text x="860" y="488" text-anchor="middle" class="emptysub">No cycle running</text>
+  <text x="752" y="542" class="lab">Linear · Current Cycle</text>
+  <text x="752" y="558" class="labn">active: false · AOD-30</text>
+
+  <!-- ===================== FOOTER ===================== -->
+  <line x1="32" y1="584" x2="968" y2="584" stroke="#22222C"/>
+  <text x="32" y="608" class="anno"><tspan class="annob">Not a seventh lifecycle state.</tspan> The six states (§5) are the data pipeline's status, host-drawn. The empty body is fresh content that is empty, leaf-drawn.</text>
+  <text x="32" y="628" class="anno"><tspan class="annob">Not a zero value.</tspan> Spend MTD's $0.00 is a valid hero figure (AOD-36 §5.3), not an empty body. Linear My Issues' "No assigned issues" is a second instance (AOD-30).</text>
+</svg>

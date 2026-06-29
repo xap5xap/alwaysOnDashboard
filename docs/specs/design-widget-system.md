@@ -7,6 +7,8 @@
 > **The AOD-15 fold-in.** AOD-37 `depends` [AOD-15](https://linear.app/thexap/issue/AOD-15) (the on-demand refresh affordance). [AOD-15](https://linear.app/thexap/issue/AOD-15) is **Done**: it is a `type:spec` whose output already landed in [`widget-model.md`](widget-model.md) §6.6 (the refresh button rides the existing manual-refresh path, is generic host chrome, is gated by the [AOD-12](https://linear.app/thexap/issue/AOD-12) §6.4 fetch-floor, and never breaches the [AOD-5](https://linear.app/thexap/issue/AOD-5) cache ceiling). The dependency is therefore **satisfied**, and this design does not re-spec it; it fixes the affordance's **visual** design (the control, its placement, its states, and the per-widget hidden/no-op behavior) as the host chrome AOD-15 left for the design step. No scope is expanded.
 >
 > **What this fixes, and what it must not touch.** It fixes **visuals only**: design tokens, the chrome, the per-state and per-size appearance. It expresses every value as a **design token** to be added to [`apps/app/unistyles.ts`](../../apps/app/unistyles.ts), so the implementing polish build extends the token set rather than hardcoding; it does **not** edit `unistyles.ts` (that is the build's job, the way a spec does not write its code). It does **not** change the registry/host/layout architecture or the [AOD-8](https://linear.app/thexap/issue/AOD-8) §6.1 render contract `{ data, config, size }`: the five leaf renderers stay pure and never learn auth/loading/error, the generic host keeps drawing the chrome. The implementing polish is a **separate I-M3 `type:tech-task`**, created after this lands, the same way each integration spec was separate from its build.
+>
+> **Additive update (2026-06-29, [AOD-61](https://linear.app/thexap/issue/AOD-61)).** §5.1 promotes the **empty body**, the renderer-drawn fresh-but-empty body, into the system as a seventh body alongside the six host states (its mockup is [`design-empty-body.svg`](assets/design-empty-body.svg)). This resolves the gap that both sibling applications flagged: [AOD-35](https://linear.app/thexap/issue/AOD-35) ([`design-calendar-weather.md`](design-calendar-weather.md) §10.2) named it first and [AOD-36](https://linear.app/thexap/issue/AOD-36) ([`design-claude-usage.md`](design-claude-usage.md) §9.3) confirmed it on a second consumer and recommended the promotion. It is **purely additive**: no change to the six host states, the tokens, the chrome, the dim/ambient behavior, the refresh affordance, or the `{ data, config, size }` contract.
 
 ## 1. Purpose and scope
 
@@ -144,7 +146,7 @@ The body is a vertical stack with one rule: **the value is the largest, brightes
 
 ## 5. The six lifecycle-state visuals
 
-The host draws one visual per view state, branching on the state and never on the service, so all five v1 widgets (and every future one) get these for free. This polishes the prompts and badges the shipped host already renders.
+The host draws one visual per view state, branching on the state and never on the service, so all five v1 widgets (and every future one) get these for free. This polishes the prompts and badges the shipped host already renders. These six are **host-drawn** and report the data *pipeline's* status; a widget can also draw a **seventh body** the host cannot, a fresh render whose content is legitimately empty, formalized in §5.1 as the **empty body**, distinct from the six states here.
 
 ![The six lifecycle states drawn generically: loading skeleton, fresh render, stale with an amber dot, error with a red dot, the needs-config prompt, and the disconnected prompt.](assets/design-lifecycle-states.svg)
 
@@ -173,6 +175,51 @@ The states, each generic:
 - **disconnected**: a host prompt, a link glyph, "Connect <Service>", and a "Connect" action. The transient reauth/credential-died state.
 
 Actions (`Retry`, `Reconfigure`, `Connect`) share one treatment: `type.label`, `accent`. Prompts share one layout: centered glyph, a muted line, an accent action. The consistency is the point: a user learns one vocabulary of "something needs you" across every widget.
+
+### 5.1 The empty body (a renderer-drawn body, not a seventh state)
+
+The six states above are **host-drawn** and report the data *pipeline's* status. There is a seventh body the host cannot draw: a **fresh render whose content is legitimately empty**, a successful fetch whose data says "nothing." Whether fresh content is empty is **domain-specific** (no events vs no spend vs no active cycle), so only the **leaf** knows it, and the leaf draws it, within the data-bearing states (`fresh` / `stale` / `error`-with-data). It is a seventh **body**, not a seventh lifecycle state. This subsection promotes one shared definition for it (the four v1 leaves already draw a bare `type.body`/`textMuted` line here; the polish builds apply this convention so they share one pattern rather than drifting).
+
+![The empty body shown once and across its v1 instances: a centered calm body with a quiet per-widget glyph, a muted line, and an optional subline, carrying no action, contrasted with an action-bearing host prompt, and applied to Calendar Next Event, Agenda, Claude Daily Spend, and Linear's Current Cycle.](assets/design-empty-body.svg)
+
+<details>
+<summary>The empty-body convention</summary>
+
+```
+trigger : a data-bearing render (fresh / stale / error-with-data) whose CONTENT is empty
+          (hasEvent:false · empty events[] · days:[] · active:false · totalCount 0). The leaf draws it.
+layout  : centered, vertically calm: a glyph over a line over an optional subline.
+glyph   : a per-widget line-icon, colors.accent or colors.textMuted, ~1.7 non-scaling stroke,
+          round caps/joins (the section 4/5 chrome-glyph family). Speaks the widget's own
+          language (the calendar glyph, the flat-chart glyph, the cycle ring).
+line    : type.body (14/500), colors.textMuted. States what the data says ("Nothing next").
+subline : optional, a quieter step (type.caption/meta), colors.textMuted. Reassurance, not an instruction.
+action  : NONE. The trait that separates it from the error / needs_config / disconnected prompts.
+tokens  : reuses type.body + colors.textMuted + colors.accent. NO new shared token; the glyph is per-widget.
+not     : not a seventh lifecycle state (those are host-drawn pipeline status); not a zero value
+          (Spend MTD's $0.00 is a hero value, design-claude-usage.md §5.3).
+```
+</details>
+
+**The convention.** A centered, calm body: a quiet per-widget **glyph** (a line-icon in `colors.accent` or `colors.textMuted`, the same family as the section 4 / 5 chrome glyphs), a `type.body` `colors.textMuted` **line** stating what the data says, and an optional quieter **subline** (a smaller step) offering reassurance. It draws in the body zone like any fresh render; the chrome (frame, quiet header, status-and-refresh cluster) is the host's, unchanged.
+
+**The defining trait: no action.** The host's `error` / `needs_config` / `disconnected` prompts (§5) each carry an action (`Retry` / `Reconfigure` / `Connect`) because something needs the user. An empty body carries **none**: nothing is wrong, the data simply says "nothing," so there is nothing to act on. That is the line separating the empty body from the action-bearing prompts it can resemble.
+
+**Not a zero value.** A valid figure that happens to be zero is **not** an empty body: Claude Spend MTD renders `$0.00` as its hero value (a known total that is zero), not as a calm empty body ([`design-claude-usage.md`](design-claude-usage.md) §5.3). The empty body is an **absence of items to draw**, not a value of zero. Daily Spend's empty `days[]` is the empty body; Spend MTD's `$0.00` is a value.
+
+**No new token.** The convention reuses `type.body`, `colors.textMuted`, and `colors.accent` (§3); the **glyph is per-widget** (the calendar glyph, the flat-chart glyph, the cycle ring), exactly as the weather and sparkline glyphs are per-widget, so no shared token is added. If a future empty body needs a genuinely shared value, it is specified the §3 way (in this doc, not written into [`unistyles.ts`](../../apps/app/unistyles.ts)).
+
+**v1 consumers.** Four renderers draw this body in v1, and a fifth instance shares it:
+
+| Widget (design) | Empty payload | Body line |
+|---|---|---|
+| Calendar Next Event ([AOD-35](https://linear.app/thexap/issue/AOD-35)) | `hasEvent: false` | "Nothing next" |
+| Calendar Agenda ([AOD-35](https://linear.app/thexap/issue/AOD-35)) | empty `events[]` | "Nothing left today" |
+| Claude Daily Spend ([AOD-36](https://linear.app/thexap/issue/AOD-36)) | `days: []` | "No spend yet this month" |
+| Linear Current Cycle ([AOD-30](https://linear.app/thexap/issue/AOD-30)) | `active: false` | "No active cycle" |
+| Linear My Issues ([AOD-30](https://linear.app/thexap/issue/AOD-30)) | `totalCount === 0` | "No assigned issues" |
+
+This resolves a gap the sibling applications flagged: [`design-calendar-weather.md`](design-calendar-weather.md) §10.2 named it first (AOD-37 §5 had no empty-body visual, and three widgets hit it), and [`design-claude-usage.md`](design-claude-usage.md) §9.3 confirmed it on a second consumer and recommended the promotion once two independent consumers existed. The empties were already drawn to this shape in those docs' mockups; this subsection promotes that one definition into the system, so the per-widget polish builds implement one pattern, not several that drift. It is additive: it changes no host state, token, chrome, dim/ambient behavior, refresh affordance, or the `{ data, config, size }` render contract.
 
 ## 6. The on-demand refresh affordance (AOD-15)
 
@@ -319,13 +366,15 @@ Proposed acceptance for this design (call out for confirmation):
 > 4. The **on-demand refresh affordance** ([AOD-15](https://linear.app/thexap/issue/AOD-15)) is fixed as host chrome: placement in the header cluster, the **idle / in-flight / within-floor / hidden** states, fetch-floor and cache-ceiling gated, and **hidden (not disabled) for a never-fetching widget** (Clock).
 > 5. The **day/night dim** is fixed consuming `phase`/`dimLevel`: the **global overlay** default (opacity `dimLevel * 0.72`), the **`useAmbient()` opt-in**, and the **deep-red night palette**; the schedule/curve/backlight stay [AOD-11](https://linear.app/thexap/issue/AOD-11)'s.
 > 6. The **Clock face** is fixed: **digital** (analog deferred), across **small / medium / wide / large** with the `clockSize` ramp, the **date-line treatment**, the **second-clock zone label** (shown only on an override, derived from the IANA id), and the **deep-red night clock**, all honoring the `{ data, config, size }` render contract with `data` ignored.
-> 7. The system is **reusable**: [AOD-35](https://linear.app/thexap/issue/AOD-35) and [AOD-36](https://linear.app/thexap/issue/AOD-36) are applications of sections 3 to 7 (section 9), not redesigns, and the **five mockups** render.
+> 7. The system is **reusable**: [AOD-35](https://linear.app/thexap/issue/AOD-35) and [AOD-36](https://linear.app/thexap/issue/AOD-36) are applications of sections 3 to 7 (section 9), not redesigns, and the **six mockups** render (including §5.1's empty body).
+> 8. The **empty body** is fixed as a **renderer-drawn** seventh body (§5.1): a centered calm body, a quiet per-widget glyph, a `type.body`/`textMuted` line, an optional quieter subline, and **no action**, distinct from the six host states and from the action-bearing prompts; it reuses existing tokens (no new one) and its v1 consumers are Next Event, Agenda, Daily Spend, and Linear's no-active-cycle. Resolves the gap flagged in [AOD-35](https://linear.app/thexap/issue/AOD-35) §10.2 / [AOD-36](https://linear.app/thexap/issue/AOD-36) §9.3.
 
 | Acceptance clause | Where |
 |---|---|
 | Token foundation: colors, night palette, type scale, clockSize, overlay, dot | Section 3, all mockups |
 | Shared card chrome: frame, quiet header, cluster, value-first body | Section 4; `design-card-anatomy.svg` |
 | Six lifecycle-state visuals, generic | Section 5; `design-lifecycle-states.svg` |
+| Empty body: renderer-drawn seventh body, no action, v1 consumers | Section 5.1; `design-empty-body.svg` |
 | Refresh affordance: placement, four states, hidden for Clock | Section 6; `design-refresh-affordance.svg` |
 | Dim/ambient: overlay default, useAmbient opt-in, deep-red night | Section 7; `design-ambient-dim.svg` |
 | Clock face: digital, four sizes, date line, zone label, night | Section 8; `design-clock-sizes.svg` |
