@@ -22,20 +22,20 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, testing-strategy §9
     expect(screen.getByText(/hello/)).toBeTruthy();
   });
 
-  it('stale: renders last-known data plus a host staleness badge', () => {
+  it('stale: renders last-known data plus a host amber status dot (AOD-37 §5)', () => {
     render(<WidgetHostView {...base} state={{ phase: 'stale', data: { n: 1 }, fetchedAt: 1 }} />);
-    expect(screen.getByTestId('widget-stale-badge')).toBeTruthy();
+    expect(screen.getByTestId('widget-stale-dot')).toBeTruthy();
     expect(screen.getByText(/stub payload/i)).toBeTruthy();
   });
 
-  it('error with data: renders last-known data plus a host error badge', () => {
+  it('error with data: renders last-known data plus a host red status dot (AOD-37 §5)', () => {
     render(
       <WidgetHostView
         {...base}
         state={{ phase: 'error', error: { kind: 'provider_unavailable' }, data: { n: 1 }, fetchedAt: 1 }}
       />,
     );
-    expect(screen.getByTestId('widget-error-badge')).toBeTruthy();
+    expect(screen.getByTestId('widget-error-dot')).toBeTruthy();
     expect(screen.getByText(/stub payload/i)).toBeTruthy();
   });
 
@@ -54,7 +54,7 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, testing-strategy §9
   it('disconnected: host connect prompt names the service, renderer NOT invoked', () => {
     render(<WidgetHostView {...base} state={{ phase: 'disconnected', status: 'reauth_required' }} />);
     expect(screen.getByTestId('widget-disconnected')).toBeTruthy();
-    expect(screen.getByText(/Connect Stub to use this widget/)).toBeTruthy();
+    expect(screen.getByText(/Connect Stub to use this/)).toBeTruthy();
     expect(screen.queryByText(/stub payload/i)).toBeNull();
   });
 });

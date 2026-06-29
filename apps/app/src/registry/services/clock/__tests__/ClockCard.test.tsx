@@ -7,6 +7,7 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClockCard } from '../ClockCard';
+import { AmbientProvider } from '../../../../ambient/AmbientContext';
 import { clockService } from '..';
 import { WidgetHost } from '../../../../host/WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../host/WidgetDataSource';
@@ -143,5 +144,52 @@ describe('Clock config validation: the Intl time-zone seam (integration-clock.md
       expect(r.values.showDate).toBe(true);
       expect(r.values.dateFormat).toBe('full');
     }
+  });
+});
+
+describe('ClockCard face across sizes (AOD-37 §8.2-§8.4)', () => {
+  const cfg = (o: Record<string, unknown> = {}) => ({ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', ...o });
+
+  it('small: time only, no date line (§8.3)', () => {
+    render(<ClockCard data={undefined} config={cfg()} size="small" />);
+    expect(screen.getByTestId('clock-time')).toBeTruthy();
+    expect(screen.queryByTestId('clock-date')).toBeNull();
+    expect(screen.queryByTestId('clock-zone')).toBeNull();
+  });
+
+  it('medium: time over a date line, no zone kicker for a device-local clock (§8.4)', () => {
+    render(<ClockCard data={undefined} config={cfg({ timezone: '' })} size="medium" />);
+    expect(screen.getByTestId('clock-time')).toBeTruthy();
+    expect(screen.getByTestId('clock-date')).toBeTruthy();
+    expect(screen.queryByTestId('clock-zone')).toBeNull();
+  });
+
+  it('a timezone override shows the second-clock zone kicker, derived from the IANA id (§8.4)', () => {
+    render(<ClockCard data={undefined} config={cfg({ timezone: 'America/New_York' })} size="wide" />);
+    expect(screen.getByTestId('clock-zone').props.children).toBe('New York');
+  });
+
+  it('large: still draws time + date (the wall hero)', () => {
+    render(<ClockCard data={undefined} config={cfg()} size="large" />);
+    expect(screen.getByTestId('clock-time')).toBeTruthy();
+    expect(screen.getByTestId('clock-date')).toBeTruthy();
+  });
+});
+
+describe('ClockCard night palette (AOD-37 §8.5)', () => {
+  it('draws the time in the deep-red night.primary at phase night', () => {
+    render(
+      <AmbientProvider value={{ phase: 'night', dimLevel: 0.7 }}>
+        <ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', timezone: '' }} size="medium" />
+      </AmbientProvider>,
+    );
+    // §3.2 night.primary is the deep red the time swaps to at night.
+    expect(screen.getByTestId('clock-time').props.style.color).toBe('#C2362B');
+  });
+
+  it('draws the time in the standard text colour by day', () => {
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', timezone: '' }} size="medium" />);
+    // §3.1 dark theme text.
+    expect(screen.getByTestId('clock-time').props.style.color).toBe('#F4F4F8');
   });
 });

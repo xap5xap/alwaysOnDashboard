@@ -81,6 +81,9 @@ export interface WidgetDefinition {
   cacheTtlSeconds?: number; // provider-facing floor (AOD-9 proxy cache); defaults from defaultRefresh
   minRefreshSeconds?: number; // device-cadence floor the author asserts; default 0
   dimsWithAmbient?: boolean; // default true: host applies the global dim overlay (AOD-10 §8)
+  // AOD-37 §4.2: sizes at which the host suppresses the quiet header for a self-evident card (Clock
+  // small declares ['small']). A generic host capability, not a per-service branch; default = show.
+  hideHeaderAtSizes?: WidgetSize[];
 }
 
 /** AOD-10 §3 names the AOD-8 widget + its additions WidgetModel; kept as an alias for traceability. */

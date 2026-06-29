@@ -21,6 +21,10 @@ export interface ClockView {
   time: string; // formatted per clockFormat + showSeconds, e.g. "14:05" or "2:05:33 PM"
   date: string | null; // formatted per dateFormat when showDate is true, else null
   zone: string; // the IANA zone actually used: the config override, or the resolved device-local zone
+  // AOD-37 §8.4 the second-clock zone label: a human label derived from the IANA id, shown ONLY when a
+  // timezone OVERRIDE is set (a device-local clock shows none). Both null for a device-local clock.
+  zoneLabel: string | null; // e.g. "New York" (America/New_York). Null when device-local.
+  zoneOffset: string | null; // e.g. "GMT-4" for the wide second-clock layout. Null when device-local.
 }
 
 /** The config defaults (integration-clock.md §5.1), the single source of truth shared by the configSchema
