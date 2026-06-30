@@ -73,6 +73,28 @@ const weatherIcon = {
   stroke: 2, // line weight, matching the AOD-37 chrome glyphs
 } as const;
 
+// AOD-36 §9.1 sparkline: the Daily Spend chart's sizing + intensity (design-claude-usage.md §4, §9.1).
+// A per-context size/intensity ramp the way weatherIcon ramps the weather glyph. The bars draw in
+// colors.accent at two opacities and sit on a colors.border baseline, applied in the leaf; NO colour
+// token is added (the group is numbers only, like clockSize/weatherIcon, so the theme stays narrow).
+const sparkline = {
+  chartHeight: { wide: 44, large: 96 }, // the tallest bar per size; the rest scale to the window max
+  barGap: 2, // px between bars (bars flex to fill the width)
+  barRadius: 1, // the bar corner
+  minBarHeight: 2, // a zero / tiny day still shows a baseline tick (a $0 day is not a gap)
+  todayOpacity: 1, // today's bar at full colors.accent
+  pastOpacity: 0.5, // earlier days recede to the same accent at half intensity
+} as const;
+
+// AOD-36 §9.2 money: the Spend MTD cents-precision typography scales (design-claude-usage.md §5.1, §9.2).
+// Scales relative to the type.xl dollars; the symbol reduces + raises toward the cap height, the cents
+// reduce + recede to colors.textMuted (the fractionColor, applied in the leaf). Like weatherIcon it
+// adds NO colour token: dollars + symbol use colors.text, cents use colors.textMuted at the draw site.
+const money = {
+  symbolScale: 0.62, // the currency symbol ($) vs the integer dollars; raised toward cap height
+  fractionScale: 0.62, // the .XX cents vs the integer dollars; baseline-aligned
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22 },
@@ -82,6 +104,8 @@ const sharedTokens = {
   overlay,
   dot,
   weatherIcon,
+  sparkline,
+  money,
 } as const;
 
 // --- §3.1 colour (shipped, recapped) ----------------------------------------------------------------

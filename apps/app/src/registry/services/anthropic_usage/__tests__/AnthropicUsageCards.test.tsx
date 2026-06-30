@@ -4,6 +4,10 @@
 // (Weather), an admin_key service is zero-config and takes the host's UNCHANGED else-branch, so the proxy
 // params are instance.config (empty) and connection.config is NOT merged in. The cents->dollars /100 lives
 // server-side (operations.ts); the card receives an already-normalized payload, so these assert rendering.
+//
+// AOD-36 polish (design-claude-usage.md): the Spend MTD run-rate is medium-only (§5 layout); $0.00 is a
+// valid hero, NOT the EmptyBody (§5.3); Daily Spend draws the sparkline at wide/large with a large-only
+// today label, and an empty days[] is the §5.1 EmptyBody (§6.2).
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -34,6 +38,13 @@ const spendInstance: WidgetInstance = {
   rect: { x: 0, y: 0, w: 1, h: 1, z: 0 },
 };
 
+const mediumSpendInstance: WidgetInstance = {
+  ...spendInstance,
+  instanceId: 'au-spend-md',
+  size: 'medium',
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+};
+
 const dailyInstance: WidgetInstance = {
   instanceId: 'au-daily',
   serviceId: 'anthropic_usage',
@@ -41,6 +52,13 @@ const dailyInstance: WidgetInstance = {
   config: {},
   size: 'wide',
   rect: { x: 0, y: 0, w: 3, h: 1, z: 0 },
+};
+
+const largeDailyInstance: WidgetInstance = {
+  ...dailyInstance,
+  instanceId: 'au-daily-lg',
+  size: 'large',
+  rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
 };
 
 const SPEND_MTD_DATA: SpendMtdData = {
@@ -56,7 +74,7 @@ const DAILY_SPEND_DATA: DailySpendData = {
   total: 4,
   days: [
     { date: '2026-06-01', amount: 1.5 },
-    { date: '2026-06-02', amount: 2.5 },
+    { date: '2026-06-02', amount: 2.5 }, // the rightmost is today -> "today $2.50" at large
   ],
 };
 
@@ -73,6 +91,20 @@ function renderHost(source: WidgetDataSource, instance: WidgetInstance) {
   );
 }
 
+function spendSource(data: SpendMtdData): WidgetDataSource {
+  return {
+    fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+    resolveOptions: jest.fn().mockResolvedValue([]),
+  };
+}
+
+function dailySource(data: DailySpendData): WidgetDataSource {
+  return {
+    fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+    resolveOptions: jest.fn().mockResolvedValue([]),
+  };
+}
+
 beforeEach(() => {
   mockConnections = new Map();
 });
@@ -82,10 +114,7 @@ describe('admin_key host params (integration-claude.md §6.3): the host else-bra
     // The connection carries config; admin_key is NOT platform_key, so the host takes the else-branch and
     // the zero-config instance config ({}) flows through unchanged. This proves WidgetHost is untouched.
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', { ignored: 'conn-config' })]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: SPEND_MTD_DATA, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
+    const source = spendSource(SPEND_MTD_DATA);
     renderHost(source, spendInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
@@ -93,58 +122,68 @@ describe('admin_key host params (integration-claude.md §6.3): the host else-bra
   });
 });
 
-describe('SpendMtdCard through the host lifecycle (AOD-59)', () => {
-  it('resolves loading -> fresh and renders the MTD amount + a derived run-rate', async () => {
+describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
+  it('at medium renders the MTD amount (cents-precision) + the emphasised run-rate', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: SPEND_MTD_DATA, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, spendInstance);
+    renderHost(spendSource(SPEND_MTD_DATA), mediumSpendInstance);
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
-    expect(screen.getByText('$2.00/day avg')).toBeTruthy(); // 4 / 2 days
-    expect(screen.getByText('2 days this month')).toBeTruthy();
+    // one run-rate line: the $/day value + the day count (§5.2)
+    const runRate = screen.getByTestId('claude-spend-mtd-runrate');
+    expect(runRate).toHaveTextContent(/\$2\.00\/day avg/); // 4 / 2 days
+    expect(runRate).toHaveTextContent(/2 days this month/);
   });
 
-  it('renders a zero-spend org as $0.00 (a valid figure, not an empty/error state, §4.1)', async () => {
+  it('at small renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    const zero: SpendMtdData = { amount: 0, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-01', daysElapsed: 0 };
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: zero, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, spendInstance);
+    renderHost(spendSource(SPEND_MTD_DATA), spendInstance); // small
+
+    await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
+    expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
+    expect(screen.queryByTestId('claude-spend-mtd-runrate')).toBeNull();
+  });
+
+  it('renders a zero-spend org as the $0.00 hero (a valid figure, NOT the empty body, §5.3)', async () => {
+    mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
+    const zero: SpendMtdData = { amount: 0, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-12', daysElapsed: 12 };
+    renderHost(spendSource(zero), mediumSpendInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$0.00');
+    // $0.00 is the hero with a normal run-rate, not routed through the calm empty body Daily Spend uses.
+    expect(screen.getByTestId('claude-spend-mtd-runrate')).toHaveTextContent(/\$0\.00\/day avg/);
+    expect(screen.queryByTestId('widget-empty-body')).toBeNull();
   });
 });
 
-describe('DailySpendCard through the host lifecycle (AOD-59)', () => {
-  it('renders the sparkline and the month-to-date total', async () => {
+describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
+  it('at wide renders the sparkline + the MTD total, no large-only today label', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: DAILY_SPEND_DATA, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, dailyInstance);
+    renderHost(dailySource(DAILY_SPEND_DATA), dailyInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-daily-spend')).toBeTruthy());
     expect(screen.getByTestId('claude-daily-spend-total')).toHaveTextContent('$4.00');
+    expect(screen.getByTestId('claude-sparkline')).toBeTruthy();
+    expect(screen.queryByTestId('claude-daily-spend-today')).toBeNull(); // today label is large-only (§6.1)
   });
 
-  it('renders the empty state for a month with no spend yet (never crashes, §4.2)', async () => {
+  it('at large adds the "today $X.XX" value label over the today bar (§6.1)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    const source: WidgetDataSource = {
-      fetch: jest.fn().mockResolvedValue({ data: { days: [], currency: 'USD', total: 0 }, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockResolvedValue([]),
-    };
-    renderHost(source, dailyInstance);
+    renderHost(dailySource(DAILY_SPEND_DATA), largeDailyInstance);
+
+    await waitFor(() => expect(screen.getByTestId('claude-daily-spend')).toBeTruthy());
+    expect(screen.getByTestId('claude-sparkline')).toBeTruthy();
+    expect(screen.getByTestId('claude-daily-spend-today')).toHaveTextContent('today $2.50'); // last day's amount
+  });
+
+  it('renders the §5.1 empty body for a month with no spend yet (never crashes, §6.2)', async () => {
+    mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
+    renderHost(dailySource({ days: [], currency: 'USD', total: 0 }), dailyInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-daily-spend-empty')).toBeTruthy());
+    expect(screen.getByTestId('widget-empty-body')).toBeTruthy(); // the shared EmptyBody convention
     expect(screen.queryByTestId('claude-daily-spend')).toBeNull();
   });
 });
