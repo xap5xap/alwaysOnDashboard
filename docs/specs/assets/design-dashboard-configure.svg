@@ -1,0 +1,101 @@
+<svg width="100%" viewBox="0 0 860 576" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela per-instance config sheet: the generic ConfigForm interior</title>
+  <desc>Left: the per-instance config sheet as a bottom sheet over a dimmed dashboard under a scrim. The sheet has a grabber, a Configure My Issues title, then one field per schema kind: a Sort segmented control with Priority selected in the accent fill, a Projects row of multi-select pills with two selected in the muted-accent fill, and a Show sub-issues toggle switched on, ending in a Cancel link and a Save primary button. Right: the sheet presentation reused from AOD-21 section 7 and the three entry points that all route through the dashboards configuring state; the field kinds mapped to AOD-20 components with the remote-options sub-states; the validation and the ownership split that gives this design the widget-instance config sheet and AOD-28 the service credential form; and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .row{font-size:11px;fill:#C9C9D4;}
+    .sheetTitle{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .field{font-size:12.5px;font-weight:600;fill:#F4F4F8;}
+    .num{font-size:10px;font-weight:700;fill:#0B0B0F;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="575" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Configure · the per-instance config sheet</text>
+  <text x="32" y="60" class="sub">The AOD-21 §7 sheet again; the interior is the generic ConfigForm, one input per schema field kind, composed from AOD-20 controls.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD · config sheet open</text>
+  <rect x="32" y="104" width="320" height="452" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- dimmed dashboard + scrim -->
+  <g opacity="0.3">
+    <path d="M64,150 L66.5,155.5 L72,158 L66.5,160.5 L64,166 L61.5,160.5 L56,158 L61.5,155.5 Z" fill="#6E8BFF"/>
+    <text x="80" y="164" font-size="16" fill="#F4F4F8" font-weight="500" letter-spacing="0.5">vela</text>
+    <rect x="56" y="184" width="120" height="56" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  </g>
+  <rect x="33" y="105" width="318" height="450" rx="27" fill="#000000" fill-opacity="0.6"/>
+
+  <!-- sheet -->
+  <rect x="46" y="226" width="292" height="324" rx="14" fill="#1F1F29" stroke="#2A2A36"/>
+  <rect x="46" y="240" width="292" height="310" fill="#1F1F29"/>
+  <rect x="182" y="238" width="36" height="4" rx="2" fill="#3A3A46"/>
+  <text x="62" y="270" class="sheetTitle">Configure My Issues</text>
+
+  <!-- Field 1: enum -> segmented control -->
+  <text x="62" y="298" class="cap">SORT</text>
+  <rect x="62" y="306" width="222" height="30" rx="8" fill="none" stroke="#2A2A36"/>
+  <rect x="62" y="306" width="78" height="30" rx="8" fill="#6E8BFF"/>
+  <text x="101" y="325" text-anchor="middle" class="num" font-size="11">Priority</text>
+  <text x="178" y="325" text-anchor="middle" class="row" font-size="11">Recent</text>
+  <text x="252" y="325" text-anchor="middle" class="row" font-size="11">Manual</text>
+
+  <!-- Field 2: remote-options -> multi-select pills -->
+  <text x="62" y="362" class="cap">PROJECTS</text>
+  <rect x="62" y="370" width="56" height="26" rx="13" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF"/>
+  <text x="90" y="387" text-anchor="middle" class="acc" font-size="11">Vela</text>
+  <rect x="124" y="370" width="52" height="26" rx="13" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF"/>
+  <text x="150" y="387" text-anchor="middle" class="acc" font-size="11">AOD</text>
+  <rect x="182" y="370" width="76" height="26" rx="13" fill="none" stroke="#2A2A36"/>
+  <text x="220" y="387" text-anchor="middle" class="row" font-size="11">Armonia</text>
+
+  <!-- Field 3: boolean -> toggle -->
+  <text x="62" y="428" class="field">Show sub-issues</text>
+  <rect x="240" y="414" width="48" height="26" rx="13" fill="#6E8BFF"/>
+  <circle cx="275" cy="427" r="10" fill="#FFFFFF"/>
+
+  <!-- inline field error example (validateConfig) -->
+  <line x1="62" y1="456" x2="284" y2="456" stroke="#2A2A36"/>
+
+  <!-- actions -->
+  <text x="62" y="492" class="meta" font-size="13" fill="#9B9BA8">Cancel</text>
+  <rect x="214" y="476" width="70" height="34" rx="8" fill="#6E8BFF"/>
+  <text x="249" y="498" text-anchor="middle" class="num" font-size="13">Save</text>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <!-- presentation + entries -->
+  <text x="386" y="116" class="sec">SHEET PRESENTATION + THREE ENTRY POINTS</text>
+  <rect x="386" y="128" width="442" height="98" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <text x="402" y="150" class="row">AOD-21 §7 in-screen sheet (scrim + overlay + grabber); carries a live</text>
+  <text x="402" y="166" class="meta" font-size="10">WidgetInstance. All three entries route through the dashboard's `configuring` state:</text>
+  <text x="402" y="188" class="row"><tspan class="acc">1</tspan>  arrange-mode "Configure" pill (any widget)</text>
+  <text x="402" y="206" class="row"><tspan class="acc">2</tspan>  host needs_config "Reconfigure" prompt (AOD-37 §5)</text>
+  <text x="402" y="222" class="row"><tspan class="acc">3</tspan>  configure-on-add from the picker (submit "Add")</text>
+
+  <!-- field kinds -->
+  <text x="386" y="252" class="sec">FIELD KINDS (GENERIC OVER THE SCHEMA -&gt; AOD-20)</text>
+  <rect x="386" y="264" width="442" height="118" rx="10" fill="#0E0E14" stroke="#2A2A36"/>
+  <text x="402" y="286" class="row"><tspan class="acc">string / number</tspan>  -&gt; input (surfaceAlt fill, border)</text>
+  <text x="402" y="306" class="row"><tspan class="acc">boolean</tspan>  -&gt; toggle (radius.full, accent track, onAccent knob)</text>
+  <text x="402" y="326" class="row"><tspan class="acc">enum</tspan>  -&gt; segmented control (exclusive, full-accent selected)</text>
+  <text x="402" y="346" class="row"><tspan class="acc">remote-options</tspan>  -&gt; multi-select pills (accentMuted selected)</text>
+  <text x="402" y="368" class="meta" font-size="10">remote-options sub-states: loading / error+retry / needs_reconnect / empty.</text>
+
+  <!-- validation + ownership -->
+  <text x="386" y="408" class="sec">VALIDATION + OWNERSHIP (THE AOD-28 OVERLAP)</text>
+  <rect x="386" y="420" width="442" height="96" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <text x="402" y="442" class="row">validateConfig is the single validation truth; errors render inline.</text>
+  <text x="402" y="462" class="row">Widget-INSTANCE config sheet (this) -&gt; <tspan class="acc">AOD-27</tspan>.</text>
+  <text x="402" y="482" class="row">Service CREDENTIAL form (API key / location) -&gt; <tspan class="acc">AOD-28</tspan>.</text>
+  <text x="402" y="504" class="meta" font-size="10">Same sheet chrome; different interior. app-ia.md §5 row 5 assigns this one here.</text>
+
+  <!-- tokens -->
+  <text x="386" y="542" class="sec">TOKENS</text>
+  <rect x="386" y="552" width="442" height="20" rx="6" fill="#101016" stroke="#23232E"/>
+  <text x="398" y="566" class="tok">input/toggle/segmented/pill = AOD-20 groups · sheet = elevation.overlay</text>
+</svg>
