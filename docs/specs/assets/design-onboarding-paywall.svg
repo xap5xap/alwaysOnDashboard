@@ -1,0 +1,99 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela paywall body: the upgrade dialog inside the AOD-21 modal, with value props, packages, the trial CTA, and restore</title>
+  <desc>A large device frame on the left shows the paywall body inside the AOD-21 modal presentation: the caller dashboard is dimmed under a scrim, and a dialog rises at the overlay elevation with a close control, the Vela Pro title with a star, a value-prop list of Kiosk Mode, unlimited services, more dashboards, faster refresh, and themes each with an accent check, two package cards for Annual at 39.99 a year marked save 44 percent and best value and Monthly at 5.99 a month, a Start 7-day free trial primary button, a Restore purchases ghost action, and a Maybe later dismiss. On the right, an anatomy panel labels the dialog at the overlay elevation, the scrim over the caller, the value props from the entitlement levers, the two RevenueCat packages, the trial CTA, and restore, and a token block states the presentation is AOD-21's, the price and levers are AOD-12's, and the body adds no new token.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:15px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .dim{opacity:0.5;}
+    .price{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .badge{font-size:8px;font-weight:700;fill:#6E8BFF;letter-spacing:1px;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Paywall body · the upgrade dialog</text>
+  <text x="32" y="60" class="sub">Fills the AOD-21 §7 modal (scrim + dialog at elevation.overlay). The trial lead, the Pro value, the packages, the CTA, and restore.</text>
+
+  <!-- ===== THE MODAL ===== -->
+  <text x="32" y="92" class="cap">PAYWALL · presentation: modal (AOD-21 §7)</text>
+  <rect x="32" y="104" width="300" height="468" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- caller dashboard dimmed behind the scrim -->
+  <g class="dim">
+    <rect x="52" y="132" width="120" height="56" rx="10" fill="#16161D" stroke="#2A2A36"/>
+    <rect x="192" y="132" width="120" height="56" rx="10" fill="#16161D" stroke="#2A2A36"/>
+    <rect x="52" y="200" width="260" height="56" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  </g>
+  <!-- scrim -->
+  <rect x="44" y="116" width="276" height="444" rx="16" fill="#000000" opacity="0.6"/>
+  <!-- dialog -->
+  <rect x="56" y="150" width="252" height="396" rx="18" fill="#1F1F29" stroke="#2A2A36"/>
+  <path d="M290,166 l10,10 M300,166 l-10,10" stroke="#9B9BA8" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M76,176 L79,184 L87,187 L79,190 L76,198 L73,190 L65,187 L73,184 Z" fill="#6E8BFF"/>
+  <text x="96" y="192" class="title" font-size="16">Vela Pro</text>
+  <text x="72" y="214" class="meta">Try everything free for 7 days.</text>
+  <!-- value props -->
+  <g>
+    <path d="M74,230 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="94" y="234" class="title" font-size="12">Kiosk Mode</text>
+    <path d="M74,252 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="94" y="256" class="title" font-size="12">Unlimited services</text>
+    <path d="M74,274 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="94" y="278" class="title" font-size="12">More dashboards</text>
+    <path d="M74,296 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="94" y="300" class="title" font-size="12">Faster, live refresh</text>
+    <path d="M74,318 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="94" y="322" class="title" font-size="12">Themes</text>
+  </g>
+  <!-- packages -->
+  <rect x="72" y="338" width="220" height="52" rx="12" fill="#16161D" stroke="#6E8BFF"/>
+  <rect x="72" y="338" width="220" height="52" rx="12" fill="#6E8BFF" opacity="0.14"/>
+  <text x="86" y="360" class="title">Annual</text>
+  <text x="86" y="378" class="meta">$39.99 / year</text>
+  <text x="278" y="360" text-anchor="end" class="badge">SAVE 44%</text>
+  <text x="278" y="378" text-anchor="end" class="cal" fill="#6E8BFF">7-day free trial</text>
+  <rect x="72" y="398" width="220" height="48" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="86" y="418" class="title">Monthly</text>
+  <text x="86" y="436" class="meta">$5.99 / month</text>
+  <text x="278" y="427" text-anchor="end" class="cal" fill="#6E8BFF">7-day free trial</text>
+  <!-- CTA -->
+  <rect x="72" y="456" width="220" height="40" rx="10" fill="#6E8BFF"/>
+  <text x="182" y="481" text-anchor="middle" class="on" font-size="13">Start 7-day free trial</text>
+  <text x="182" y="516" text-anchor="middle" class="acc" font-size="11">Restore purchases</text>
+  <text x="182" y="534" text-anchor="middle" class="meta">Maybe later</text>
+
+  <!-- ===== ANATOMY ===== -->
+  <text x="360" y="92" class="cap">ANATOMY · who owns each part</text>
+  <rect x="360" y="104" width="468" height="220" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="376" y="128" class="note"><tspan class="acc">AOD-21 §7 · presentation.</tspan> The modal route, the scrim,</text>
+  <text x="376" y="144" class="tok">and the dialog at elevation.overlay. Not redrawn here.</text>
+  <text x="376" y="168" class="note"><tspan class="acc">AOD-12 · the levers + the price.</tspan> The value props are the</text>
+  <text x="376" y="184" class="tok">Entitlements levers (kiosk / services / dashboards / floor / themes,</text>
+  <text x="376" y="198" class="tok">§4); the $5.99 / $39.99 / 7-day trial are the §5.1 packages.</text>
+  <text x="376" y="222" class="note"><tspan class="acc">AOD-29 · the body (here).</tspan> The value list, the package</text>
+  <text x="376" y="238" class="tok">cards, the trial CTA, restore, and the per-trigger lead (§7).</text>
+  <text x="376" y="262" class="note"><tspan class="acc">Restore purchases</tspan> is required by the stores; it re-reads</text>
+  <text x="376" y="278" class="tok">CustomerInfo, no new purchase. "Maybe later" dismisses.</text>
+  <text x="376" y="302" class="tok">After purchase the SDK CustomerInfo update flips the locks off (AOD-12 §6.5).</text>
+
+  <text x="360" y="352" class="sec">COMPOSES · no new token</text>
+  <rect x="360" y="364" width="468" height="100" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="376" y="386" class="tok">dialog   : AOD-21 §7 modal · scrim + elevation.overlay · radius.lg</text>
+  <text x="376" y="402" class="tok">props    : §5.1 check glyph · type.title · accent · the one accent</text>
+  <text x="376" y="418" class="tok">package  : AOD-20 §8 row · selected = accentMuted fill + accent border</text>
+  <text x="376" y="434" class="tok">CTA      : AOD-20 §5 primary (onAccent) · restore = ghost · later = textMuted</text>
+  <text x="376" y="450" class="tok">badge    : AOD-20 §10 PRO/accent badge (type.badge) · "SAVE 44%"</text>
+
+  <line x1="360" y1="492" x2="828" y2="492" stroke="#22222C"/>
+  <text x="360" y="514" class="note"><tspan class="acc">One accent, calm voice.</tspan> "Try everything free for 7 days,"</text>
+  <text x="360" y="532" class="note">not "Unlock powerful features!" (brand §7). The trial leads; the</text>
+  <text x="360" y="550" class="note">price is plain; no urgency. Reached by every Gate lock + onboarding.</text>
+</svg>
