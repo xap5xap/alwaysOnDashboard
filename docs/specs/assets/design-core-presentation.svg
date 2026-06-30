@@ -1,0 +1,104 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela presentation chrome: pushed screen, modal route, and in-screen sheet</title>
+  <desc>Three device frames show the three presentation kinds from the IA. The pushed screen shows a Themes sub-screen with a back chevron over a parent, a default stack push. The modal route shows the Dashboard dimmed under a scrim with a centered paywall dialog at the overlay elevation carrying a close control, a Vela Pro title, and an Upgrade button. The in-screen sheet shows the Dashboard dimmed under a scrim with a bottom sheet sliding up, a grabber handle, an Add a widget title, and two widget rows. Below, a decision rule asks whether the surface carries a live object from a parent, routing to a sheet, otherwise a deep-linkable global surface to a modal route, otherwise a pushed screen, with the surface mapping for each and a token line noting that modals and sheets use the scrim plus overlay elevation and never a shadow.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:15px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .dim{opacity:0.5;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Presentation chrome · pushed · modal · sheet</text>
+  <text x="32" y="60" class="sub">Applies the AOD-17 presentation rule and composes the AOD-20 overlays (scrim + elevation.overlay). One question decides the kind.</text>
+
+  <!-- ===== PUSHED ===== -->
+  <text x="32" y="92" class="cap">PUSHED SCREEN · Stack push · back pops</text>
+  <rect x="32" y="104" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <path d="M58,148 l-9,7 l9,7" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="78" y="160" class="title" font-size="15">Themes</text>
+  <line x1="48" y1="176" x2="264" y2="176" stroke="#2A2A36"/>
+  <rect x="48" y="190" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="64" y="214" class="title">Dark</text>
+  <path d="M236,205 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="48" y="238" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="64" y="262" class="title">Light</text>
+  <rect x="48" y="286" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="64" y="310" class="title">System</text>
+  <text x="48" y="356" class="cal">push: own back entry · deep-linkable</text>
+  <text x="48" y="372" class="cal">Settings · Themes · Account · Kiosk</text>
+  <text x="48" y="402" class="meta" fill="#6E8BFF">default Stack route</text>
+
+  <!-- ===== MODAL ROUTE ===== -->
+  <text x="306" y="92" class="cap">MODAL ROUTE · presentation: modal</text>
+  <rect x="306" y="104" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- parent dashboard behind -->
+  <g class="dim">
+    <path d="M334,138 L336,143 L341,145 L336,147 L334,152 L332,147 L327,145 L332,143 Z" fill="#6E8BFF"/>
+    <text x="348" y="150" class="word">vela</text>
+    <line x1="322" y1="162" x2="538" y2="162" stroke="#2A2A36"/>
+    <rect x="322" y="174" width="100" height="60" rx="10" fill="#16161D" stroke="#2A2A36"/>
+    <rect x="438" y="174" width="100" height="60" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  </g>
+  <!-- scrim -->
+  <rect x="318" y="116" width="224" height="296" rx="16" fill="#000000" opacity="0.6"/>
+  <!-- modal dialog -->
+  <rect x="330" y="232" width="200" height="150" rx="18" fill="#1F1F29" stroke="#2A2A36"/>
+  <path d="M512,246 l10,10 M522,246 l-10,10" stroke="#9B9BA8" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M352,260 L355,268 L363,271 L355,274 L352,282 L349,274 L341,271 L349,268 Z" fill="#6E8BFF"/>
+  <text x="372" y="276" class="title" font-size="15">Vela Pro</text>
+  <text x="346" y="302" class="meta">Kiosk, themes, more dashboards.</text>
+  <rect x="346" y="318" width="168" height="34" rx="10" fill="#6E8BFF"/>
+  <text x="430" y="340" text-anchor="middle" class="on" font-size="12">Upgrade</text>
+  <text x="322" y="404" class="cal">scrim + dialog at elevation.overlay</text>
+
+  <!-- ===== SHEET ===== -->
+  <text x="580" y="92" class="cap">IN-SCREEN SHEET · RN Modal · live object</text>
+  <rect x="580" y="104" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- parent dashboard behind -->
+  <g class="dim">
+    <path d="M608,138 L610,143 L615,145 L610,147 L608,152 L606,147 L601,145 L606,143 Z" fill="#6E8BFF"/>
+    <text x="622" y="150" class="word">vela</text>
+    <line x1="596" y1="162" x2="812" y2="162" stroke="#2A2A36"/>
+    <rect x="596" y="174" width="100" height="60" rx="10" fill="#16161D" stroke="#2A2A36"/>
+    <rect x="712" y="174" width="100" height="60" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  </g>
+  <!-- scrim -->
+  <rect x="592" y="116" width="224" height="296" rx="16" fill="#000000" opacity="0.6"/>
+  <!-- bottom sheet -->
+  <rect x="592" y="270" width="224" height="142" rx="18" fill="#1F1F29" stroke="#2A2A36"/>
+  <rect x="690" y="280" width="28" height="4" rx="2" fill="#9B9BA8"/>
+  <text x="608" y="306" class="title">Add a widget</text>
+  <line x1="608" y1="318" x2="800" y2="318" stroke="#2A2A36"/>
+  <text x="608" y="340" class="title">Clock</text>
+  <path d="M788,330 v12 M782,336 h12" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="608" y1="352" x2="800" y2="352" stroke="#2A2A36"/>
+  <text x="608" y="374" class="title">Weather</text>
+  <path d="M788,364 v12 M782,370 h12" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="592" y="404" class="cal">picker · config · credential · live object</text>
+
+  <!-- ===== DECISION RULE ===== -->
+  <line x1="32" y1="438" x2="828" y2="438" stroke="#22222C"/>
+  <text x="32" y="462" class="sec">THE RULE · does the surface carry a live object from a parent screen?</text>
+  <rect x="32" y="474" width="252" height="58" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="48" y="495" class="title acc" font-size="12">Yes → in-screen sheet</text>
+  <text x="48" y="514" class="tok">a WidgetInstance / ServiceDefinition;</text>
+  <text x="48" y="527" class="tok">no deep-link identity. RN &lt;Modal&gt;.</text>
+  <rect x="300" y="474" width="252" height="58" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="316" y="495" class="title acc" font-size="12">No, global → modal route</text>
+  <text x="316" y="514" class="tok">deep-linkable, no live parent object.</text>
+  <text x="316" y="527" class="tok">Paywall · Dashboards switcher.</text>
+  <rect x="568" y="474" width="260" height="58" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="584" y="495" class="title acc" font-size="12">Else → pushed screen</text>
+  <text x="584" y="514" class="tok">own back entry, route params only.</text>
+  <text x="584" y="527" class="tok">Settings · Themes · Account · Kiosk.</text>
+</svg>

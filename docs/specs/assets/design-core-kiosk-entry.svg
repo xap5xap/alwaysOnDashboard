@@ -1,0 +1,80 @@
+<svg width="100%" viewBox="0 0 860 520" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela kiosk entry chrome: the two entry points, the gate, and the fullscreen entry transition</title>
+  <desc>Left: the two kiosk entry points as chips. The Dashboard offers a Start Kiosk action, and the Settings screen offers a Kiosk Mode row behind the entitlements Gate with a padlock, a muted title, and a PRO badge when the user is Free. Both flow into the gate node that checks canUseKiosk. Right: the two outcomes. A Pro user enters the kiosk route, drawn as a near-black fullscreen wall with a large clock and a dashed note that the wall presentation is owned by AOD-39 and AOD-11, with the chrome hidden. A Free user is sent to the Paywall, drawn as a modal dialog with a Vela Pro title, a kiosk-needs-Pro line, a close control, and an Upgrade button. A footer states the entry transition pushes a fullscreen route with the gesture back disabled and the OS back intercepted, and the only exit is the AOD-11 gesture plus PIN back to the Dashboard.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .titlem{font-size:13px;font-weight:600;fill:#9B9BA8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .badge{font-size:9px;font-weight:700;letter-spacing:1px;fill:#6E8BFF;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:15px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .node{font-size:12px;font-weight:600;fill:#F4F4F8;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="519" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Kiosk entry chrome</text>
+  <text x="32" y="60" class="sub">Where kiosk is entered and the Pro gate handoff. The wall presentation is AOD-39 / AOD-11; this places the entry.</text>
+
+  <!-- ===== ENTRY POINTS ===== -->
+  <text x="32" y="92" class="sec">TWO ENTRY POINTS</text>
+  <!-- chip A: Dashboard -->
+  <rect x="32" y="104" width="300" height="72" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="128" class="cap">DASHBOARD</text>
+  <text x="48" y="152" class="title">Start Kiosk</text>
+  <text x="48" y="168" class="meta">a hub action</text>
+  <text x="316" y="146" text-anchor="end" class="acc" font-size="12">Start →</text>
+  <!-- chip B: Settings -->
+  <rect x="32" y="186" width="300" height="72" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="210" class="cap">SETTINGS · the Gate row</text>
+  <rect x="48" y="222" width="15" height="11" rx="2.5" fill="none" stroke="#9B9BA8" stroke-width="1.6"/>
+  <path d="M51,222 v-3 a4.5 4.5 0 0 1 9 0 v3" fill="none" stroke="#9B9BA8" stroke-width="1.6"/>
+  <text x="76" y="234" class="titlem">Kiosk Mode</text>
+  <rect x="244" y="218" width="40" height="20" rx="10" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF" stroke-opacity="0.5"/><text x="264" y="232" text-anchor="middle" class="badge">PRO</text>
+  <path d="M304,223 l6,6 l-6,6" fill="none" stroke="#9B9BA8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- arrows to gate -->
+  <path d="M332,140 C352,140 350,176 372,176" fill="none" stroke="#3A3A48" stroke-width="1.5"/><path d="M372,176 l-7,-3 l0,6 z" fill="#3A3A48"/>
+  <path d="M332,222 C352,222 350,190 372,190" fill="none" stroke="#3A3A48" stroke-width="1.5"/><path d="M372,190 l-7,-3 l0,6 z" fill="#3A3A48"/>
+
+  <!-- gate -->
+  <rect x="374" y="152" width="128" height="62" rx="10" fill="#101019" stroke="#6E8BFF" stroke-opacity="0.6"/>
+  <text x="438" y="178" text-anchor="middle" class="node">canUseKiosk?</text>
+  <text x="438" y="196" text-anchor="middle" class="cal">AOD-12 Gate</text>
+
+  <!-- branches -->
+  <path d="M502,170 C520,170 520,140 540,140" fill="none" stroke="#3A3A48" stroke-width="1.5"/><path d="M540,140 l-7,-3 l0,6 z" fill="#3A3A48"/>
+  <text x="512" y="128" class="meta" fill="#4CB782">Pro → enter</text>
+  <path d="M502,196 C520,196 520,300 540,300" fill="none" stroke="#3A3A48" stroke-width="1.5"/><path d="M540,300 l-7,-3 l0,6 z" fill="#3A3A48"/>
+  <text x="512" y="250" class="meta">Free →</text>
+  <text x="512" y="264" class="meta">Paywall</text>
+
+  <!-- kiosk wall frame -->
+  <text x="548" y="100" class="cap">KIOSK ROUTE · fullscreen · chrome hidden</text>
+  <rect x="548" y="108" width="280" height="150" rx="16" fill="#08080B" stroke="#2A2A36"/>
+  <text x="688" y="190" text-anchor="middle" font-size="44" font-weight="700" fill="#F4F4F8" letter-spacing="-1">14:05</text>
+  <rect x="566" y="124" width="244" height="116" rx="10" fill="none" stroke="#23232E" stroke-dasharray="4 3"/>
+  <text x="688" y="218" text-anchor="middle" class="cal" fill="#9B9BA8">wall presentation → AOD-39 / AOD-11</text>
+  <text x="566" y="120" class="cal">no header · gestureEnabled:false</text>
+
+  <!-- paywall frame -->
+  <text x="548" y="292" class="cap">FREE → PAYWALL · modal · trigger=kiosk</text>
+  <rect x="548" y="300" width="280" height="148" rx="16" fill="#1F1F29" stroke="#2A2A36"/>
+  <path d="M812,318 l10,10 M822,318 l-10,10" stroke="#9B9BA8" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M570,328 L573,336 L581,339 L573,342 L570,350 L567,342 L559,339 L567,336 Z" fill="#6E8BFF"/>
+  <text x="590" y="344" class="title" font-size="15">Vela Pro</text>
+  <text x="564" y="372" class="meta">Kiosk Mode needs Pro.</text>
+  <rect x="564" y="390" width="248" height="36" rx="10" fill="#6E8BFF"/>
+  <text x="688" y="413" text-anchor="middle" class="on" font-size="12">Upgrade to Pro</text>
+
+  <line x1="32" y1="468" x2="828" y2="468" stroke="#22222C"/>
+  <text x="32" y="490" class="note"><tspan fill="#6E8BFF" font-weight="700">Entry, not the wall.</tspan> Push a fullscreen route (dashboardId), chrome hidden, gestureEnabled:false, OS back intercepted (AOD-11 §4.3).</text>
+  <text x="32" y="508" class="tok">the only exit is the AOD-11 gesture + PIN, back to the Dashboard · Free routes to Paywall(trigger=kiosk), never an enabled control</text>
+</svg>

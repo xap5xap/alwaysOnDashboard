@@ -1,0 +1,98 @@
+<svg width="100%" viewBox="0 0 860 580" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela Dashboard frame: the hub header, the canvas field, and the frame-versus-interior split</title>
+  <desc>Left: the Dashboard home drawn as a device frame. A top safe-area band, a hub header with the vela wordmark and the Add, Settings, and switcher chevron actions over a divider, then the canvas field at elevation base holding two small widget cards and one wide widget card that reuse the AOD-37 card chrome, with a muted long-press-to-arrange hint at the bottom. Right: the split. The frame owned by this design lists the hub header, the canvas field, the dashboards switcher modal entry, and the screen states. The interior owned by AOD-27 lists the free-form editor, the widget picker and config sheets, and the empty-dashboard layout. A small dashboards switcher panel shows Home checked, Wall, and a New dashboard action. A token block gives the canvas and card measurements. A footer states the Dashboard is the hub and this design fixes its frame, not its editor.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:16px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .hero{font-size:26px;font-weight:700;fill:#F4F4F8;}
+    .row{font-size:11.5px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="579" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Dashboard frame · the hub</text>
+  <text x="32" y="60" class="sub">The home dashboard frame: hub header, canvas field, switcher entry. The editor interior is AOD-27; the cards reuse AOD-37.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD · home · the hub</text>
+  <rect x="32" y="104" width="320" height="452" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- safe top -->
+  <rect x="46" y="116" width="292" height="20" rx="6" fill="none" stroke="#6E8BFF" stroke-opacity="0.4" stroke-dasharray="4 3"/>
+  <!-- hub header -->
+  <path d="M64,156 L66.5,161.5 L72,164 L66.5,166.5 L64,172 L61.5,166.5 L56,164 L61.5,161.5 Z" fill="#6E8BFF"/>
+  <text x="80" y="170" class="word">vela</text>
+  <text x="232" y="168" class="acc" font-size="11" font-weight="700">Add</text>
+  <text x="318" y="168" text-anchor="end" class="acc" font-size="11" font-weight="700">Settings</text>
+  <path d="M330,161 l6,5 l-6,5" fill="none" stroke="#9B9BA8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="46" y1="184" x2="338" y2="184" stroke="#2A2A36"/>
+  <!-- canvas field -->
+  <rect x="46" y="194" width="292" height="328" rx="10" fill="#0C0C11" stroke="#23232E" stroke-dasharray="4 3"/>
+  <!-- card 1: Clock -->
+  <rect x="58" y="206" width="134" height="96" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="72" y="228" class="cap" font-size="8">CLOCK</text>
+  <text x="72" y="268" class="hero">14:05</text>
+  <text x="72" y="288" class="meta">Mon, Jun 30</text>
+  <!-- card 2: Weather -->
+  <rect x="204" y="206" width="134" height="96" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="218" y="228" class="cap" font-size="8">WEATHER · NOW</text>
+  <circle cx="232" cy="262" r="11" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <text x="252" y="270" class="hero">18°</text>
+  <!-- card 3: Linear wide -->
+  <rect x="58" y="314" width="280" height="92" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="72" y="336" class="cap" font-size="8">LINEAR · MY ISSUES</text>
+  <text x="72" y="372" class="hero">7</text>
+  <text x="104" y="372" class="meta">assigned · 2 in progress</text>
+  <text x="72" y="394" class="meta">AOD-21 Core navigation IA</text>
+  <!-- arrange hint -->
+  <text x="60" y="440" class="cal" fill="#9B9BA8">canvas · elevation.base · cards mount here</text>
+  <text x="60" y="500" class="cal">long-press a card to arrange → AOD-27</text>
+
+  <!-- ===== THE SPLIT ===== -->
+  <text x="388" y="128" class="sec">THE FRAME · this design fixes</text>
+  <text x="388" y="152" class="row">·  Hub header: wordmark, Add, Settings, switcher ›</text>
+  <text x="388" y="174" class="row">·  Canvas field: elevation.base, where cards mount</text>
+  <text x="388" y="196" class="row">·  Dashboards switcher: the modal-route entry</text>
+  <text x="388" y="218" class="row">·  Screen states: loading / empty / error (§8)</text>
+
+  <text x="388" y="262" class="sec">THE INTERIOR · AOD-27 fills</text>
+  <text x="388" y="286" class="row">·  Free-form editor: drag, resize, arrange mode</text>
+  <text x="388" y="308" class="row">·  Widget picker + per-instance config: sheets</text>
+  <text x="388" y="330" class="row">·  Empty-dashboard CTA layout</text>
+
+  <!-- dashboards switcher mini -->
+  <text x="388" y="374" class="cap">DASHBOARDS SWITCHER · modal route (entry placed here)</text>
+  <rect x="388" y="384" width="276" height="150" rx="14" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="406" y="410" class="title">Dashboards</text>
+  <path d="M642,398 l12,12 M654,398 l-12,12" stroke="#9B9BA8" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="404" y1="422" x2="648" y2="422" stroke="#2A2A36"/>
+  <text x="406" y="444" class="title">Home</text>
+  <path d="M634,440 l4,4 l8,-9" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="404" y1="458" x2="648" y2="458" stroke="#2A2A36"/>
+  <text x="406" y="480" class="title">Wall</text>
+  <line x1="404" y1="494" x2="648" y2="494" stroke="#2A2A36"/>
+  <path d="M412,514 h12 M418,508 v12" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="436" y="518" class="title acc" font-size="12">New dashboard</text>
+
+  <!-- token block -->
+  <rect x="684" y="384" width="144" height="150" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="700" y="406" class="tok">canvas:</text>
+  <text x="700" y="422" class="tok">elevation.base</text>
+  <text x="700" y="444" class="tok">card: surface</text>
+  <text x="700" y="460" class="tok">+ border</text>
+  <text x="700" y="476" class="tok">radius.md</text>
+  <text x="700" y="498" class="tok">switcher:</text>
+  <text x="700" y="514" class="tok">scrim +</text>
+  <text x="700" y="530" class="tok">elevation.overlay</text>
+
+  <line x1="32" y1="556" x2="828" y2="556" stroke="#22222C"/>
+  <text x="388" y="240" class="cal" fill="#6E8BFF">composes AOD-20 list rows + the widget card chrome</text>
+  <text x="32" y="574" class="note"><tspan fill="#6E8BFF" font-weight="700">The Dashboard is the hub.</tspan> One tap to Add, Settings, the switcher, kiosk, or a paywall. AOD-27 lays out the editor.</text>
+</svg>

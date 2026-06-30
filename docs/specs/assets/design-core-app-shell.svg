@@ -1,0 +1,87 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela app shell: the screen frame, safe-area insets, and the two header patterns</title>
+  <desc>Left: the screen frame as a device outline. A dashed top band marks the top safe-area inset, a header zone holds the vela wordmark and a Settings action over a divider, the content region below is the ambient field at elevation base where widget cards mount, and a dashed bottom band marks the bottom safe-area inset. Right: the two header patterns. The hub header used on the Dashboard home pairs the wordmark with the Add and Settings actions and a switcher chevron. The pushed header used on a sub-screen pairs a back chevron with the screen title and an optional trailing action. Below, a legend of the shared nav glyphs (back, chevron, close, add) and a token block giving the frame, header, and app-bar measurements. A footer states this is the shell drawn once, with headerShown false app-wide, and the per-feature interiors filling the content field.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:14px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:22px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">App shell · global chrome</text>
+  <text x="32" y="60" class="sub">The frame every screen sits in: safe-area insets, the dark ambient field, and the two header patterns. Composed from AOD-20.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="sec">SCREEN FRAME · safe-area · ambient field</text>
+  <rect x="32" y="104" width="288" height="430" rx="30" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- safe-area top -->
+  <rect x="46" y="116" width="260" height="30" rx="8" fill="none" stroke="#6E8BFF" stroke-opacity="0.45" stroke-dasharray="4 3"/>
+  <rect x="150" y="119" width="52" height="8" rx="4" fill="#1F1F29"/>
+  <text x="176" y="139" text-anchor="middle" class="cal">safe-area top · rt.insets.top</text>
+  <!-- hub header in-frame -->
+  <line x1="46" y1="180" x2="306" y2="180" stroke="#2A2A36"/>
+  <path d="M64,154 L66.5,159.5 L72,162 L66.5,164.5 L64,170 L61.5,164.5 L56,162 L61.5,159.5 Z" fill="#6E8BFF"/>
+  <text x="80" y="168" class="word" font-size="15">vela</text>
+  <text x="298" y="166" text-anchor="end" class="acc" font-size="10" font-weight="700">Settings</text>
+  <!-- content field -->
+  <rect x="46" y="192" width="260" height="278" rx="10" fill="#0C0C11" stroke="#23232E" stroke-dasharray="4 3"/>
+  <rect x="60" y="208" width="112" height="92" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="182" y="208" width="112" height="92" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="60" y="312" width="234" height="78" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="176" y="432" text-anchor="middle" class="cal" fill="#9B9BA8">content · elevation.base · widget cards mount here</text>
+  <!-- safe-area bottom -->
+  <rect x="46" y="488" width="260" height="32" rx="8" fill="none" stroke="#6E8BFF" stroke-opacity="0.45" stroke-dasharray="4 3"/>
+  <text x="176" y="508" text-anchor="middle" class="cal">safe-area bottom · rt.insets.bottom</text>
+
+  <!-- ===== HEADER PATTERNS ===== -->
+  <text x="356" y="92" class="sec">HEADER PATTERNS · composed, not new</text>
+
+  <!-- hub header -->
+  <text x="356" y="116" class="cap">HUB HEADER · Dashboard home · brand + glanceable actions</text>
+  <rect x="356" y="124" width="472" height="68" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <path d="M386,150 L389,158 L397,161 L389,164 L386,172 L383,164 L375,161 L383,158 Z" fill="#6E8BFF"/>
+  <text x="408" y="167" class="word">vela</text>
+  <text x="664" y="164" class="title acc" font-size="13">Add</text>
+  <text x="724" y="164" class="title acc" font-size="13">Settings</text>
+  <path d="M804,157 l7,7 l-7,7" fill="none" stroke="#9B9BA8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="386" y="186" class="cal">wordmark (brand §4)</text>
+  <text x="811" y="186" text-anchor="end" class="cal">switcher ›</text>
+
+  <!-- pushed header -->
+  <text x="356" y="220" class="cap">PUSHED HEADER · a sub-screen · back + title</text>
+  <rect x="356" y="228" width="472" height="68" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <path d="M390,255 l-9,7 l9,7" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="412" y="268" class="title">Settings</text>
+  <text x="812" y="266" text-anchor="end" class="title acc" font-size="13">Done</text>
+  <text x="381" y="290" class="cal">back ‹ pops the stack</text>
+  <text x="812" y="290" text-anchor="end" class="cal">trailing (optional)</text>
+
+  <!-- nav glyph legend -->
+  <text x="356" y="330" class="sec">NAV GLYPHS · shared chrome glyph family (glyphs.tsx)</text>
+  <path d="M392,358 l-9,7 l9,7" fill="none" stroke="#9B9BA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="388" y="392" text-anchor="middle" class="cal">back</text>
+  <path d="M452,358 l9,7 l-9,7" fill="none" stroke="#9B9BA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="457" y="392" text-anchor="middle" class="cal">chevron</text>
+  <path d="M512,358 l14,14 M526,358 l-14,14" fill="none" stroke="#9B9BA8" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="519" y="392" text-anchor="middle" class="cal">close</text>
+  <path d="M588,358 v14 M581,365 h14" fill="none" stroke="#9B9BA8" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="588" y="392" text-anchor="middle" class="cal">add</text>
+
+  <!-- token block -->
+  <rect x="356" y="410" width="472" height="98" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="372" y="432" class="tok">frame: colors.background · paddingTop rt.insets.top · paddingX spacing(4..5)</text>
+  <text x="372" y="450" class="tok">header: title type.title · actions ghost/accent · hub has a 1px bottom border</text>
+  <text x="372" y="468" class="tok">hub: wordmark + Add + Settings + switcher ·  pushed: back ‹ + title + trailing</text>
+  <text x="372" y="486" class="tok">appBar.height ~ spacing(14)=56 + safe-area · flat, no shadow (§4.1)</text>
+
+  <line x1="32" y1="524" x2="828" y2="524" stroke="#22222C"/>
+  <text x="32" y="546" class="note"><tspan fill="#6E8BFF" font-weight="700">Shell, not screens.</tspan> The frame is drawn once; the per-feature interiors fill the content field. headerShown:false app-wide.</text>
+</svg>
