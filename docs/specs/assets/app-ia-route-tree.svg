@@ -1,0 +1,100 @@
+<svg width="100%" viewBox="0 0 860 786" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela expo-router route tree (apps/app/app)</title>
+  <desc>The expo-router file tree for the app. app/_layout.tsx is the root Stack and provider stack (exists today). app/index.tsx is the auth gate and evolves from an inline SignIn-or-Dashboard render into a Redirect keyed on the Supabase session and the onboarded flag. app/oauth/done.tsx is the new OAuth callback deep-link target at vela://oauth/done. The (auth) group is the signed-out zone with sign-in.tsx (the SignIn component exists and gains a route). The (app) group is the signed-in zone, session-guarded, holding index.tsx (the Dashboard home, moved here), onboarding.tsx, dashboards.tsx and paywall.tsx (both modal presentation), kiosk.tsx (fullscreen, chrome hidden), and the settings folder with index.tsx (today settings.tsx, Settings home plus Connections), themes.tsx, and account.tsx. Separately, the add-widget picker, the per-instance config sheet, and the credential form are in-screen React Native modals owned by a parent screen, not router routes, because they carry a live object from that screen.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:14px;font-weight:700;fill:#1a1a1a;}
+    .leg{font-size:11px;fill:#5b5b5b;}
+    .folder{font-size:13px;font-weight:700;fill:#1a1a1a;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    .path{font-size:13px;fill:#1a1a1a;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    .ann{font-size:12px;fill:#7a7a7a;}
+    .desc{font-size:12px;fill:#5b5b5b;}
+    .bExists{font-size:11px;font-weight:700;fill:#2c8a5b;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    .bAdd{font-size:11px;font-weight:700;fill:#4a63c8;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    .bMove{font-size:11px;font-weight:700;fill:#b07d1e;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    .bSheet{font-size:11px;font-weight:700;fill:#8a6bb0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+    .guide{stroke:#dadada;stroke-width:1;fill:none;}
+    .panel{fill:#f7f8fb;stroke:#d3d6e2;stroke-width:1;}
+  </style>
+
+  <rect x="0.5" y="0.5" width="859" height="785" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="32" y="34" class="h">expo-router route tree  ·  apps/app/app/</text>
+  <text x="32" y="54" class="leg">Legend:  <tspan class="bExists">EXISTS</tspan> shipped today    <tspan class="bMove">MOVE/EVOLVE</tspan> existing file re-roled    <tspan class="bAdd">ADD</tspan> new route    <tspan class="bSheet">SHEET</tspan> in-screen modal, not a route</text>
+
+  <!-- guide lines -->
+  <path d="M50 96 V622" class="guide"/>
+  <path d="M84 188 V216" class="guide"/>
+  <path d="M84 246 V332" class="guide"/>
+  <path d="M84 362 V594" class="guide"/>
+  <path d="M118 536 V622" class="guide"/>
+
+  <!-- rows -->
+  <text x="44" y="100" class="folder">app/</text>
+
+  <text x="70" y="129" class="path">_layout.tsx</text>
+  <text x="360" y="129" class="bExists">[EXISTS]</text>
+  <text x="440" y="129" class="desc">Root Stack + provider stack</text>
+
+  <text x="70" y="158" class="path">index.tsx</text>
+  <text x="360" y="158" class="bMove">[EVOLVE]</text>
+  <text x="440" y="158" class="desc">auth gate: Redirect by (session, onboarded)</text>
+
+  <text x="70" y="187" class="folder">oauth/</text>
+  <text x="118" y="216" class="path">done.tsx</text>
+  <text x="360" y="216" class="bAdd">[ADD]</text>
+  <text x="440" y="216" class="desc">OAuth callback target  ·  vela://oauth/done</text>
+
+  <text x="70" y="245" class="folder">(auth)/</text>
+  <text x="138" y="245" class="ann">signed-out group</text>
+  <text x="118" y="274" class="path">_layout.tsx</text>
+  <text x="360" y="274" class="bAdd">[ADD]</text>
+  <text x="440" y="274" class="desc">auth Stack</text>
+  <text x="118" y="303" class="path">sign-in.tsx</text>
+  <text x="360" y="303" class="bAdd">[ADD]</text>
+  <text x="440" y="303" class="desc">SignIn component exists; gains a route</text>
+
+  <text x="70" y="332" class="folder">(app)/</text>
+  <text x="124" y="332" class="ann">signed-in group, session-guarded</text>
+  <text x="118" y="361" class="path">_layout.tsx</text>
+  <text x="360" y="361" class="bAdd">[ADD]</text>
+  <text x="440" y="361" class="desc">signed-in Stack + session guard</text>
+  <text x="118" y="390" class="path">index.tsx</text>
+  <text x="360" y="390" class="bMove">[MOVE]</text>
+  <text x="440" y="390" class="desc">Dashboard (home)</text>
+  <text x="118" y="419" class="path">onboarding.tsx</text>
+  <text x="360" y="419" class="bAdd">[ADD]</text>
+  <text x="440" y="419" class="desc">first-run flow (AOD-29)</text>
+  <text x="118" y="448" class="path">dashboards.tsx</text>
+  <text x="360" y="448" class="bAdd">[ADD]</text>
+  <text x="440" y="448" class="desc">create / switch dashboard  ·  presentation: modal</text>
+  <text x="118" y="477" class="path">paywall.tsx</text>
+  <text x="360" y="477" class="bAdd">[ADD]</text>
+  <text x="440" y="477" class="desc">upgrade / paywall (AOD-12)  ·  presentation: modal</text>
+  <text x="118" y="506" class="path">kiosk.tsx</text>
+  <text x="360" y="506" class="bAdd">[ADD]</text>
+  <text x="440" y="506" class="desc">kiosk wall (AOD-11)  ·  fullscreen, chrome hidden</text>
+  <text x="118" y="535" class="folder">settings/</text>
+  <text x="152" y="564" class="path">index.tsx</text>
+  <text x="360" y="564" class="bExists">[EXISTS]</text>
+  <text x="440" y="564" class="desc">Settings home + Connections (today settings.tsx)</text>
+  <text x="152" y="593" class="path">themes.tsx</text>
+  <text x="360" y="593" class="bAdd">[ADD]</text>
+  <text x="440" y="593" class="desc">theme picker</text>
+  <text x="152" y="622" class="path">account.tsx</text>
+  <text x="360" y="622" class="bAdd">[ADD]</text>
+  <text x="440" y="622" class="desc">account</text>
+
+  <!-- sheets panel -->
+  <rect x="32" y="654" width="796" height="112" rx="8" class="panel"/>
+  <text x="48" y="678" class="h">In-screen sheets  —  not routes</text>
+  <text x="300" y="678" class="leg">RN &lt;Modal&gt; owned by a parent screen; carries a live object, so it is not a global route</text>
+  <text x="48" y="704" class="path">WidgetPicker</text>
+  <text x="360" y="704" class="bSheet">[SHEET]</text>
+  <text x="440" y="704" class="desc">add-widget  ·  over Dashboard</text>
+  <text x="48" y="729" class="path">ConfigureInstance / ConfigForm</text>
+  <text x="360" y="729" class="bSheet">[SHEET]</text>
+  <text x="440" y="729" class="desc">per-instance widget config  ·  over Dashboard</text>
+  <text x="48" y="754" class="path">CredentialForm</text>
+  <text x="360" y="754" class="bSheet">[SHEET]</text>
+  <text x="440" y="754" class="desc">API key / location entry  ·  over Settings &#8594; Connections</text>
+</svg>
