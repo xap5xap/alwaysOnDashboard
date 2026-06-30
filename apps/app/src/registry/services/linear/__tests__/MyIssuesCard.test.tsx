@@ -27,6 +27,8 @@ const baseInstance: WidgetInstance = {
   rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
 };
 
+const largeInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-lg', size: 'large' };
+
 // The projectId picker resolves through the same seam; p1 is a member so the config validates.
 const projectChoices = [{ value: 'p1', label: 'Platform & App Shell' }];
 
@@ -38,13 +40,17 @@ const sampleData: MyIssuesData = {
   totalCount: 2,
 };
 
-function renderHost(source: WidgetDataSource, config: Record<string, unknown> = baseInstance.config) {
+function renderHost(
+  source: WidgetDataSource,
+  config: Record<string, unknown> = baseInstance.config,
+  instance: WidgetInstance = baseInstance,
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
       <RegistryProvider>
         <WidgetDataSourceProvider source={source}>
-          <WidgetHost instance={{ ...baseInstance, config }} maxRetries={0} />
+          <WidgetHost instance={{ ...instance, config }} maxRetries={0} />
         </WidgetDataSourceProvider>
       </RegistryProvider>
     </QueryClientProvider>,
@@ -63,6 +69,8 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.getByText('AOD-55')).toBeTruthy();
     expect(screen.getByText('Wire Linear My Issues')).toBeTruthy();
+    // AOD-30 §5.1: the body leads with the assigned count, the qualifier echoing the active filter.
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
     expect(source.fetch).toHaveBeenCalledWith({
       serviceId: 'linear',
       widgetType: 'my_issues',
@@ -77,6 +85,8 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     };
     renderHost(source);
     await waitFor(() => expect(screen.getByTestId('linear-myissues-empty')).toBeTruthy());
+    // AOD-30 §5.3: the empty is the shared §5.1 EmptyBody, wrapped to keep the *-empty testID contract.
+    expect(screen.getByTestId('widget-empty-body')).toBeTruthy();
     expect(screen.queryByTestId('linear-myissues')).toBeNull();
   });
 
@@ -98,5 +108,39 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     renderHost(source, { projectId: 'ghost', filter: 'open' });
     await screen.findByTestId('widget-needs-config');
     expect(screen.queryByTestId('linear-myissues')).toBeNull();
+  });
+
+  it('echoes the active filter in the count qualifier (open / in progress / all, §5.1)', async () => {
+    const mk = (): WidgetDataSource => ({
+      fetch: jest.fn().mockResolvedValue({ data: sampleData, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(projectChoices),
+    });
+    const first = renderHost(mk(), { projectId: 'p1', filter: 'in_progress' });
+    await waitFor(() => expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 in progress'));
+    first.unmount();
+    renderHost(mk(), { projectId: 'p1', filter: 'all' });
+    await waitFor(() => expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 assigned'));
+  });
+
+  it('shows the due date on the right at large, omits it at medium (the §5.2 large affordance)', async () => {
+    const dueData: MyIssuesData = {
+      issues: [
+        { id: 'd1', identifier: 'AOD-30', title: 'Linear widget visuals', url: 'u', stateName: 'In Progress', stateType: 'started', priority: 1, priorityLabel: 'Urgent', dueDate: '2026-12-31' },
+      ],
+      totalCount: 1,
+    };
+    const mk = (): WidgetDataSource => ({
+      fetch: jest.fn().mockResolvedValue({ data: dueData, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(projectChoices),
+    });
+
+    const lg = renderHost(mk(), largeInstance.config, largeInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    expect(screen.getByTestId('linear-myissues-due')).toBeTruthy();
+    lg.unmount();
+
+    renderHost(mk()); // medium
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    expect(screen.queryByTestId('linear-myissues-due')).toBeNull();
   });
 });

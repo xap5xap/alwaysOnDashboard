@@ -95,6 +95,26 @@ const money = {
   fractionScale: 0.62, // the .XX cents vs the integer dollars; baseline-aligned
 } as const;
 
+// AOD-30 §9.1 priorityIcon: the My Issues priority glyph sizing + intensity (design-linear.md §4, §9.1).
+// The five glyphs are monochrome and carried by SHAPE, not colour: filled bars / the urgent block draw in
+// colors.text, unfilled bars in colors.textMuted at offOpacity, applied in the leaf. Like
+// weatherIcon/sparkline/money it is numbers only and adds NO colour token (the §3 one-accent rule + the §5
+// status-hue reservation forbid a priority-dot rainbow, so priority spends no accent and no status hue).
+const priorityIcon = {
+  size: 14, // the glyph box edge, per row (the legend draws it larger)
+  offOpacity: 0.3, // unfilled bars -> colors.textMuted at this intensity, so level is read by filled-bar count
+} as const;
+
+// AOD-30 §9.2 progress: the Current Cycle progress bar sizing + intensity (design-linear.md §6, §9.2). One
+// accent at TWO intensities: the fill is colors.accent (the completed fraction), the track is the same
+// colors.accent at trackOpacity (the remaining fraction), NOT colors.skeleton (the loading colour, §6.1).
+// The radius is the bar's half-height (fully rounded), computed at the draw site. Numbers only, like
+// sparkline; adds NO colour token (the progress analogue of the sparkline's one-accent-two-intensities).
+const progress = {
+  trackHeight: { medium: 12, large: 16 }, // the bar thickness per size
+  trackOpacity: 0.18, // the remaining-fraction track = colors.accent at this intensity
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22 },
@@ -106,6 +126,8 @@ const sharedTokens = {
   weatherIcon,
   sparkline,
   money,
+  priorityIcon,
+  progress,
 } as const;
 
 // --- §3.1 colour (shipped, recapped) ----------------------------------------------------------------
