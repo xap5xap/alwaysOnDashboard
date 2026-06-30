@@ -1,0 +1,153 @@
+<svg width="100%" viewBox="0 0 860 792" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela color tokens: primitive ramps, dark and light semantic roles, and the layering rule</title>
+  <desc>The Vela color token taxonomy. At the top, the primitive ramps: a fourteen-step neutral ramp from white through the packed near-black ambient surfaces, the two-step blue accent ramp, the amber, red, and green status ramps, and the six-step deep-red ember ramp for the ambient night. In the middle, the semantic roles as a table: each role in the dark primary theme and the light variant theme aliases one primitive step, shown with the resolved swatch and hex, including the new additions onAccent, scrim, and focusRing. At the bottom, the layering rule: a component references a semantic role, a semantic role references a primitive, and references resolve only downward. The whole system uses one accent per theme and adds no new hue.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .ramp{font-size:10.5px;font-weight:600;fill:#C9C9D4;}
+    .step{font-size:8px;fill:#6F6F7C;font-family:ui-monospace,Menlo,monospace;}
+    .role{font-size:11px;font-weight:600;fill:#F4F4F8;}
+    .alias{font-size:9.5px;fill:#9B9BA8;font-family:ui-monospace,Menlo,monospace;}
+    .hex{font-size:9px;fill:#6F6F7C;font-family:ui-monospace,Menlo,monospace;}
+    .colh{font-size:9px;font-weight:700;fill:#6F6F7C;letter-spacing:1px;}
+    .add{font-size:8px;font-weight:700;fill:#6E8BFF;letter-spacing:0.5px;}
+    .anno{font-size:11px;fill:#C9C9D4;}
+    .pill{font-size:10.5px;font-weight:700;fill:#F4F4F8;letter-spacing:0.5px;}
+    .pillc{font-size:9px;fill:#9B9BA8;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="791" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela color tokens · primitive → semantic → component</text>
+  <text x="32" y="60" class="sub">The shipped palette, formalized into three tiers. Values are verbatim; the one-accent rule holds; no new hue. Handed to a tech-task to reconcile.</text>
+
+  <!-- PRIMITIVE -->
+  <text x="32" y="92" class="sec">PRIMITIVE · raw values, theme-independent</text>
+  <text x="32" y="112" class="ramp">neutral <tspan class="step">· surfaces, text, scrim black (denser at the dark end)</tspan></text>
+  <g>
+    <rect x="32"  y="120" width="48" height="30" rx="4" fill="#FFFFFF"/><text x="56"  y="164" text-anchor="middle" class="step">0</text>
+    <rect x="82"  y="120" width="48" height="30" rx="4" fill="#F6F6FA"/><text x="106" y="164" text-anchor="middle" class="step">50</text>
+    <rect x="132" y="120" width="48" height="30" rx="4" fill="#F4F4F8"/><text x="156" y="164" text-anchor="middle" class="step">100</text>
+    <rect x="182" y="120" width="48" height="30" rx="4" fill="#EEEEF3"/><text x="206" y="164" text-anchor="middle" class="step">200</text>
+    <rect x="232" y="120" width="48" height="30" rx="4" fill="#E4E4EC"/><text x="256" y="164" text-anchor="middle" class="step">300</text>
+    <rect x="282" y="120" width="48" height="30" rx="4" fill="#DADAE2"/><text x="306" y="164" text-anchor="middle" class="step">400</text>
+    <rect x="332" y="120" width="48" height="30" rx="4" fill="#9B9BA8"/><text x="356" y="164" text-anchor="middle" class="step">500</text>
+    <rect x="382" y="120" width="48" height="30" rx="4" fill="#6B6B78"/><text x="406" y="164" text-anchor="middle" class="step">600</text>
+    <rect x="432" y="120" width="48" height="30" rx="4" fill="#2A2A36" stroke="#3A3A46"/><text x="456" y="164" text-anchor="middle" class="step">700</text>
+    <rect x="482" y="120" width="48" height="30" rx="4" fill="#23232E" stroke="#3A3A46"/><text x="506" y="164" text-anchor="middle" class="step">750</text>
+    <rect x="532" y="120" width="48" height="30" rx="4" fill="#1F1F29" stroke="#3A3A46"/><text x="556" y="164" text-anchor="middle" class="step">800</text>
+    <rect x="582" y="120" width="48" height="30" rx="4" fill="#16161D" stroke="#3A3A46"/><text x="606" y="164" text-anchor="middle" class="step">850</text>
+    <rect x="632" y="120" width="48" height="30" rx="4" fill="#0B0B0F" stroke="#3A3A46"/><text x="656" y="164" text-anchor="middle" class="step">900</text>
+    <rect x="682" y="120" width="48" height="30" rx="4" fill="#000000" stroke="#3A3A46"/><text x="706" y="164" text-anchor="middle" class="step">950</text>
+  </g>
+
+  <!-- accent + status + ember groups -->
+  <g>
+    <text x="32"  y="190" class="ramp">blue <tspan class="step">accent</tspan></text>
+    <rect x="32"  y="198" width="44" height="28" rx="4" fill="#6E8BFF"/><text x="54"  y="240" text-anchor="middle" class="step">400</text>
+    <rect x="78"  y="198" width="44" height="28" rx="4" fill="#3F5BD6"/><text x="100" y="240" text-anchor="middle" class="step">600</text>
+
+    <text x="142" y="190" class="ramp">amber <tspan class="step">warn</tspan></text>
+    <rect x="142" y="198" width="36" height="28" rx="4" fill="#F2B84B"/><text x="160" y="240" text-anchor="middle" class="step">400</text>
+    <rect x="180" y="198" width="36" height="28" rx="4" fill="#B5791B"/><text x="198" y="240" text-anchor="middle" class="step">600</text>
+
+    <text x="232" y="190" class="ramp">red <tspan class="step">error</tspan></text>
+    <rect x="232" y="198" width="36" height="28" rx="4" fill="#FF6B6B"/><text x="250" y="240" text-anchor="middle" class="step">400</text>
+    <rect x="270" y="198" width="36" height="28" rx="4" fill="#D64545"/><text x="288" y="240" text-anchor="middle" class="step">600</text>
+
+    <text x="322" y="190" class="ramp">green <tspan class="step">ok</tspan></text>
+    <rect x="322" y="198" width="36" height="28" rx="4" fill="#4CB782"/><text x="340" y="240" text-anchor="middle" class="step">400</text>
+    <rect x="360" y="198" width="36" height="28" rx="4" fill="#2F8F63"/><text x="378" y="240" text-anchor="middle" class="step">600</text>
+
+    <text x="430" y="190" class="ramp">ember <tspan class="step">ambient night</tspan></text>
+    <rect x="430" y="198" width="34" height="28" rx="4" fill="#C2362B"/><text x="447" y="240" text-anchor="middle" class="step">500</text>
+    <rect x="466" y="198" width="34" height="28" rx="4" fill="#8A201B"/><text x="483" y="240" text-anchor="middle" class="step">600</text>
+    <rect x="502" y="198" width="34" height="28" rx="4" fill="#5E1714"/><text x="519" y="240" text-anchor="middle" class="step">700</text>
+    <rect x="538" y="198" width="34" height="28" rx="4" fill="#2E1214" stroke="#3A3A46"/><text x="555" y="240" text-anchor="middle" class="step">850</text>
+    <rect x="574" y="198" width="34" height="28" rx="4" fill="#140709" stroke="#3A3A46"/><text x="591" y="240" text-anchor="middle" class="step">900</text>
+    <rect x="610" y="198" width="34" height="28" rx="4" fill="#0A0506" stroke="#3A3A46"/><text x="627" y="240" text-anchor="middle" class="step">950</text>
+  </g>
+
+  <line x1="32" y1="262" x2="828" y2="262" stroke="#22222C"/>
+
+  <!-- SEMANTIC -->
+  <text x="32" y="286" class="sec">SEMANTIC · a role aliases one primitive (the only tier code references for color)</text>
+  <text x="32"  y="312" class="colh">ROLE</text>
+  <text x="170" y="312" class="colh">DARK · PRIMARY</text>
+  <text x="470" y="312" class="colh">LIGHT · VARIANT</text>
+  <line x1="32" y1="320" x2="828" y2="320" stroke="#22222C"/>
+
+  <!-- rows: y starts 340, step 27. swatch h20 w24, sits y-15 -->
+  <g>
+    <!-- background -->
+    <text x="32" y="344" class="role">background</text>
+    <text x="170" y="344" class="alias">→ neutral.900</text><rect x="300" y="329" width="24" height="20" rx="4" fill="#0B0B0F" stroke="#3A3A46"/><text x="332" y="344" class="hex">#0B0B0F</text>
+    <text x="470" y="344" class="alias">→ neutral.50</text><rect x="600" y="329" width="24" height="20" rx="4" fill="#F6F6FA" stroke="#3A3A46"/><text x="632" y="344" class="hex">#F6F6FA</text>
+    <!-- surface -->
+    <text x="32" y="371" class="role">surface</text>
+    <text x="170" y="371" class="alias">→ neutral.850</text><rect x="300" y="356" width="24" height="20" rx="4" fill="#16161D" stroke="#3A3A46"/><text x="332" y="371" class="hex">#16161D</text>
+    <text x="470" y="371" class="alias">→ neutral.0</text><rect x="600" y="356" width="24" height="20" rx="4" fill="#FFFFFF" stroke="#3A3A46"/><text x="632" y="371" class="hex">#FFFFFF</text>
+    <!-- surfaceAlt -->
+    <text x="32" y="398" class="role">surfaceAlt</text>
+    <text x="170" y="398" class="alias">→ neutral.800</text><rect x="300" y="383" width="24" height="20" rx="4" fill="#1F1F29" stroke="#3A3A46"/><text x="332" y="398" class="hex">#1F1F29</text>
+    <text x="470" y="398" class="alias">→ neutral.200</text><rect x="600" y="383" width="24" height="20" rx="4" fill="#EEEEF3" stroke="#3A3A46"/><text x="632" y="398" class="hex">#EEEEF3</text>
+    <!-- border -->
+    <text x="32" y="425" class="role">border</text>
+    <text x="170" y="425" class="alias">→ neutral.700</text><rect x="300" y="410" width="24" height="20" rx="4" fill="#2A2A36" stroke="#3A3A46"/><text x="332" y="425" class="hex">#2A2A36</text>
+    <text x="470" y="425" class="alias">→ neutral.400</text><rect x="600" y="410" width="24" height="20" rx="4" fill="#DADAE2" stroke="#3A3A46"/><text x="632" y="425" class="hex">#DADAE2</text>
+    <!-- skeleton -->
+    <text x="32" y="452" class="role">skeleton</text>
+    <text x="170" y="452" class="alias">→ neutral.750</text><rect x="300" y="437" width="24" height="20" rx="4" fill="#23232E" stroke="#3A3A46"/><text x="332" y="452" class="hex">#23232E</text>
+    <text x="470" y="452" class="alias">→ neutral.300</text><rect x="600" y="437" width="24" height="20" rx="4" fill="#E4E4EC" stroke="#3A3A46"/><text x="632" y="452" class="hex">#E4E4EC</text>
+    <!-- textMuted -->
+    <text x="32" y="479" class="role">textMuted</text>
+    <text x="170" y="479" class="alias">→ neutral.500</text><rect x="300" y="464" width="24" height="20" rx="4" fill="#9B9BA8"/><text x="332" y="479" class="hex">#9B9BA8</text>
+    <text x="470" y="479" class="alias">→ neutral.600</text><rect x="600" y="464" width="24" height="20" rx="4" fill="#6B6B78"/><text x="632" y="479" class="hex">#6B6B78</text>
+    <!-- text -->
+    <text x="32" y="506" class="role">text</text>
+    <text x="170" y="506" class="alias">→ neutral.100</text><rect x="300" y="491" width="24" height="20" rx="4" fill="#F4F4F8"/><text x="332" y="506" class="hex">#F4F4F8</text>
+    <text x="470" y="506" class="alias">→ neutral.850</text><rect x="600" y="491" width="24" height="20" rx="4" fill="#16161D" stroke="#3A3A46"/><text x="632" y="506" class="hex">#16161D</text>
+    <!-- accent -->
+    <text x="32" y="533" class="role">accent</text>
+    <text x="170" y="533" class="alias">→ blue.400</text><rect x="300" y="518" width="24" height="20" rx="4" fill="#6E8BFF"/><text x="332" y="533" class="hex">#6E8BFF</text>
+    <text x="470" y="533" class="alias">→ blue.600</text><rect x="600" y="518" width="24" height="20" rx="4" fill="#3F5BD6"/><text x="632" y="533" class="hex">#3F5BD6</text>
+    <!-- status -->
+    <text x="32" y="560" class="role">warning<tspan class="hex"> / </tspan>error<tspan class="hex"> / </tspan>success</text>
+    <text x="170" y="560" class="alias">→ ·.400</text>
+    <rect x="300" y="545" width="14" height="20" rx="3" fill="#F2B84B"/><rect x="318" y="545" width="14" height="20" rx="3" fill="#FF6B6B"/><rect x="336" y="545" width="14" height="20" rx="3" fill="#4CB782"/>
+    <text x="470" y="560" class="alias">→ ·.600</text>
+    <rect x="600" y="545" width="14" height="20" rx="3" fill="#B5791B"/><rect x="618" y="545" width="14" height="20" rx="3" fill="#D64545"/><rect x="636" y="545" width="14" height="20" rx="3" fill="#2F8F63"/>
+    <text x="362" y="560" class="hex">reserved · dot + badge</text>
+
+    <!-- additions -->
+    <text x="32" y="587" class="role">onAccent</text><text x="108" y="587" class="add">+NEW</text>
+    <text x="170" y="587" class="alias">→ neutral.0</text><rect x="300" y="572" width="24" height="20" rx="4" fill="#FFFFFF" stroke="#3A3A46"/><text x="332" y="587" class="hex">#FFFFFF · on a fill</text>
+    <text x="470" y="587" class="alias">→ neutral.0</text><rect x="600" y="572" width="24" height="20" rx="4" fill="#FFFFFF" stroke="#3A3A46"/><text x="632" y="587" class="hex">#FFFFFF</text>
+    <!-- scrim -->
+    <text x="32" y="614" class="role">scrim</text><text x="78" y="614" class="add">+NEW</text>
+    <text x="170" y="614" class="alias">→ neutral.950 @.60</text>
+    <rect x="300" y="599" width="24" height="20" rx="4" fill="#16161D" stroke="#3A3A46"/><rect x="300" y="599" width="24" height="20" rx="4" fill="#000000" opacity="0.6"/><text x="332" y="614" class="hex">black over surface</text>
+    <text x="470" y="614" class="alias">→ neutral.950 @.40</text>
+    <rect x="600" y="599" width="24" height="20" rx="4" fill="#FFFFFF" stroke="#3A3A46"/><rect x="600" y="599" width="24" height="20" rx="4" fill="#000000" opacity="0.4"/><text x="632" y="614" class="hex">fixed</text>
+    <!-- focusRing -->
+    <text x="32" y="641" class="role">focusRing</text><text x="104" y="641" class="add">+NEW</text>
+    <text x="170" y="641" class="alias">→ accent (blue.400)</text><rect x="300" y="626" width="24" height="20" rx="4" fill="#0B0B0F" stroke="#6E8BFF" stroke-width="2"/><text x="332" y="641" class="hex">ring = accent</text>
+    <text x="470" y="641" class="alias">→ accent (blue.600)</text><rect x="600" y="626" width="24" height="20" rx="4" fill="#F6F6FA" stroke="#3F5BD6" stroke-width="2"/><text x="632" y="641" class="hex">a11y focus</text>
+  </g>
+
+  <line x1="32" y1="662" x2="828" y2="662" stroke="#22222C"/>
+
+  <!-- LAYERING RULE -->
+  <g>
+    <rect x="32"  y="680" width="150" height="34" rx="8" fill="#121218" stroke="#2A2A36"/><text x="107" y="702" text-anchor="middle" class="pill">PRIMITIVE</text>
+    <rect x="246" y="680" width="150" height="34" rx="8" fill="#121218" stroke="#2A2A36"/><text x="321" y="702" text-anchor="middle" class="pill">SEMANTIC</text>
+    <rect x="460" y="680" width="150" height="34" rx="8" fill="#121218" stroke="#2A2A36"/><text x="535" y="702" text-anchor="middle" class="pill">COMPONENT</text>
+    <text x="190" y="702" text-anchor="middle" class="hex">←</text>
+    <text x="404" y="702" text-anchor="middle" class="hex">←</text>
+    <text x="107" y="730" text-anchor="middle" class="pillc">raw values</text>
+    <text x="321" y="730" text-anchor="middle" class="pillc">roles · code reads these</text>
+    <text x="535" y="730" text-anchor="middle" class="pillc">widget / button groups</text>
+  </g>
+  <line x1="32" y1="748" x2="828" y2="748" stroke="#22222C"/>
+  <text x="32" y="772" class="anno"><tspan fill="#6E8BFF" font-weight="700">References resolve downward.</tspan> A component reads a semantic role; a semantic role reads a primitive; a theme swap re-aliases the middle tier.</text>
+</svg>

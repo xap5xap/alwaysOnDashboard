@@ -1,0 +1,96 @@
+<svg width="100%" viewBox="0 0 860 566" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela elevation and the ambient dim and night variant, both without shadows</title>
+  <desc>On the top left, the surface-step elevation ladder: a base field at the background color, a raised card one surface step above it with a hairline border, and a level-two overlay surface for popovers and menus, each labeled with its fill and border role, no drop shadow anywhere. On the top right, floating UI: a scrim of black at sixty percent darkens the dashboard behind a modal that sits at the overlay surface level, so the floating layer reads as above without a shadow. Below, the ambient variant: the global dim overlay shown over a card at dimLevel zero, point three five, and point seven, where the opacity equals dimLevel times zero point seven two, and beside it a Clock rendering light by day and recoloring to the deep-red night palette at night. At the bottom, the rule that the dynamic dim overlay and the fixed floating scrim are two different blacks with two roles, and that elevation never uses a shadow because on an emissive display a shadow reads as glare.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:600;fill:#9B9BA8;letter-spacing:0.4px;}
+    .role{font-size:10.5px;font-weight:600;fill:#F4F4F8;}
+    .lab{font-size:10px;fill:#9B9BA8;}
+    .labb{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .val{font-size:26px;font-weight:700;fill:#F4F4F8;}
+    .ntime{font-size:26px;font-weight:700;fill:#C2362B;}
+    .ndate{font-size:9px;font-weight:600;fill:#8A201B;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .on{font-size:10px;font-weight:700;fill:#FFFFFF;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="565" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela elevation + ambient variant · no shadows</text>
+  <text x="32" y="60" class="sub">Depth is a surface step + a hairline border (+ a scrim when floating). Dim and night consume phase / dimLevel; the schedule stays AOD-11's.</text>
+
+  <!-- ===== A: ELEVATION LADDER ===== -->
+  <text x="32" y="90" class="sec">ELEVATION · surface-step + border</text>
+  <!-- base field (dashed = the field behind cards) -->
+  <rect x="32" y="100" width="372" height="182" rx="12" fill="#0B0B0F" stroke="#2A2A36" stroke-dasharray="4 4"/>
+  <text x="44" y="118" class="cap">elevation.base · background · no border</text>
+  <!-- raised card -->
+  <rect x="56" y="128" width="324" height="138" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="70" y="148" class="role">elevation.raised</text>
+  <text x="70" y="163" class="tok">surface + 1px border · a card</text>
+  <!-- overlay surface -->
+  <rect x="80" y="178" width="232" height="74" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="94" y="200" class="role">elevation.overlay</text>
+  <text x="94" y="215" class="tok">surfaceAlt + border</text>
+  <text x="94" y="236" class="lab">popover · menu · selected row</text>
+
+  <!-- ===== B: FLOATING / SCRIM ===== -->
+  <text x="440" y="90" class="sec">FLOATING · scrim darkens the field</text>
+  <!-- field with mini cards -->
+  <rect x="440" y="100" width="388" height="182" rx="12" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="456" y="116" width="168" height="68" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="456" y="196" width="168" height="72" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="640" y="116" width="172" height="152" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <!-- scrim -->
+  <rect x="440" y="100" width="388" height="182" rx="12" fill="#000000" opacity="0.6"/>
+  <!-- modal at overlay level -->
+  <rect x="520" y="146" width="228" height="92" rx="14" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="536" y="174" class="role">Disconnect Linear?</text>
+  <text x="536" y="192" class="cap">Tokens are wiped immediately.</text>
+  <rect x="536" y="202" width="96" height="24" rx="8" fill="#6E8BFF"/><text x="584" y="218" text-anchor="middle" class="on">Disconnect</text>
+  <text x="648" y="218" class="tok">onAccent</text>
+  <text x="440" y="300" class="lab"><tspan class="labb">scrim</tspan> = neutral.950 @ 0.60 over the field · the modal sits at <tspan class="labb">elevation.overlay</tspan>. No shadow.</text>
+
+  <line x1="32" y1="320" x2="828" y2="320" stroke="#22222C"/>
+
+  <!-- ===== C: AMBIENT VARIANT ===== -->
+  <text x="32" y="346" class="sec">AMBIENT VARIANT · overlay (dim) + night (deep red)</text>
+
+  <!-- dim ramp: 3 spend cards -->
+  <g>
+    <rect x="32" y="360" width="148" height="104" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="46" y="382" class="cap">CLAUDE · SPEND</text><text x="45" y="420" class="val">$42</text><text x="46" y="440" class="tok">$1.40/day</text>
+  </g>
+  <text x="46" y="481" class="labb">dimLevel 0</text>
+  <g>
+    <rect x="196" y="360" width="148" height="104" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="210" y="382" class="cap">CLAUDE · SPEND</text><text x="209" y="420" class="val">$42</text><text x="210" y="440" class="tok">$1.40/day</text>
+    <rect x="196" y="360" width="148" height="104" rx="14" fill="#000000" opacity="0.25"/>
+  </g>
+  <text x="210" y="481" class="labb">dimLevel 0.35</text>
+  <g>
+    <rect x="360" y="360" width="148" height="104" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="374" y="382" class="cap">CLAUDE · SPEND</text><text x="373" y="420" class="val">$42</text><text x="374" y="440" class="tok">$1.40/day</text>
+    <rect x="360" y="360" width="148" height="104" rx="14" fill="#000000" opacity="0.50"/>
+  </g>
+  <text x="374" y="481" class="labb">dimLevel 0.70</text>
+  <text x="32" y="500" class="tok">overlay opacity = dimLevel × overlay.maxDim (0.72) · uniform, no widget code</text>
+
+  <!-- night clocks -->
+  <g>
+    <rect x="556" y="360" width="128" height="104" rx="14" fill="#16161D" stroke="#2A2A36"/>
+    <text x="570" y="382" class="cap">CLOCK</text><text x="569" y="420" class="val">14:05</text><text x="570" y="440" class="tok">Mon, Jun 28</text>
+  </g>
+  <text x="570" y="481" class="labb">phase day</text>
+  <g>
+    <rect x="700" y="360" width="128" height="104" rx="14" fill="#140709" stroke="#2E1214"/>
+    <text x="714" y="382" class="ndate">CLOCK</text><text x="713" y="420" class="ntime">21:48</text><text x="714" y="440" class="ndate">Mon, Jun 28</text>
+  </g>
+  <text x="714" y="481" class="labb">phase night</text>
+
+  <line x1="32" y1="514" x2="828" y2="514" stroke="#22222C"/>
+  <text x="32" y="536" class="note"><tspan fill="#6E8BFF" font-weight="700">Two blacks, two roles.</tspan> overlay is dynamic (dimLevel × 0.72, time of day); scrim is fixed (0.60, a floating layer). They can stack.</text>
+  <text x="32" y="556" class="note"><tspan fill="#6E8BFF" font-weight="700">Never a drop shadow.</tspan> On an emissive display a shadow reads as glare; depth comes from the surface step, the border, and the scrim.</text>
+</svg>
