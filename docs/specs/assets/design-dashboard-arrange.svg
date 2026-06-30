@@ -1,0 +1,107 @@
+<svg width="100%" viewBox="0 0 860 572" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela arrange mode: the drag, resize, and configure affordances</title>
+  <desc>Left: the Dashboard in arrange mode as a device frame. The hub header replaces its actions with a single accent Done pill. On the canvas two dimmed unselected cards sit above one selected card lifted off a faint dashed origin outline. The selected card carries the arrange treatment, an accent border over a surfaceAlt fill, a Configure pill at its top-left in onAccent, and a resize handle at its bottom-right, a twenty-four point accent dot ringed in the background colour inside a forty-four point hit target. An arrange hint sits below the canvas. Right: the arrange-mode affordances listed with their entry and exit, the drag and resize mechanics naming the nominal-unit math and the commit path, a note that placement is continuous free-form rather than snap-to-grid, and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:16px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .hero{font-size:26px;font-weight:700;fill:#F4F4F8;}
+    .num{font-size:10px;font-weight:700;fill:#0B0B0F;}
+    .row{font-size:11px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="571" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Arrange mode · drag, resize, configure</text>
+  <text x="32" y="60" class="sub">Long-press enters; drag moves, the corner handle resizes, the pill configures, Done exits. The free-form layout engine (AOD-7), canonicalized.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD · arranging</text>
+  <rect x="32" y="104" width="320" height="452" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- safe top -->
+  <rect x="46" y="116" width="292" height="18" rx="6" fill="none" stroke="#6E8BFF" stroke-opacity="0.4" stroke-dasharray="4 3"/>
+  <!-- hub header: arranging shows only Done -->
+  <path d="M64,152 L66.5,157.5 L72,160 L66.5,162.5 L64,168 L61.5,162.5 L56,160 L61.5,157.5 Z" fill="#6E8BFF"/>
+  <text x="80" y="166" class="word">vela</text>
+  <rect x="296" y="150" width="42" height="20" rx="6" fill="#6E8BFF"/>
+  <text x="317" y="164" text-anchor="middle" class="num" font-size="11">Done</text>
+  <line x1="46" y1="180" x2="338" y2="180" stroke="#2A2A36"/>
+
+  <!-- canvas field -->
+  <rect x="46" y="190" width="292" height="320" rx="10" fill="#0C0C11" stroke="#23232E" stroke-dasharray="4 3"/>
+
+  <!-- dimmed unselected cards -->
+  <g opacity="0.45">
+    <rect x="58" y="200" width="120" height="74" rx="13" fill="#16161D" stroke="#2A2A36"/>
+    <text x="70" y="220" class="cap" font-size="8">WEATHER</text>
+    <text x="70" y="250" class="hero" font-size="20">72°</text>
+    <rect x="190" y="200" width="138" height="74" rx="13" fill="#16161D" stroke="#2A2A36"/>
+    <text x="202" y="220" class="cap" font-size="8">CALENDAR · NEXT</text>
+    <text x="202" y="246" class="title">Standup</text>
+    <text x="202" y="264" class="meta" font-size="9.5">in 20m</text>
+  </g>
+
+  <!-- origin ghost (where the selected card was) -->
+  <rect x="78" y="300" width="176" height="140" rx="13" fill="none" stroke="#6E8BFF" stroke-opacity="0.25" stroke-dasharray="5 4"/>
+  <!-- move arrow -->
+  <path d="M150,358 L120,372" stroke="#6E8BFF" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- SELECTED card: bodyArranging = accent border + surfaceAlt fill -->
+  <rect x="96" y="286" width="176" height="140" rx="13" fill="#1F1F29" stroke="#6E8BFF" stroke-width="1.5"/>
+  <text x="110" y="308" class="cap" font-size="8">CLOCK</text>
+  <text x="110" y="344" class="hero">9:41</text>
+  <text x="110" y="366" class="meta">Tuesday, June 30</text>
+  <!-- Configure pill (top-left, onAccent label) -->
+  <rect x="88" y="276" width="72" height="20" rx="6" fill="#6E8BFF"/>
+  <text x="124" y="290" text-anchor="middle" class="num">Configure</text>
+  <!-- resize handle: 44pt hit (faint) + 24pt accent dot ringed in background -->
+  <rect x="250" y="404" width="44" height="44" rx="8" fill="#6E8BFF" fill-opacity="0.06" stroke="#6E8BFF" stroke-opacity="0.25" stroke-dasharray="3 3"/>
+  <circle cx="272" cy="426" r="12" fill="#6E8BFF" stroke="#0B0B0F" stroke-width="2"/>
+  <path d="M267,431 l10,-10 M270,431 l7,-7 M273,431 l4,-4" stroke="#0B0B0F" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- arrange hint -->
+  <text x="56" y="490" class="meta" font-size="10">Drag to move. Corner handle resizes. Tap empty or Done.</text>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <!-- affordances -->
+  <text x="386" y="120" class="sec">ARRANGE-MODE AFFORDANCES</text>
+  <rect x="386" y="132" width="442" height="150" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <circle cx="404" cy="156" r="8" fill="#6E8BFF"/><text x="404" y="160" text-anchor="middle" class="num">1</text>
+  <text x="422" y="154" class="row">Enter: long-press any card (350ms)</text>
+  <text x="422" y="169" class="meta" font-size="9.5">the iOS-style jiggle to start arranging</text>
+  <circle cx="404" cy="190" r="8" fill="#6E8BFF"/><text x="404" y="194" text-anchor="middle" class="num">2</text>
+  <text x="422" y="188" class="row">Selected: accent border + surfaceAlt fill</text>
+  <text x="422" y="203" class="meta" font-size="9.5">bodyArranging; the one card you are moving</text>
+  <circle cx="404" cy="224" r="8" fill="#6E8BFF"/><text x="404" y="228" text-anchor="middle" class="num">3</text>
+  <text x="422" y="222" class="row">Configure pill (top-left) -&gt; config sheet</text>
+  <text x="422" y="237" class="meta" font-size="9.5">configure ANY widget, not only needs_config</text>
+  <circle cx="404" cy="258" r="8" fill="#6E8BFF"/><text x="404" y="262" text-anchor="middle" class="num">4</text>
+  <text x="422" y="256" class="row">Resize handle (bottom-right): 24pt dot / 44pt hit</text>
+  <text x="422" y="271" class="meta" font-size="9.5">Exit: Done in the header, or tap empty canvas</text>
+
+  <!-- mechanics -->
+  <text x="386" y="310" class="sec">DRAG / RESIZE MECHANICS</text>
+  <rect x="386" y="322" width="442" height="134" rx="10" fill="#0E0E14" stroke="#2A2A36"/>
+  <text x="402" y="344" class="row"><tspan class="acc">drag</tspan>  moves rect.{x,y}; origin clamped &gt;= 0</text>
+  <text x="402" y="366" class="row"><tspan class="acc">resize</tspan>  grows rect.{w,h} on the far edges; min 1x1 unit</text>
+  <text x="402" y="388" class="row"><tspan class="acc">commit</tspan>  at gesture-end: optimistic repaint + debounced</text>
+  <text x="446" y="404" class="meta" font-size="9.5">RLS write (500ms), so a glance never blocks on I/O</text>
+  <text x="402" y="426" class="row"><tspan class="acc">size</tspan>  reconcileSize derives the class; the rect is authoritative</text>
+  <text x="402" y="448" class="meta" font-size="9.5">Live geometry runs on the UI thread (reanimated): no re-render mid-drag.</text>
+
+  <!-- free-form note -->
+  <rect x="386" y="466" width="442" height="44" rx="8" fill="#12121A" stroke="#3A3A57"/>
+  <text x="402" y="486" class="note">Free-form &amp; continuous: snapUnit only kills 0.01u float drift.</text>
+  <text x="402" y="502" class="meta" font-size="10">No coarse grid snap today; alignment guides are a named seam (section 12).</text>
+
+  <!-- tokens -->
+  <text x="386" y="532" class="sec">TOKENS</text>
+  <rect x="386" y="542" width="442" height="22" rx="8" fill="#101016" stroke="#23232E"/>
+  <text x="398" y="557" class="tok">arrange.selectBorder-&gt;accent · selectFill-&gt;surfaceAlt · handle 24dot/44hit</text>
+</svg>

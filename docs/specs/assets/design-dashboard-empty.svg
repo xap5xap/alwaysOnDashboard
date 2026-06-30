@@ -1,0 +1,85 @@
+<svg width="100%" viewBox="0 0 860 540" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela empty dashboard: the calm add-your-first-widget CTA</title>
+  <desc>Left: the empty Dashboard as a device frame. The hub header sits over an otherwise empty elevation-base canvas holding one centered calm call to action: a soft dashed add glyph, the line your dashboard is empty, a quieter get-started subline, and a single accent Add widget primary button. Right: the empty-state anatomy naming the centered glyph, the calm line, the optional subline, and the one primary button, with a reminder that this is a calm CTA and never an error treatment; a panel distinguishing the two empties, the screen empty that always offers Add widget versus the picker empty that points to Settings and Connections; a note that this lays out the empty-dashboard interior the AOD-21 screen-state pattern deferred; and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:16px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .num{font-size:10px;font-weight:700;fill:#0B0B0F;}
+    .row{font-size:11px;fill:#C9C9D4;}
+    .empty{font-size:13px;fill:#F4F4F8;font-weight:600;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="539" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Empty state · the first-widget CTA</text>
+  <text x="32" y="60" class="sub">A calm centered prompt, never an error. The empty-dashboard layout AOD-21's screen-state pattern deferred here.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD · empty (0 instances)</text>
+  <rect x="32" y="104" width="320" height="420" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- safe top -->
+  <rect x="46" y="116" width="292" height="18" rx="6" fill="none" stroke="#6E8BFF" stroke-opacity="0.4" stroke-dasharray="4 3"/>
+  <!-- hub header -->
+  <path d="M64,152 L66.5,157.5 L72,160 L66.5,162.5 L64,168 L61.5,162.5 L56,160 L61.5,157.5 Z" fill="#6E8BFF"/>
+  <text x="80" y="166" class="word">vela</text>
+  <text x="226" y="164" class="acc" font-size="11">Add</text>
+  <text x="312" y="164" text-anchor="end" class="acc" font-size="11">Settings</text>
+  <path d="M324,157 l6,5 l-6,5" fill="none" stroke="#9B9BA8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="46" y1="180" x2="338" y2="180" stroke="#2A2A36"/>
+
+  <!-- empty canvas -->
+  <rect x="46" y="190" width="292" height="296" rx="10" fill="#0C0C11" stroke="#23232E" stroke-dasharray="4 3"/>
+
+  <!-- centered CTA -->
+  <!-- add glyph: dashed rounded square + plus -->
+  <rect x="164" y="262" width="56" height="56" rx="14" fill="none" stroke="#6E8BFF" stroke-opacity="0.6" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <path d="M192,278 v24 M180,290 h24" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="192" y="350" text-anchor="middle" class="empty">Your dashboard is empty.</text>
+  <text x="192" y="370" text-anchor="middle" class="meta">Add a widget to get started.</text>
+  <!-- primary button (AOD-20 primary: accent fill + onAccent) -->
+  <rect x="140" y="392" width="104" height="36" rx="8" fill="#6E8BFF"/>
+  <text x="192" y="415" text-anchor="middle" class="num" font-size="13">Add widget</text>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <!-- anatomy -->
+  <text x="386" y="120" class="sec">EMPTY-STATE ANATOMY</text>
+  <rect x="386" y="132" width="442" height="130" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <!-- mini stack -->
+  <rect x="408" y="150" width="34" height="34" rx="9" fill="none" stroke="#6E8BFF" stroke-opacity="0.6" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <path d="M425,159 v16 M417,167 h16" stroke="#6E8BFF" stroke-width="1.5" stroke-linecap="round"/>
+  <text x="462" y="158" class="row">glyph  a soft dashed add mark (accent), centered</text>
+  <text x="462" y="180" class="row">line  "Your dashboard is empty." (type.body / text)</text>
+  <text x="462" y="202" class="row">subline  one quiet line (type.meta / textMuted)</text>
+  <text x="462" y="224" class="row"><tspan class="acc">button</tspan>  ONE primary "Add widget" -&gt; opens the picker</text>
+  <text x="408" y="250" class="meta" font-size="10">A calm CTA in the brand voice. Never an error treatment (no red, no alert glyph).</text>
+
+  <!-- two empties -->
+  <text x="386" y="292" class="sec">TWO EMPTIES, ONE ENTRY</text>
+  <rect x="386" y="304" width="216" height="120" rx="10" fill="#0E0E14" stroke="#2A2A36"/>
+  <text x="402" y="326" class="cap">SCREEN EMPTY · this design</text>
+  <text x="402" y="348" class="row">0 instances on the canvas.</text>
+  <text x="402" y="368" class="row">Always offers <tspan class="acc">Add widget</tspan>.</text>
+  <text x="402" y="392" class="meta" font-size="9.5">Never assumes a service is</text>
+  <text x="402" y="406" class="meta" font-size="9.5">connected; the picker resolves it.</text>
+
+  <rect x="612" y="304" width="216" height="120" rx="10" fill="#0E0E14" stroke="#2A2A36"/>
+  <text x="628" y="326" class="cap">PICKER EMPTY · AOD-27 m4</text>
+  <text x="628" y="348" class="row">Nothing addable.</text>
+  <text x="628" y="368" class="row">Points to <tspan class="acc">Settings</tspan>.</text>
+  <text x="628" y="392" class="meta" font-size="9.5">"Connect a service to add its</text>
+  <text x="628" y="406" class="meta" font-size="9.5">widgets." (the add-widget sheet).</text>
+
+  <!-- AOD-21 relationship + tokens -->
+  <rect x="386" y="436" width="442" height="40" rx="8" fill="#12121A" stroke="#3A3A57"/>
+  <text x="402" y="456" class="note">AOD-21 §8 fixed the empty-state PATTERN (calm line + primary).</text>
+  <text x="402" y="471" class="meta" font-size="10">This design lays out the empty-DASHBOARD interior it explicitly deferred.</text>
+  <text x="386" y="500" class="sec">TOKENS</text>
+  <rect x="386" y="510" width="442" height="22" rx="8" fill="#101016" stroke="#23232E"/>
+  <text x="398" y="525" class="tok">primary: button (accent + onAccent) · line type.body · subline type.meta</text>
+</svg>

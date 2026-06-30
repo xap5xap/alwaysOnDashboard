@@ -1,0 +1,136 @@
+<svg width="100%" viewBox="0 0 860 564" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela Dashboard view: free-form widget instances on the elevation-base canvas</title>
+  <desc>Left: the Dashboard home drawn as a device frame. A top safe-area band, the AOD-21 hub header with the vela wordmark and the Add, Settings, and switcher chevron actions over a divider, then the elevation-base canvas holding five widget instances placed free-form at varied sizes and positions, each reusing the AOD-37 card chrome (a quiet service-and-widget caption header over a glanceable value): a Clock, Current Weather, My Issues, Next Event, and a wide Daily Spend. A quiet long-press-to-arrange hint sits at the bottom. Right: the free-form placement model showing a rect stored in nominal units rendered at eighty pixels per unit so a layout is device independent, the frame-versus-interior split naming what AOD-21 fixes and what this design fills, and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:16px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .hero{font-size:24px;font-weight:700;fill:#F4F4F8;}
+    .heroS{font-size:19px;font-weight:700;fill:#F4F4F8;}
+    .row{font-size:11px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="563" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Dashboard view · the placed canvas</text>
+  <text x="32" y="60" class="sub">Widget instances placed free-form on the elevation.base canvas. The frame is AOD-21; the cards are AOD-37; this design fills the canvas.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD · home · resting (looked at)</text>
+  <rect x="32" y="104" width="320" height="436" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- safe top -->
+  <rect x="46" y="116" width="292" height="18" rx="6" fill="none" stroke="#6E8BFF" stroke-opacity="0.4" stroke-dasharray="4 3"/>
+  <!-- hub header (AOD-21 §3) -->
+  <path d="M64,152 L66.5,157.5 L72,160 L66.5,162.5 L64,168 L61.5,162.5 L56,160 L61.5,157.5 Z" fill="#6E8BFF"/>
+  <text x="80" y="166" class="word">vela</text>
+  <text x="226" y="164" class="acc" font-size="11">Add</text>
+  <text x="312" y="164" text-anchor="end" class="acc" font-size="11">Settings</text>
+  <path d="M324,157 l6,5 l-6,5" fill="none" stroke="#9B9BA8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="46" y1="180" x2="338" y2="180" stroke="#2A2A36"/>
+
+  <!-- canvas field (elevation.base) -->
+  <rect x="46" y="190" width="292" height="312" rx="10" fill="#0C0C11" stroke="#23232E" stroke-dasharray="4 3"/>
+
+  <!-- card: Clock (medium) -->
+  <rect x="56" y="200" width="150" height="80" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="68" y="220" class="cap" font-size="8">CLOCK</text>
+  <text x="68" y="250" class="hero">9:41</text>
+  <text x="68" y="268" class="meta">Tuesday, June 30</text>
+
+  <!-- card: Weather Current (small) -->
+  <rect x="216" y="200" width="112" height="80" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="228" y="220" class="cap" font-size="8">WEATHER</text>
+  <circle cx="238" cy="250" r="8" fill="none" stroke="#F4F4F8" stroke-width="2"/>
+  <text x="256" y="256" class="heroS">72°</text>
+  <text x="228" y="272" class="meta">Clear</text>
+
+  <!-- card: Linear My Issues (medium) -->
+  <rect x="56" y="290" width="138" height="112" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="68" y="310" class="cap" font-size="8">LINEAR · MY ISSUES</text>
+  <text x="68" y="336" class="hero">8</text>
+  <text x="98" y="336" class="meta">assigned</text>
+  <line x1="68" y1="350" x2="182" y2="350" stroke="#2A2A36"/>
+  <text x="68" y="368" class="row">AOD-27 editor</text>
+  <text x="68" y="386" class="row">AOD-28 settings</text>
+
+  <!-- card: Calendar Next Event (small) -->
+  <rect x="204" y="290" width="124" height="112" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="216" y="310" class="cap" font-size="8">CALENDAR · NEXT</text>
+  <text x="216" y="336" class="title">Standup</text>
+  <text x="216" y="356" class="acc" font-size="13">in 20m</text>
+  <text x="216" y="378" class="meta">9:00 - 9:15 AM</text>
+
+  <!-- card: Claude Daily Spend (wide) -->
+  <rect x="56" y="412" width="272" height="80" rx="13" fill="#16161D" stroke="#2A2A36"/>
+  <text x="68" y="432" class="cap" font-size="8">CLAUDE · DAILY SPEND</text>
+  <text x="68" y="462" class="hero">$12.40</text>
+  <text x="150" y="462" class="meta">month to date</text>
+  <!-- mini sparkline -->
+  <g fill="#6E8BFF">
+    <rect x="210" y="470" width="7" height="10" rx="1" opacity="0.5"/>
+    <rect x="221" y="464" width="7" height="16" rx="1" opacity="0.5"/>
+    <rect x="232" y="458" width="7" height="22" rx="1" opacity="0.5"/>
+    <rect x="243" y="452" width="7" height="28" rx="1" opacity="0.5"/>
+    <rect x="254" y="446" width="7" height="34" rx="1" opacity="0.5"/>
+    <rect x="265" y="450" width="7" height="30" rx="1" opacity="0.5"/>
+    <rect x="276" y="442" width="7" height="38" rx="1"/>
+  </g>
+
+  <!-- quiet hint -->
+  <text x="56" y="524" class="meta" font-size="10">Long-press a widget to arrange.</text>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <!-- Free-form placement model -->
+  <text x="386" y="124" class="sec">FREE-FORM PLACEMENT MODEL</text>
+  <rect x="386" y="136" width="442" height="150" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <!-- a placed rect with x/y/w/h -->
+  <line x1="408" y1="160" x2="408" y2="262" stroke="#3A3A46"/>
+  <line x1="408" y1="262" x2="560" y2="262" stroke="#3A3A46"/>
+  <text x="402" y="156" class="tok" text-anchor="end" fill="#6B6B78">y</text>
+  <text x="566" y="266" class="tok" fill="#6B6B78">x</text>
+  <rect x="446" y="180" width="92" height="62" rx="8" fill="#16161D" stroke="#6E8BFF"/>
+  <text x="492" y="206" text-anchor="middle" class="cap" font-size="8">WIDGET</text>
+  <text x="492" y="224" text-anchor="middle" class="meta" font-size="9">instance</text>
+  <!-- dimensions -->
+  <text x="492" y="172" text-anchor="middle" class="tok">w</text>
+  <text x="556" y="214" class="tok">h</text>
+  <line x1="446" y1="170" x2="538" y2="170" stroke="#6E8BFF" stroke-opacity="0.5"/>
+  <line x1="548" y1="180" x2="548" y2="242" stroke="#6E8BFF" stroke-opacity="0.5"/>
+  <text x="588" y="184" class="note">rect = { x, y, w, h }</text>
+  <text x="588" y="204" class="tok">stored in NOMINAL units</text>
+  <text x="588" y="220" class="tok">rendered at UNIT_PX = 80</text>
+  <text x="588" y="236" class="tok">snapUnit -&gt; 0.01u float-safe</text>
+  <text x="588" y="258" class="meta" font-size="10">Device-independent: author on</text>
+  <text x="588" y="272" class="meta" font-size="10">web, reload on the Fire HD 8.</text>
+
+  <!-- frame vs interior -->
+  <text x="386" y="312" class="sec">THE FRAME (AOD-21) VS THE INTERIOR (THIS DESIGN)</text>
+  <rect x="386" y="324" width="216" height="150" rx="10" fill="#0E0E14" stroke="#2A2A36"/>
+  <text x="402" y="346" class="cap">FRAME · AOD-21 (FIXED)</text>
+  <text x="402" y="368" class="row">- hub header + wordmark</text>
+  <text x="402" y="388" class="row">- elevation.base canvas</text>
+  <text x="402" y="408" class="row">- dashboards switcher entry</text>
+  <text x="402" y="428" class="row">- screen states (load/err)</text>
+  <text x="402" y="456" class="meta" font-size="9.5">The chrome the dashboard always has.</text>
+
+  <rect x="612" y="324" width="216" height="150" rx="10" fill="#12121A" stroke="#3A3A57"/>
+  <text x="628" y="346" class="cap" fill="#6E8BFF">INTERIOR · AOD-27 (THIS)</text>
+  <text x="628" y="368" class="row">- placed widget instances</text>
+  <text x="628" y="388" class="row">- arrange / edit mode</text>
+  <text x="628" y="408" class="row">- add-widget picker</text>
+  <text x="628" y="428" class="row">- per-instance config sheet</text>
+  <text x="628" y="448" class="row">- empty state + switcher</text>
+  <text x="628" y="468" class="meta" font-size="9.5">What happens inside the canvas.</text>
+
+  <!-- token block -->
+  <text x="386" y="500" class="sec">TOKENS</text>
+  <rect x="386" y="510" width="442" height="42" rx="8" fill="#101016" stroke="#23232E"/>
+  <text x="398" y="528" class="tok">canvas: elevation.base · card: AOD-37 chrome reused (not restyled)</text>
+  <text x="398" y="544" class="tok">caption: type.caption/textMuted · hero: type.hero/text · one accent #6E8BFF</text>
+</svg>

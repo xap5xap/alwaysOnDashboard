@@ -1,0 +1,99 @@
+<svg width="100%" viewBox="0 0 860 576" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela dashboards switcher: the modal-route list interior</title>
+  <desc>Left: the dashboards switcher as a centered modal dialog over a dimmed dashboard under a scrim. The dialog has a Dashboards title and a Close, a Home row marked active with a muted-accent highlight and an accent check, a Wall row, a divider, and a New dashboard create action. Right: the presentation reused from AOD-21 section 7 modal route, with AOD-21 placing the hub-header entry and the modal presentation and this design fixing the interior; the interior listing the dashboards table ordered by position with the active check and the tap-to-switch behaviour; the create gate where on Free the New dashboard becomes the AOD-20 lock row routing to the paywall, shown as a mini lock-row specimen; a build-seam note that the multi-dashboard backing is the builds; and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .row{font-size:11px;fill:#C9C9D4;}
+    .dlgTitle{font-size:15px;font-weight:700;fill:#F4F4F8;}
+    .item{font-size:13px;font-weight:600;fill:#F4F4F8;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="575" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Dashboards switcher · the list interior</text>
+  <text x="32" y="60" class="sub">The AOD-21 §7 modal route; the interior is the dashboards list with the active check and the New-dashboard create gate.</text>
+
+  <!-- ===== DEVICE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD · switcher open (modal route)</text>
+  <rect x="32" y="104" width="320" height="452" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- dimmed dashboard + scrim -->
+  <g opacity="0.3">
+    <path d="M64,150 L66.5,155.5 L72,158 L66.5,160.5 L64,166 L61.5,160.5 L56,158 L61.5,155.5 Z" fill="#6E8BFF"/>
+    <text x="80" y="164" font-size="16" fill="#F4F4F8" font-weight="500" letter-spacing="0.5">vela</text>
+    <rect x="56" y="184" width="120" height="56" rx="12" fill="#16161D" stroke="#2A2A36"/>
+    <rect x="188" y="184" width="140" height="56" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  </g>
+  <rect x="33" y="105" width="318" height="450" rx="27" fill="#000000" fill-opacity="0.6"/>
+
+  <!-- modal dialog (elevation.overlay) -->
+  <rect x="60" y="250" width="264" height="234" rx="22" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="82" y="284" class="dlgTitle">Dashboards</text>
+  <text x="302" y="284" text-anchor="end" class="acc" font-size="12">Close</text>
+
+  <!-- Home (active) -->
+  <rect x="74" y="298" width="236" height="34" rx="9" fill="#6E8BFF" fill-opacity="0.14"/>
+  <rect x="86" y="307" width="16" height="16" rx="3" fill="none" stroke="#6E8BFF" stroke-width="1.5"/>
+  <line x1="94" y1="307" x2="94" y2="323" stroke="#6E8BFF" stroke-width="1.5"/>
+  <line x1="86" y1="315" x2="102" y2="315" stroke="#6E8BFF" stroke-width="1.5"/>
+  <text x="116" y="320" class="item">Home</text>
+  <path d="M288,315 l5,5 l9,-11" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Wall -->
+  <rect x="86" y="347" width="16" height="16" rx="3" fill="none" stroke="#9B9BA8" stroke-width="1.5"/>
+  <text x="116" y="360" class="item">Wall</text>
+
+  <!-- divider -->
+  <line x1="82" y1="392" x2="302" y2="392" stroke="#2A2A36"/>
+
+  <!-- New dashboard -->
+  <path d="M94,412 v16 M86,420 h16" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="116" y="425" class="item"><tspan class="acc">New dashboard</tspan></text>
+
+  <!-- footer -->
+  <text x="82" y="462" class="meta" font-size="10">Ordered by position. Tap a row to switch.</text>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <!-- presentation -->
+  <text x="386" y="114" class="sec">PRESENTATION (AOD-21 §7 MODAL ROUTE, REUSED)</text>
+  <rect x="386" y="126" width="442" height="58" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <text x="402" y="148" class="row">scrim + dialog at elevation.overlay + Close. (app-ia §4.5: a modal route.)</text>
+  <text x="402" y="168" class="meta" font-size="10">AOD-21 placed the entry + the modal presentation; this design fixes the interior.</text>
+
+  <!-- interior -->
+  <text x="386" y="208" class="sec">INTERIOR: THE DASHBOARDS LIST</text>
+  <rect x="386" y="220" width="442" height="92" rx="10" fill="#0E0E14" stroke="#2A2A36"/>
+  <text x="402" y="242" class="row">Reads the <tspan class="acc">dashboards</tspan> table, ordered by position.</text>
+  <text x="402" y="262" class="row">Active row: accentMuted highlight + an accent check.</text>
+  <text x="402" y="282" class="row">Tap a row -&gt; switch the active layout (the canvas re-renders).</text>
+  <text x="402" y="302" class="row"><tspan class="acc">New dashboard</tspan> -&gt; the create action.</text>
+
+  <!-- create gate -->
+  <text x="386" y="336" class="sec">THE CREATE GATE (maxDashboards)</text>
+  <rect x="386" y="348" width="442" height="92" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <text x="402" y="370" class="row">On Free, maxDashboards = 1, so New dashboard becomes the AOD-20</text>
+  <text x="402" y="386" class="row">lock row -&gt; Paywall (trigger=dashboards). UX-only; server enforces.</text>
+  <!-- mini lock-row specimen -->
+  <rect x="402" y="398" width="410" height="32" rx="8" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="414" y="406" width="14" height="11" rx="2" fill="none" stroke="#9B9BA8" stroke-width="1.3"/>
+  <path d="M417,406 v-3 a4,4 0 0 1 8,0 v3" fill="none" stroke="#9B9BA8" stroke-width="1.3"/>
+  <text x="438" y="418" class="row" fill="#9B9BA8">New dashboard</text>
+  <rect x="734" y="406" width="34" height="16" rx="8" fill="#6E8BFF" fill-opacity="0.14"/>
+  <text x="751" y="418" text-anchor="middle" class="acc" font-size="9">PRO</text>
+  <path d="M784,409 l6,5 l-6,5" fill="none" stroke="#9B9BA8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- build seam + tokens -->
+  <text x="386" y="466" class="sec">BUILD SEAM</text>
+  <rect x="386" y="476" width="442" height="44" rx="8" fill="#12121A" stroke="#3A3A57"/>
+  <text x="402" y="496" class="note">Today useDashboard bootstraps ONE dashboard.</text>
+  <text x="402" y="512" class="meta" font-size="10">The multi-dashboard table + active-selection persistence are the build's (app-ia §10).</text>
+
+  <text x="386" y="544" class="sec">TOKENS</text>
+  <rect x="386" y="554" width="442" height="20" rx="6" fill="#101016" stroke="#23232E"/>
+  <text x="398" y="568" class="tok">dialog = elevation.overlay · active = accentMuted + check · lockRow = AOD-20</text>
+</svg>
