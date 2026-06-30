@@ -1,0 +1,94 @@
+<svg width="100%" viewBox="0 0 860 580" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela buttons: four variants across five interaction states and three sizes</title>
+  <desc>A matrix of buttons. Columns are the four variants: primary is an accent fill with onAccent text, secondary is a bordered button with accent text and no fill, ghost is accent text with no fill or border, destructive is an error fill with onAccent text. Rows are the five states: default, pressed which darkens a fill or tints a text button with accentMuted, focused which draws a two pixel focusRing in the accent, disabled which drops opacity and uses muted text, and loading which shows a spinner and keeps the label. Below, the three sizes small at thirty two pixels, medium at forty, and large at forty eight, with their padding and type step. A footer notes that fills use onAccent for legible foreground and every button reads its color from a semantic role.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .colh{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .colr{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .stt{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .str{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .blab{font-size:12px;font-weight:700;}
+    .on{fill:#FFFFFF;}
+    .acc{fill:#6E8BFF;}
+    .mut{fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="579" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Buttons · primary / secondary / ghost / destructive</text>
+  <text x="32" y="60" class="sub">Every state and size. Fills carry onAccent; focus draws focusRing; text buttons tint with accentMuted when pressed. No raw hex, only roles.</text>
+
+  <!-- column headers -->
+  <text x="250" y="92" text-anchor="middle" class="colh">primary</text><text x="250" y="105" text-anchor="middle" class="colr">accent · onAccent</text>
+  <text x="410" y="92" text-anchor="middle" class="colh">secondary</text><text x="410" y="105" text-anchor="middle" class="colr">border · accent</text>
+  <text x="570" y="92" text-anchor="middle" class="colh">ghost</text><text x="570" y="105" text-anchor="middle" class="colr">accent</text>
+  <text x="730" y="92" text-anchor="middle" class="colh">destructive</text><text x="730" y="105" text-anchor="middle" class="colr">error · onAccent</text>
+
+  <!-- ===== ROW: default (top=120) ===== -->
+  <text x="32" y="145" class="stt">default</text><text x="32" y="159" class="str">resting</text>
+  <rect x="184" y="120" width="132" height="40" rx="14" fill="#6E8BFF"/><text x="250" y="145" text-anchor="middle" class="blab on">Save</text>
+  <rect x="344" y="120" width="132" height="40" rx="14" fill="none" stroke="#2A2A36"/><text x="410" y="145" text-anchor="middle" class="blab acc">Cancel</text>
+  <text x="570" y="145" text-anchor="middle" class="blab acc">Reconnect</text>
+  <rect x="664" y="120" width="132" height="40" rx="14" fill="#FF6B6B"/><text x="730" y="145" text-anchor="middle" class="blab on">Disconnect</text>
+
+  <!-- ===== ROW: pressed (top=176) ===== -->
+  <text x="32" y="201" class="stt">pressed</text><text x="32" y="215" class="str">fill −12% /</text><text x="32" y="226" class="str">accentMuted</text>
+  <rect x="184" y="176" width="132" height="40" rx="14" fill="#5A75E6"/><text x="250" y="201" text-anchor="middle" class="blab on">Save</text>
+  <rect x="344" y="176" width="132" height="40" rx="14" fill="#6E8BFF" fill-opacity="0.14" stroke="#2A2A36"/><text x="410" y="201" text-anchor="middle" class="blab acc">Cancel</text>
+  <rect x="504" y="176" width="132" height="40" rx="14" fill="#6E8BFF" fill-opacity="0.14"/><text x="570" y="201" text-anchor="middle" class="blab acc">Reconnect</text>
+  <rect x="664" y="176" width="132" height="40" rx="14" fill="#E65B5B"/><text x="730" y="201" text-anchor="middle" class="blab on">Disconnect</text>
+
+  <!-- ===== ROW: focused (top=232) ===== -->
+  <text x="32" y="257" class="stt">focused</text><text x="32" y="271" class="str">2px focusRing</text>
+  <rect x="180" y="228" width="140" height="48" rx="16" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <rect x="184" y="232" width="132" height="40" rx="14" fill="#6E8BFF"/><text x="250" y="257" text-anchor="middle" class="blab on">Save</text>
+  <rect x="340" y="228" width="140" height="48" rx="16" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <rect x="344" y="232" width="132" height="40" rx="14" fill="none" stroke="#2A2A36"/><text x="410" y="257" text-anchor="middle" class="blab acc">Cancel</text>
+  <rect x="500" y="228" width="140" height="48" rx="16" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <text x="570" y="257" text-anchor="middle" class="blab acc">Reconnect</text>
+  <rect x="660" y="228" width="140" height="48" rx="16" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <rect x="664" y="232" width="132" height="40" rx="14" fill="#FF6B6B"/><text x="730" y="257" text-anchor="middle" class="blab on">Disconnect</text>
+
+  <!-- ===== ROW: disabled (top=292) ===== -->
+  <text x="32" y="317" class="stt">disabled</text><text x="32" y="331" class="str">opacity 0.38</text>
+  <g opacity="0.38">
+    <rect x="184" y="292" width="132" height="40" rx="14" fill="#6E8BFF"/><text x="250" y="317" text-anchor="middle" class="blab on">Save</text>
+    <rect x="344" y="292" width="132" height="40" rx="14" fill="none" stroke="#2A2A36"/><text x="410" y="317" text-anchor="middle" class="blab mut">Cancel</text>
+    <text x="570" y="317" text-anchor="middle" class="blab mut">Reconnect</text>
+    <rect x="664" y="292" width="132" height="40" rx="14" fill="#FF6B6B"/><text x="730" y="317" text-anchor="middle" class="blab on">Disconnect</text>
+  </g>
+
+  <!-- ===== ROW: loading (top=348) ===== -->
+  <text x="32" y="373" class="stt">loading</text><text x="32" y="387" class="str">spinner, label</text><text x="32" y="398" class="str">stays</text>
+  <rect x="184" y="348" width="132" height="40" rx="14" fill="#6E8BFF"/>
+  <circle cx="232" cy="368" r="7" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.35"/>
+  <path d="M232 361 A7 7 0 0 1 239 368" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="262" y="373" text-anchor="middle" class="blab on">Saving</text>
+  <rect x="344" y="348" width="132" height="40" rx="14" fill="none" stroke="#2A2A36"/>
+  <circle cx="392" cy="368" r="7" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-opacity="0.35"/>
+  <path d="M392 361 A7 7 0 0 1 399 368" fill="none" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="424" y="373" text-anchor="middle" class="blab acc">Saving</text>
+  <text x="570" y="373" text-anchor="middle" class="blab mut" font-style="italic">…</text>
+  <rect x="664" y="348" width="132" height="40" rx="14" fill="#FF6B6B"/>
+  <circle cx="712" cy="368" r="7" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.35"/>
+  <path d="M712 361 A7 7 0 0 1 719 368" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="744" y="373" text-anchor="middle" class="blab on">Removing</text>
+
+  <line x1="32" y1="418" x2="828" y2="418" stroke="#22222C"/>
+
+  <!-- ===== SIZES ===== -->
+  <text x="32" y="444" class="sec">SIZES · height · paddingX · type step · radius.md (pill ends use radius.full)</text>
+  <rect x="40" y="460" width="96" height="32" rx="14" fill="#6E8BFF"/><text x="88" y="480" text-anchor="middle" class="blab on" font-size="11">Save</text>
+  <text x="40" y="510" class="tok">sm · 32 · pad 12 · label</text>
+  <rect x="220" y="456" width="120" height="40" rx="14" fill="#6E8BFF"/><text x="280" y="481" text-anchor="middle" class="blab on">Save</text>
+  <text x="220" y="514" class="tok">md · 40 · pad 16 · body  (default)</text>
+  <rect x="420" y="452" width="148" height="48" rx="16" fill="#6E8BFF"/><text x="494" y="481" text-anchor="middle" class="blab on" font-size="13">Save</text>
+  <text x="420" y="518" class="tok">lg · 48 · pad 20 · heading</text>
+
+  <line x1="32" y1="534" x2="828" y2="534" stroke="#22222C"/>
+  <text x="32" y="556" class="note"><tspan fill="#6E8BFF" font-weight="700">onAccent on every fill.</tspan> Primary and destructive labels use onAccent (white), not background; the old colors.background idiom reconciles to onAccent.</text>
+  <text x="32" y="573" class="note"><tspan fill="#6E8BFF" font-weight="700">focusRing is one token.</tspan> Keyboard / switch-control focus is a 2px accent ring offset from the edge, shared by every interactive component.</text>
+</svg>

@@ -1,0 +1,101 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The Vela component library on the elevation ladder, with the component family</title>
+  <desc>Top: elevation shown in practice across four app surfaces. A dashed base field is the dashboard backdrop at elevation.base. A raised settings panel at elevation.raised is the surface fill with a hairline border and holds two rows and a primary button. An overlay popover menu at elevation.overlay is the surfaceAlt fill one step up. A modal sits over a scrim of black at sixty percent with the dialog at the overlay level and two buttons. No drop shadow anywhere. Bottom: the component family, nine groups, each a chip naming the component and the semantic roles it themes against, never raw hex. A footer states the rules: one accent and no new hue, theme against role names, and reuse the widget card chrome rather than redesign it.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:600;fill:#9B9BA8;letter-spacing:0.4px;}
+    .role{font-size:10.5px;font-weight:600;fill:#F4F4F8;}
+    .lab{font-size:10px;fill:#9B9BA8;}
+    .labb{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .tok{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .on{font-size:10.5px;font-weight:700;fill:#FFFFFF;}
+    .fam{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .famr{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela component library · app chrome on the elevation ladder</text>
+  <text x="32" y="60" class="sub">App-chrome for Settings / SignIn / onboarding / paywall / connections. Themed against semantic roles, never raw hex. One accent, no new hue.</text>
+
+  <!-- ===== ELEVATION IN PRACTICE ===== -->
+  <text x="32" y="92" class="sec">ELEVATION IN PRACTICE · base · raised · overlay · scrim + overlay</text>
+
+  <!-- base field -->
+  <rect x="32" y="104" width="180" height="196" rx="12" fill="#0B0B0F" stroke="#2A2A36" stroke-dasharray="4 4"/>
+  <text x="44" y="124" class="cap">elevation.base</text>
+  <text x="44" y="138" class="tok">background · no border</text>
+  <text x="44" y="290" class="lab">the dashboard field</text>
+
+  <!-- raised panel -->
+  <rect x="224" y="104" width="180" height="196" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="238" y="124" class="cap">elevation.raised</text>
+  <text x="238" y="138" class="tok">surface + 1px border</text>
+  <line x1="238" y1="150" x2="390" y2="150" stroke="#2A2A36"/>
+  <text x="238" y="170" class="role">Linear</text><text x="390" y="170" text-anchor="end" class="acc" fill="#6E8BFF" font-size="10.5" font-weight="700">Connect</text>
+  <line x1="238" y1="182" x2="390" y2="182" stroke="#2A2A36"/>
+  <text x="238" y="202" class="role">Weather</text><text x="390" y="202" text-anchor="end" class="lab" fill="#9B9BA8" font-size="10.5">Connected</text>
+  <rect x="238" y="256" width="152" height="30" rx="14" fill="#6E8BFF"/><text x="314" y="275" text-anchor="middle" class="on">Save</text>
+  <text x="238" y="248" class="tok">panels · cards · row-groups</text>
+
+  <!-- overlay popover -->
+  <rect x="416" y="104" width="180" height="196" rx="12" fill="#0B0B0F" stroke="#2A2A36" stroke-dasharray="4 4"/>
+  <rect x="432" y="150" width="148" height="118" rx="10" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="446" y="172" class="role">Full</text>
+  <line x1="432" y1="184" x2="580" y2="184" stroke="#2A2A36"/>
+  <text x="446" y="204" class="role">Long</text>
+  <line x1="432" y1="216" x2="580" y2="216" stroke="#2A2A36"/>
+  <text x="446" y="236" class="role">Medium</text>
+  <circle cx="566" cy="232" r="3" fill="#6E8BFF"/>
+  <text x="428" y="128" class="cap">elevation.overlay</text>
+  <text x="428" y="290" class="lab">popover · menu</text>
+
+  <!-- scrim + overlay modal -->
+  <rect x="608" y="104" width="220" height="196" rx="12" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="620" y="116" width="92" height="48" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="724" y="116" width="92" height="48" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="620" y="176" width="196" height="40" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <!-- scrim -->
+  <rect x="608" y="104" width="220" height="196" rx="12" fill="#000000" opacity="0.6"/>
+  <!-- dialog -->
+  <rect x="636" y="150" width="164" height="104" rx="14" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="650" y="176" class="role">Disconnect Linear?</text>
+  <text x="650" y="192" class="cap">Tokens are wiped now.</text>
+  <rect x="650" y="210" width="62" height="28" rx="8" fill="none" stroke="#2A2A36"/><text x="681" y="228" text-anchor="middle" class="lab" fill="#9B9BA8" font-size="10.5" font-weight="700">Cancel</text>
+  <rect x="720" y="210" width="66" height="28" rx="8" fill="#FF6B6B"/><text x="753" y="228" text-anchor="middle" class="on">Remove</text>
+  <text x="612" y="128" class="cap" fill="#C9C9D4">scrim + overlay</text>
+  <text x="608" y="290" class="lab">modal · sheet</text>
+
+  <line x1="32" y1="324" x2="828" y2="324" stroke="#22222C"/>
+
+  <!-- ===== THE SET ===== -->
+  <text x="32" y="350" class="sec">THE SET · nine app-chrome families, each themed against semantic roles</text>
+
+  <!-- row 1 -->
+  <rect x="32" y="362" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="46" y="384" class="fam">Buttons</text><text x="46" y="402" class="famr">accent · onAccent · focusRing</text>
+  <rect x="302" y="362" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="316" y="384" class="fam">Inputs / fields</text><text x="316" y="402" class="famr">surfaceAlt · border · focusRing · error</text>
+  <rect x="572" y="362" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="586" y="384" class="fam">Toggles · segmented</text><text x="586" y="402" class="famr">accent · onAccent · radius.full</text>
+
+  <!-- row 2 -->
+  <rect x="32" y="424" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="46" y="446" class="fam">Cards · panels · row-groups</text><text x="46" y="464" class="famr">surface · border · elevation.raised</text>
+  <rect x="302" y="424" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="316" y="446" class="fam">Sheets · modals · popovers</text><text x="316" y="464" class="famr">scrim · surfaceAlt · elevation.overlay</text>
+  <rect x="572" y="424" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="586" y="446" class="fam">Skeletons</text><text x="586" y="464" class="famr">skeleton · the shimmer sweep</text>
+
+  <!-- row 3 -->
+  <rect x="32" y="486" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="46" y="508" class="fam">Badges</text><text x="46" y="526" class="famr">warning · error · success · accentMuted</text>
+  <rect x="302" y="486" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="316" y="508" class="fam">Lock / PRO overlays</text><text x="316" y="526" class="famr">scrim · accentMuted · the Gate seam</text>
+  <rect x="572" y="486" width="256" height="52" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="586" y="503" class="note" fill="#6E8BFF" font-weight="700" font-size="10.5">Reuse, do not redesign.</text>
+  <text x="586" y="518" class="famr" fill="#9B9BA8">the widget card chrome + lifecycle</text>
+  <text x="586" y="531" class="famr" fill="#9B9BA8">are owned by design-widget-system</text>
+</svg>

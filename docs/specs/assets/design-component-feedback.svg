@@ -1,0 +1,94 @@
+<svg width="100%" viewBox="0 0 860 470" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela feedback: skeletons and badges</title>
+  <desc>Left: skeletons for the loading state. A raised panel holds a heading bar and three list rows, each a leading square, two text lines, and a trailing chip, all drawn in the skeleton color with a diagonal shimmer band sweeping across to suggest motion, mirroring the real row layout rather than a single bar. Right: badges. The status group reuses the widget status mark, a warning dot with a stale label, an error dot with an error label, and a success dot with an up-to-date label, all in the uppercase badge type step. The accent group shows a PRO tag as an accentMuted fill with accent text and a NEW tag. The count group shows a primary count pill in accent with onAccent and a neutral count pill in surfaceAlt, both fully rounded. A footer notes the badge type step is ten over seven hundred uppercase and the status badges reuse the widget dot and badge rather than a new shape.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .badge{font-size:10px;font-weight:700;letter-spacing:1px;}
+    .on{fill:#FFFFFF;}
+    .acc{fill:#6E8BFF;}
+    .warn{fill:#F2B84B;}
+    .err{fill:#FF6B6B;}
+    .suc{fill:#4CB782;}
+    .txt{fill:#F4F4F8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .cnt{font-size:12px;font-weight:700;}
+  </style>
+  <defs>
+    <linearGradient id="shimmer" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3A3A48" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#3A3A48" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#3A3A48" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="859" height="469" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Feedback · skeletons · badges</text>
+  <text x="32" y="60" class="sub">Skeletons shape the real layout, not a single bar, and shimmer in the skeleton role. Badges reuse the widget status dot + the badge type step.</text>
+
+  <!-- ===== SKELETONS ===== -->
+  <text x="32" y="92" class="sec">SKELETON · loading a row-group</text>
+  <rect x="32" y="104" width="372" height="312" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="48" y="124" width="96" height="10" rx="5" fill="#23232E"/>
+  <!-- 3 skeleton rows -->
+  <g>
+    <rect x="48" y="152" width="36" height="36" rx="9" fill="#23232E"/>
+    <rect x="96" y="158" width="150" height="12" rx="6" fill="#23232E"/>
+    <rect x="96" y="176" width="96" height="9" rx="4.5" fill="#23232E"/>
+    <rect x="316" y="160" width="72" height="22" rx="11" fill="#23232E"/>
+  </g>
+  <line x1="48" y1="208" x2="388" y2="208" stroke="#1F1F29"/>
+  <g>
+    <rect x="48" y="224" width="36" height="36" rx="9" fill="#23232E"/>
+    <rect x="96" y="230" width="128" height="12" rx="6" fill="#23232E"/>
+    <rect x="96" y="248" width="84" height="9" rx="4.5" fill="#23232E"/>
+    <rect x="316" y="232" width="72" height="22" rx="11" fill="#23232E"/>
+  </g>
+  <line x1="48" y1="280" x2="388" y2="280" stroke="#1F1F29"/>
+  <g>
+    <rect x="48" y="296" width="36" height="36" rx="9" fill="#23232E"/>
+    <rect x="96" y="302" width="160" height="12" rx="6" fill="#23232E"/>
+    <rect x="96" y="320" width="72" height="9" rx="4.5" fill="#23232E"/>
+    <rect x="316" y="304" width="72" height="22" rx="11" fill="#23232E"/>
+  </g>
+  <!-- shimmer band -->
+  <rect x="120" y="104" width="150" height="312" fill="url(#shimmer)" transform="skewX(-12)"/>
+  <text x="48" y="364" class="tok">bars: skeleton (#23232E role) · mirror header + rows</text>
+  <text x="48" y="380" class="tok">motion: a slow shimmer sweep, no spinner</text>
+  <text x="48" y="400" class="tok">reuses the widget loading-skeleton pattern</text>
+
+  <!-- ===== BADGES ===== -->
+  <text x="440" y="92" class="sec">BADGES</text>
+
+  <!-- status -->
+  <text x="440" y="124" class="cap">STATUS · widget dot + badge, reused</text>
+  <circle cx="446" cy="146" r="4.5" fill="#F2B84B"/><text x="458" y="150" class="badge warn">STALE</text>
+  <circle cx="540" cy="146" r="4.5" fill="#FF6B6B"/><text x="552" y="150" class="badge err">ERROR</text>
+  <circle cx="636" cy="146" r="4.5" fill="#4CB782"/><text x="648" y="150" class="badge suc">UP TO DATE</text>
+
+  <line x1="440" y1="170" x2="828" y2="170" stroke="#22222C"/>
+
+  <!-- accent / pro -->
+  <text x="440" y="196" class="cap">ACCENT · PRO tag, info</text>
+  <rect x="440" y="208" width="48" height="22" rx="11" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF" stroke-opacity="0.5"/><text x="464" y="223" text-anchor="middle" class="badge acc">PRO</text>
+  <rect x="500" y="208" width="48" height="22" rx="11" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF" stroke-opacity="0.5"/><text x="524" y="223" text-anchor="middle" class="badge acc">NEW</text>
+  <text x="566" y="223" class="tok">accentMuted fill + accent text · radius.full</text>
+
+  <line x1="440" y1="248" x2="828" y2="248" stroke="#22222C"/>
+
+  <!-- count -->
+  <text x="440" y="274" class="cap">COUNT · pills</text>
+  <rect x="440" y="286" width="30" height="24" rx="12" fill="#6E8BFF"/><text x="455" y="303" text-anchor="middle" class="cnt on">3</text>
+  <rect x="482" y="286" width="36" height="24" rx="12" fill="#1F1F29" stroke="#2A2A36"/><text x="500" y="303" text-anchor="middle" class="cnt txt">12</text>
+  <rect x="530" y="286" width="44" height="24" rx="12" fill="#1F1F29" stroke="#2A2A36"/><text x="552" y="303" text-anchor="middle" class="cnt txt">99+</text>
+  <text x="590" y="303" class="tok">accent (primary) · surfaceAlt (neutral) · radius.full</text>
+
+  <line x1="440" y1="332" x2="828" y2="332" stroke="#22222C"/>
+  <text x="440" y="358" class="note" fill="#6E8BFF" font-weight="700">One badge type step.</text>
+  <text x="440" y="376" class="tok">type.badge = 10 / 700 / +1 / uppercase · paired with a</text>
+  <text x="440" y="390" class="tok">dot for status, a fill for count, accentMuted for PRO.</text>
+  <text x="440" y="410" class="tok">Status badges reuse the widget mark; no new shape.</text>
+</svg>
