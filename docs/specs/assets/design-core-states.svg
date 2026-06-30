@@ -1,0 +1,73 @@
+<svg width="100%" viewBox="0 0 860 500" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela screen-level states: splash, loading, empty, and error</title>
+  <desc>Four device frames show the screen-level states. The splash shows a centered spinner and the vela wordmark while the session resolves at app boot. The loading state shows a skeleton title bar and a panel of three skeleton rows shaped to the layout rather than a spinner. The empty state shows the Dashboard hub header and a centered message that the dashboard is empty with an Add widget primary button. The error state shows a header and a centered alert glyph with a could-not-load message and a Retry action. A footer note distinguishes these screen-level states, which report a whole surface, from the per-widget lifecycle states owned by AOD-37, and notes they compose the AOD-20 skeleton and buttons.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:12.5px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:16px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="499" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Screen-level states · loading · empty · error</text>
+  <text x="32" y="60" class="sub">Whole-surface states, distinct from the AOD-37 per-widget lifecycle. They compose the AOD-20 skeleton and buttons.</text>
+
+  <!-- ===== SPLASH ===== -->
+  <text x="32" y="92" class="cap">SPLASH · app boot</text>
+  <rect x="32" y="104" width="184" height="300" rx="22" fill="#0B0B0F" stroke="#2A2A36"/>
+  <circle cx="124" cy="238" r="16" fill="none" stroke="#23232E" stroke-width="3"/>
+  <path d="M124 222 a16 16 0 0 1 16 16" fill="none" stroke="#6E8BFF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M118,278 L121,286 L129,289 L121,292 L118,300 L115,292 L107,289 L115,286 Z" fill="#6E8BFF"/>
+  <text x="140" y="295" class="word">vela</text>
+  <text x="124" y="344" text-anchor="middle" class="cal">while the session resolves</text>
+
+  <!-- ===== LOADING ===== -->
+  <text x="234" y="92" class="cap">LOADING · skeleton</text>
+  <rect x="234" y="104" width="184" height="300" rx="22" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="250" y="142" width="90" height="14" rx="4" fill="#23232E"/>
+  <rect x="250" y="172" width="152" height="180" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="264" y="190" width="80" height="10" rx="3" fill="#23232E"/>
+  <rect x="264" y="206" width="118" height="8" rx="3" fill="#23232E"/>
+  <line x1="264" y1="224" x2="388" y2="224" stroke="#22222C"/>
+  <rect x="264" y="236" width="70" height="10" rx="3" fill="#23232E"/>
+  <rect x="264" y="252" width="118" height="8" rx="3" fill="#23232E"/>
+  <line x1="264" y1="270" x2="388" y2="270" stroke="#22222C"/>
+  <rect x="264" y="282" width="86" height="10" rx="3" fill="#23232E"/>
+  <rect x="264" y="298" width="104" height="8" rx="3" fill="#23232E"/>
+  <text x="326" y="380" text-anchor="middle" class="cal">shaped to the layout · slow shimmer</text>
+
+  <!-- ===== EMPTY ===== -->
+  <text x="436" y="92" class="cap">EMPTY · screen-level</text>
+  <rect x="436" y="104" width="184" height="300" rx="22" fill="#0B0B0F" stroke="#2A2A36"/>
+  <path d="M454,138 L456,143 L461,145 L456,147 L454,152 L452,147 L447,145 L452,143 Z" fill="#6E8BFF"/>
+  <text x="468" y="150" class="word" font-size="14">vela</text>
+  <text x="604" y="148" text-anchor="end" class="acc" font-size="10">Add</text>
+  <line x1="450" y1="164" x2="606" y2="164" stroke="#2A2A36"/>
+  <text x="528" y="248" text-anchor="middle" class="meta">Your dashboard is empty.</text>
+  <rect x="478" y="266" width="100" height="32" rx="9" fill="#6E8BFF"/>
+  <text x="528" y="287" text-anchor="middle" class="on" font-size="12">Add widget</text>
+  <text x="528" y="356" text-anchor="middle" class="cal">a calm CTA, not an error</text>
+
+  <!-- ===== ERROR ===== -->
+  <text x="638" y="92" class="cap">ERROR · screen-level</text>
+  <rect x="638" y="104" width="184" height="300" rx="22" fill="#0B0B0F" stroke="#2A2A36"/>
+  <path d="M730,212 L744,238 L716,238 Z" fill="none" stroke="#FF6B6B" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M730,221 v8" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="730" cy="233" r="1.2" fill="#FF6B6B"/>
+  <text x="730" y="266" text-anchor="middle" class="meta">Couldn't load your</text>
+  <text x="730" y="281" text-anchor="middle" class="meta">dashboard.</text>
+  <text x="730" y="312" text-anchor="middle" class="acc" font-size="12">Retry</text>
+  <text x="730" y="356" text-anchor="middle" class="cal">one action, the §5 prompt vocabulary</text>
+
+  <line x1="32" y1="430" x2="828" y2="430" stroke="#22222C"/>
+  <text x="32" y="452" class="note"><tspan fill="#6E8BFF" font-weight="700">Screen, not widget.</tspan> These report a whole surface. The per-widget lifecycle states (loading / stale / error) are AOD-37, drawn in each card.</text>
+  <text x="32" y="476" class="tok">tokens: skeleton (#23232E) shaped bars · primary / ghost buttons · type.meta line · accent action · no spinner except the boot splash</text>
+</svg>
