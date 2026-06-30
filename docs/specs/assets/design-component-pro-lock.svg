@@ -1,0 +1,91 @@
+<svg width="100%" viewBox="0 0 860 500" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela lock and PRO overlays, coordinated with the entitlements Gate</title>
+  <desc>Top: the Gate seam. When the entitlement is true the Gate renders its children, a normal Kiosk Mode row with an accent Open action. When false it renders the fallback, the lock: a dimmed row with a padlock glyph, muted title, a PRO badge, and a trailing chevron that routes to the paywall. Bottom left: a locked premium tile in a picker, the preview dimmed under a scrim with a centered padlock, a Pro feature line, and an Upgrade primary button. Bottom right: the lock-row anatomy, callouts for the leading padlock, the muted title, the PRO badge, and the whole row tapping through to the paywall, with a token block. A footer states the rule: the Gate is UX-only and the lock affordance is its fallback, the server still refuses an over-limit request, and the gated control is never shown enabled.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:14px;font-weight:600;fill:#F4F4F8;}
+    .titlem{font-size:14px;font-weight:600;fill:#9B9BA8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .badge{font-size:10px;font-weight:700;letter-spacing:1px;fill:#6E8BFF;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .mono{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="499" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Lock / PRO overlays · the freemium gate affordance</text>
+  <text x="32" y="60" class="sub">The lock IS the Gate's fallback (apps/app/src/entitlements/Gate.tsx). UX-only: it never performs the gated mutation; the server enforces the limit.</text>
+
+  <!-- ===== THE GATE SEAM ===== -->
+  <text x="32" y="92" class="sec">THE GATE · children when entitled · lock fallback otherwise</text>
+
+  <!-- entitled -->
+  <text x="32" y="116" class="cap">canUseKiosk = true → children</text>
+  <rect x="32" y="124" width="372" height="64" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="48" y="142" width="30" height="28" rx="7" fill="#1F1F29" stroke="#2A2A36"/>
+  <rect x="56" y="152" width="14" height="10" rx="2" fill="none" stroke="#6E8BFF" stroke-width="1.6"/>
+  <path d="M59 152 v-2.5 a4 4 0 0 1 8 0 v2.5" fill="none" stroke="#6E8BFF" stroke-width="1.6"/>
+  <text x="92" y="150" class="title">Kiosk Mode</text>
+  <text x="92" y="168" class="meta">Keep the screen on, dim at night</text>
+  <text x="388" y="160" text-anchor="end" class="title acc" font-size="12">Open</text>
+
+  <!-- locked -->
+  <text x="456" y="116" class="cap">false → fallback (the lock)</text>
+  <rect x="456" y="124" width="372" height="64" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <g opacity="0.55">
+    <rect x="472" y="142" width="30" height="28" rx="7" fill="#1F1F29" stroke="#2A2A36"/>
+    <!-- padlock closed -->
+    <rect x="480" y="152" width="14" height="11" rx="2.5" fill="none" stroke="#9B9BA8" stroke-width="1.6"/>
+    <path d="M483 152 v-3 a4 4 0 0 1 8 0 v3" fill="none" stroke="#9B9BA8" stroke-width="1.6"/>
+    <text x="516" y="150" class="titlem">Kiosk Mode</text>
+    <text x="516" y="168" class="meta">Pro feature</text>
+  </g>
+  <rect x="724" y="146" width="48" height="22" rx="11" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF" stroke-opacity="0.5"/><text x="748" y="161" text-anchor="middle" class="badge">PRO</text>
+  <path d="M790 150 l6 7 l-6 7" fill="none" stroke="#9B9BA8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <line x1="32" y1="212" x2="828" y2="212" stroke="#22222C"/>
+
+  <!-- ===== LOCKED CARD ===== -->
+  <text x="32" y="238" class="sec">LOCKED TILE · a premium pick in a picker</text>
+  <rect x="32" y="250" width="372" height="200" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <!-- dimmed preview -->
+  <rect x="48" y="266" width="340" height="120" rx="10" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="64" y="292" class="cap">CLAUDE · SPEND</text>
+  <text x="63" y="332" font-size="30" font-weight="700" fill="#F4F4F8">$42</text>
+  <text x="64" y="356" class="mono">premium pack widget</text>
+  <!-- scrim + lock -->
+  <rect x="48" y="266" width="340" height="120" rx="10" fill="#000000" opacity="0.55"/>
+  <rect x="210" y="296" width="20" height="15" rx="3" fill="none" stroke="#F4F4F8" stroke-width="1.8"/>
+  <path d="M214 296 v-3.5 a6 6 0 0 1 12 0 v3.5" fill="none" stroke="#F4F4F8" stroke-width="1.8"/>
+  <text x="220" y="340" text-anchor="middle" class="meta" fill="#F4F4F8">Pro feature</text>
+  <!-- upgrade CTA -->
+  <rect x="48" y="402" width="340" height="36" rx="14" fill="#6E8BFF"/><text x="218" y="425" text-anchor="middle" class="on" font-size="12">Upgrade to Pro</text>
+
+  <!-- ===== LOCK ROW ANATOMY ===== -->
+  <text x="436" y="238" class="sec">LOCK ROW · anatomy + tokens</text>
+  <rect x="436" y="250" width="392" height="92" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="452" y="282" width="34" height="30" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <rect x="461" y="293" width="16" height="12" rx="2.5" fill="none" stroke="#9B9BA8" stroke-width="1.7"/>
+  <path d="M464 293 v-3 a4.5 4.5 0 0 1 9 0 v3" fill="none" stroke="#9B9BA8" stroke-width="1.7"/>
+  <text x="500" y="293" class="titlem">Premium themes</text>
+  <text x="500" y="311" class="meta">Pro feature</text>
+  <rect x="724" y="285" width="48" height="22" rx="11" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF" stroke-opacity="0.5"/><text x="748" y="300" text-anchor="middle" class="badge">PRO</text>
+  <path d="M792 290 l6 7 l-6 7" fill="none" stroke="#9B9BA8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="452" y="272" class="cal">lock glyph</text>
+  <text x="500" y="272" class="cal">title muted</text>
+  <text x="748" y="272" text-anchor="middle" class="cal">PRO badge</text>
+  <text x="436" y="364" class="tok">leading: padlock glyph (textMuted) · title → textMuted · PRO = accentMuted badge</text>
+  <text x="436" y="380" class="tok">whole row taps → paywall · dimmed, never an enabled gated control</text>
+  <rect x="436" y="396" width="392" height="54" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="452" y="418" class="note" fill="#6E8BFF" font-weight="700">Coordinates with the Gate.</text>
+  <text x="452" y="438" class="tok">&lt;Gate feature="canUseKiosk" fallback={&lt;LockRow/&gt;}&gt;</text>
+
+  <line x1="32" y1="466" x2="828" y2="466" stroke="#22222C"/>
+  <text x="32" y="488" class="note"><tspan fill="#6E8BFF" font-weight="700">UX-only.</tspan> The lock is the Gate fallback; it routes to the paywall and never runs the gated action. The server enforces the limit.</text>
+</svg>

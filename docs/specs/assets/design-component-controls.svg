@@ -1,0 +1,93 @@
+<svg width="100%" viewBox="0 0 860 520" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela controls: toggle switch and segmented or selectable pills</title>
+  <desc>Top: the toggle switch replacing the unstyled native control. Off is a surfaceAlt track with a muted knob at the left. On is an accent track with an onAccent knob at the right, the track a fully rounded radius.full pill. Disabled drops opacity. Focused draws the focusRing around the track. Middle: choice controls. A segmented control for an exclusive enum like date format fills the chosen segment with the accent and onAccent text, the strong selected state. Selectable multi-select pills use the softer accentMuted fill with an accent border and accent text for the chosen items, a lower-emphasis selected state. Bottom: the resolution that accentMuted is promoted as one shared low-accent interactive surface for pressed text buttons, selected rows and pills, and accent badges, while the widget data alphas stay per-widget, and that radius.full is the pill and track end.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .stt{font-size:10.5px;font-weight:700;fill:#F4F4F8;}
+    .str{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .seg{font-size:12px;font-weight:600;}
+    .on{fill:#FFFFFF;}
+    .acc{fill:#6E8BFF;}
+    .txt{fill:#F4F4F8;}
+    .mut{fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .ilab{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="519" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Toggles · segmented · selectable pills</text>
+  <text x="32" y="60" class="sub">The toggle replaces the unstyled native Switch. Selected choices show the two accents: full accent and the softer accentMuted.</text>
+
+  <!-- ===== TOGGLE STATES ===== -->
+  <text x="32" y="92" class="sec">TOGGLE / SWITCH · off · on · disabled · focused · radius.full track</text>
+
+  <!-- off -->
+  <text x="44" y="124" class="ilab">OFF</text>
+  <rect x="44" y="134" width="52" height="30" rx="15" fill="#1F1F29" stroke="#2A2A36"/>
+  <circle cx="59" cy="149" r="11" fill="#9B9BA8"/>
+  <text x="44" y="190" class="str">surfaceAlt · knob textMuted</text>
+
+  <!-- on -->
+  <text x="244" y="124" class="ilab">ON</text>
+  <rect x="244" y="134" width="52" height="30" rx="15" fill="#6E8BFF"/>
+  <circle cx="281" cy="149" r="11" fill="#FFFFFF"/>
+  <text x="244" y="190" class="str">accent · knob onAccent</text>
+
+  <!-- disabled -->
+  <text x="444" y="124" class="ilab">DISABLED</text>
+  <g opacity="0.4">
+    <rect x="444" y="134" width="52" height="30" rx="15" fill="#6E8BFF"/>
+    <circle cx="481" cy="149" r="11" fill="#FFFFFF"/>
+  </g>
+  <text x="444" y="190" class="str">opacity 0.4</text>
+
+  <!-- focused -->
+  <text x="644" y="124" class="ilab">FOCUSED</text>
+  <rect x="638" y="128" width="64" height="42" rx="21" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <rect x="644" y="134" width="52" height="30" rx="15" fill="#6E8BFF"/>
+  <circle cx="681" cy="149" r="11" fill="#FFFFFF"/>
+  <text x="644" y="190" class="str">2px focusRing</text>
+
+  <line x1="32" y1="212" x2="828" y2="212" stroke="#22222C"/>
+
+  <!-- ===== SEGMENTED ===== -->
+  <text x="32" y="238" class="sec">SEGMENTED · exclusive choice</text>
+  <text x="32" y="264" class="ilab">DATE FORMAT</text>
+  <rect x="32" y="274" width="300" height="40" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <rect x="34" y="276" width="98" height="36" rx="7" fill="#6E8BFF"/><text x="83" y="299" text-anchor="middle" class="seg on">Full</text>
+  <text x="181" y="299" text-anchor="middle" class="seg txt">Long</text>
+  <line x1="232" y1="284" x2="232" y2="304" stroke="#2A2A36"/>
+  <text x="281" y="299" text-anchor="middle" class="seg txt">Medium</text>
+  <text x="32" y="334" class="tok">selected segment = accent fill + onAccent · radius.sm group</text>
+
+  <!-- ===== SELECTABLE PILLS ===== -->
+  <text x="360" y="238" class="sec">SELECTABLE PILLS · multi-select</text>
+  <text x="360" y="264" class="ilab">PROJECTS · MULTI-SELECT</text>
+  <!-- selected (accentMuted) -->
+  <rect x="360" y="274" width="96" height="34" rx="17" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF"/><text x="408" y="296" text-anchor="middle" class="seg acc">Mobile</text>
+  <rect x="466" y="274" width="84" height="34" rx="17" fill="#6E8BFF" fill-opacity="0.14" stroke="#6E8BFF"/><text x="508" y="296" text-anchor="middle" class="seg acc">API</text>
+  <!-- unselected -->
+  <rect x="560" y="274" width="96" height="34" rx="17" fill="none" stroke="#2A2A36"/><text x="608" y="296" text-anchor="middle" class="seg txt">Backend</text>
+  <rect x="666" y="274" width="84" height="34" rx="17" fill="none" stroke="#2A2A36"/><text x="708" y="296" text-anchor="middle" class="seg txt">Web</text>
+  <text x="360" y="334" class="tok">selected = accentMuted fill + accent border/text · radius.full</text>
+
+  <line x1="32" y1="354" x2="828" y2="354" stroke="#22222C"/>
+
+  <!-- ===== RESOLUTION ===== -->
+  <text x="32" y="380" class="sec">RESOLVED · accentMuted promoted · radius.full</text>
+  <rect x="32" y="392" width="404" height="104" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="416" class="note" fill="#6E8BFF" font-weight="700">accentMuted = the one accent at a low fixed alpha.</text>
+  <text x="48" y="438" class="tok">SURFACE tint, shared by: pressed text buttons · selected</text>
+  <text x="48" y="452" class="tok">rows &amp; multi-pills · accent badges · the focus halo.</text>
+  <text x="48" y="476" class="tok">NOT the widget data alphas (progress 0.18, sparkline</text>
+  <text x="48" y="490" class="tok">0.5) — those encode data, stay per-widget.</text>
+
+  <rect x="452" y="392" width="376" height="104" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="468" y="416" class="note" fill="#6E8BFF" font-weight="700">radius.full (9999) is the pill / track end.</text>
+  <text x="468" y="438" class="tok">toggle track · selectable pills · count pills ·</text>
+  <text x="468" y="452" class="tok">the Current Cycle bar (was computed half-height).</text>
+  <text x="468" y="476" class="tok">Buttons / fields / cards keep radius.sm / md / lg.</text>
+</svg>

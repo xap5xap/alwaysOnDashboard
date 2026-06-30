@@ -1,0 +1,79 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela surfaces: row-group panel, list-row anatomy, and the auth card</title>
+  <desc>Left: a Connections row-group, the dominant Settings surface. A caption heading sits over a raised panel at the surface fill with a border, holding five list rows separated by border dividers. Each row pairs an identity of title and subtitle with a trailing affordance: a destructive Disconnect, an accent Connect or Reconnect, a status with a warning dot, or a muted no-connection-needed label. Right top: the list-row anatomy, an enlarged row with labeled slots for an optional leading glyph, the identity of title and subtitle, and the trailing slot for an action, status, or chevron, annotated with card padding and the divider role. Right bottom: the auth card used by sign-in, a raised surface at the large radius with generous padding holding the lowercase vela wordmark, a field, and a primary button. A note states the widget card chrome is reused at the medium radius, not redesigned.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:14px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .err{fill:#FF6B6B;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .word{font-size:22px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Surfaces · cards · panels · row-groups</text>
+  <text x="32" y="60" class="sub">App chrome reuses the widget card (surface · border · radius) and adds the row-group, the list row, and the auth card.</text>
+
+  <!-- ===== ROW-GROUP PANEL ===== -->
+  <text x="32" y="92" class="sec">ROW-GROUP · the Settings connections panel</text>
+  <rect x="32" y="104" width="372" height="416" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="130" class="cap">CONNECTIONS</text>
+
+  <!-- row 1 -->
+  <text x="48" y="160" class="title">Linear</text><text x="48" y="178" class="meta">Connected · xavier</text>
+  <text x="388" y="168" text-anchor="end" class="title err" font-size="12">Disconnect</text>
+  <line x1="48" y1="194" x2="388" y2="194" stroke="#2A2A36"/>
+  <!-- row 2 -->
+  <text x="48" y="222" class="title">Google Calendar</text><text x="48" y="240" class="meta">Connected</text>
+  <text x="388" y="230" text-anchor="end" class="title err" font-size="12">Disconnect</text>
+  <line x1="48" y1="256" x2="388" y2="256" stroke="#2A2A36"/>
+  <!-- row 3 -->
+  <text x="48" y="284" class="title">Weather</text><text x="48" y="302" class="meta">Not connected</text>
+  <text x="388" y="292" text-anchor="end" class="title acc" font-size="12">Connect</text>
+  <line x1="48" y1="318" x2="388" y2="318" stroke="#2A2A36"/>
+  <!-- row 4 -->
+  <circle cx="54" cy="342" r="4.5" fill="#F2B84B"/>
+  <text x="68" y="346" class="title">Claude usage</text><text x="68" y="364" class="meta">Reconnect needed</text>
+  <text x="388" y="354" text-anchor="end" class="title acc" font-size="12">Reconnect</text>
+  <line x1="48" y1="380" x2="388" y2="380" stroke="#2A2A36"/>
+  <!-- row 5 -->
+  <text x="48" y="408" class="title">Clock</text><text x="48" y="426" class="meta">Built in</text>
+  <text x="388" y="418" text-anchor="end" class="meta">No connection needed</text>
+  <text x="48" y="470" class="tok">panel: surface + border + radius.md · row pad spacing(3)</text>
+  <text x="48" y="486" class="tok">divider: rowGroup.divider → border (1px)</text>
+  <text x="48" y="502" class="tok">trailing: accent (connect) · error (disconnect) · muted</text>
+
+  <!-- ===== LIST ROW ANATOMY ===== -->
+  <text x="436" y="92" class="sec">LIST ROW · anatomy</text>
+  <rect x="436" y="104" width="392" height="92" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="452" y="132" width="36" height="36" rx="9" fill="#1F1F29" stroke="#2A2A36"/>
+  <circle cx="470" cy="150" r="7" fill="none" stroke="#6E8BFF" stroke-width="1.7"/>
+  <text x="504" y="146" class="title">Kiosk Mode</text>
+  <text x="504" y="164" class="meta">Keep the screen on, dim at night</text>
+  <text x="812" y="155" text-anchor="end" class="title acc" font-size="12">Open</text>
+  <!-- callouts -->
+  <text x="452" y="120" class="cal">leading (opt)</text>
+  <text x="504" y="120" class="cal">identity · title + meta</text>
+  <text x="812" y="120" text-anchor="end" class="cal">trailing</text>
+  <text x="436" y="216" class="tok">slots: leading glyph (optional) · identity (title/subtitle) · trailing (action · status · chevron)</text>
+
+  <!-- ===== AUTH CARD ===== -->
+  <text x="436" y="252" class="sec">AUTH CARD · SignIn / paywall panel · radius.lg</text>
+  <rect x="436" y="264" width="392" height="256" rx="22" fill="#16161D" stroke="#2A2A36"/>
+  <circle cx="468" cy="304" r="5" fill="#6E8BFF"/>
+  <path d="M468 296 L470 302 L476 304 L470 306 L468 312 L466 306 L460 304 L466 302 Z" fill="#6E8BFF"/>
+  <text x="484" y="312" class="word">vela</text>
+  <text x="460" y="340" class="meta">Sign in to your dashboard</text>
+  <text x="460" y="372" class="cap">EMAIL</text>
+  <rect x="460" y="380" width="344" height="44" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="476" y="407" class="meta" font-size="13">you@example.com</text>
+  <rect x="460" y="440" width="344" height="44" rx="14" fill="#6E8BFF"/><text x="632" y="467" text-anchor="middle" class="on" font-size="13">Sign in</text>
+  <text x="436" y="540" class="note"><tspan fill="#6E8BFF" font-weight="700">Reuse, do not redesign.</tspan> The widget card (radius.md, the lifecycle states, the empty body) stays owned by design-widget-system; app chrome composes from it.</text>
+</svg>
