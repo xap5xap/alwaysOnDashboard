@@ -1,0 +1,72 @@
+<svg width="100%" viewBox="0 0 860 650" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela type specimen: the wordmark family and the in-app type scale</title>
+  <desc>The Vela type specimen. The brand sets in a humanist geometric sans, the same system family as the in-app type scale. The display step at ninety-six is the wall-dominating Clock hero. Below, the full scale runs from hero at forty-four through expanded, title, heading, body, label, meta, caption, and badge at ten, each shown with a real in-app sample and its size, weight, and use. Numeric steps carry tabular figures so values do not jitter as they tick or refresh.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .colh{font-size:10px;font-weight:700;fill:#6F6F7C;letter-spacing:1px;}
+    .spec{font-size:11px;fill:#9B9BA8;font-family:ui-monospace,Menlo,monospace;}
+    .use{font-size:11px;fill:#8A8A97;}
+    .s{fill:#F4F4F8;}
+    .tab{font-variant-numeric:tabular-nums;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="649" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela type · the wordmark family + the in-app scale</text>
+  <text x="32" y="60" class="sub">One humanist geometric sans (the system stack: SF Pro / Roboto). The wordmark is weight 500 of it; the scale is the in-app type.* rhythm.</text>
+
+  <!-- display band -->
+  <rect x="32" y="80" width="796" height="120" rx="14" fill="#121218" stroke="#2A2A36"/>
+  <text x="56" y="172" class="s tab" font-size="84" font-weight="700" letter-spacing="-1">21:48</text>
+  <text x="470" y="128" class="spec">display · 96 / 700</text>
+  <text x="470" y="148" class="use">tracking −1 · tabular</text>
+  <text x="470" y="172" class="use">The wall hero (Clock large).</text>
+  <text x="470" y="190" class="use">Shown here at 84 to fit the sheet.</text>
+
+  <!-- column headers -->
+  <text x="32" y="228" class="colh">STEP · SAMPLE</text>
+  <text x="470" y="228" class="colh">SPEC · USE</text>
+  <line x1="32" y1="236" x2="828" y2="236" stroke="#22222C"/>
+
+  <!-- hero 44 -->
+  <text x="32" y="282" class="s tab" font-size="44" font-weight="700" letter-spacing="-0.5">72°</text>
+  <text x="470" y="270" class="spec">hero · 44 / 700</text>
+  <text x="470" y="288" class="use">Temperature, spend, Clock medium.</text>
+
+  <!-- xl 40 -->
+  <text x="32" y="340" class="s tab" font-size="40" font-weight="700">$1,240</text>
+  <text x="470" y="328" class="spec">xl · 40 / 700</text>
+  <text x="470" y="346" class="use">A large value in a denser card.</text>
+
+  <!-- title 18 -->
+  <text x="32" y="384" class="s" font-size="18" font-weight="600">Design sync</text>
+  <text x="470" y="380" class="spec">title · 18 / 600</text>
+
+  <!-- heading 15 -->
+  <text x="32" y="416" class="s" font-size="15" font-weight="600">Partly cloudy</text>
+  <text x="470" y="412" class="spec">heading · 15 / 600</text>
+
+  <!-- body 14 -->
+  <text x="32" y="446" class="s" font-size="14" font-weight="500" fill="#9B9BA8">Nothing left today</text>
+  <text x="470" y="442" class="spec">body · 14 / 500</text>
+
+  <!-- label 13 -->
+  <text x="32" y="474" class="s" font-size="13" font-weight="600">12 open · AOD</text>
+  <text x="470" y="470" class="spec">label · 13 / 600</text>
+
+  <!-- meta 13 -->
+  <text x="32" y="500" class="s" font-size="13" font-weight="400" fill="#9B9BA8">updated 2m ago</text>
+  <text x="470" y="496" class="spec">meta · 13 / 400</text>
+
+  <!-- caption 11 -->
+  <text x="32" y="526" class="s" font-size="11" font-weight="500" fill="#9B9BA8" letter-spacing="1">LINEAR · MY ISSUES</text>
+  <text x="470" y="522" class="spec">caption · 11 / 500 · +1</text>
+
+  <!-- badge 10 -->
+  <text x="32" y="550" class="s" font-size="10" font-weight="700" fill="#F2B84B" letter-spacing="1">STALE</text>
+  <text x="470" y="546" class="spec">badge · 10 / 700 · uppercase</text>
+
+  <line x1="32" y1="578" x2="828" y2="578" stroke="#22222C"/>
+  <text x="32" y="604" class="sub">The brand adds no new type tokens; it adopts type.* and hands it to AOD-19. The wordmark and the in-app text are one family, so the marketing</text>
+  <text x="32" y="622" class="sub">surface and the product surface read as the same calm voice. Numeric steps (display / hero / xl) carry tabular figures, the value-first rule of §3.</text>
+</svg>

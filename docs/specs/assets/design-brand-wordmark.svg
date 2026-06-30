@@ -1,0 +1,61 @@
+<svg width="100%" viewBox="0 0 860 540" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela wordmark: dark and light lockups, clear space, and minimum size</title>
+  <desc>The Vela wordmark sets the name in lowercase in a humanist geometric sans with the ambient-star mark leading it. The sheet shows the primary lockup on the dark surface with the star in the accent and vela in the near-white text color, the same lockup on the light surface with the light-theme accent and ink text, the wordmark standing alone without the mark, the clear-space rule of one lowercase x-height around the lockup, and a minimum-size note of eighty-eight pixels wide for the full lockup.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .anno{font-size:11px;fill:#C9C9D4;}
+    .dim{font-size:10px;fill:#6F6F7C;}
+    .wd{font-size:52px;font-weight:500;letter-spacing:0.5px;}
+    .wl{font-size:34px;font-weight:500;letter-spacing:0.5px;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="539" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela wordmark · lockups</text>
+  <text x="32" y="60" class="sub">Lowercase, calm, unhurried. The star leads the wordmark; together they form the horizontal lockup. The mark can also stand alone.</text>
+
+  <!-- primary dark lockup -->
+  <rect x="32" y="88" width="478" height="150" rx="14" fill="#121218" stroke="#2A2A36"/>
+  <g transform="translate(96,163)" fill="#6E8BFF">
+    <path d="M0,-26 Q0,0 26,0 Q0,0 0,26 Q0,0 -26,0 Q0,0 0,-26 Z"/>
+  </g>
+  <text x="138" y="180" class="wd" fill="#F4F4F8">vela</text>
+  <text x="32" y="262" class="lab">Primary · dark surface</text>
+
+  <!-- light lockup -->
+  <rect x="534" y="88" width="294" height="150" rx="14" fill="#F6F6FA" stroke="#DADAE2"/>
+  <g transform="translate(576,163)" fill="#3F5BD6">
+    <path d="M0,-17 Q0,0 17,0 Q0,0 0,17 Q0,0 -17,0 Q0,0 0,-17 Z"/>
+  </g>
+  <text x="604" y="174" class="wl" fill="#16161D">vela</text>
+  <text x="534" y="262" class="lab">Light surface <tspan class="labn">(foreground app, store on white)</tspan></text>
+
+  <!-- wordmark alone -->
+  <rect x="32" y="292" width="300" height="108" rx="14" fill="#121218" stroke="#2A2A36"/>
+  <text x="58" y="358" class="wl" fill="#F4F4F8">vela</text>
+  <text x="32" y="424" class="lab">Wordmark alone <tspan class="labn">· where the mark is already present</tspan></text>
+
+  <!-- clear space -->
+  <rect x="356" y="292" width="234" height="108" rx="14" fill="#101016" stroke="#2A2A36"/>
+  <rect x="384" y="312" width="178" height="68" fill="none" stroke="#3A3A46" stroke-dasharray="4 4"/>
+  <g transform="translate(406,346)" fill="#6E8BFF"><path d="M0,-13 Q0,0 13,0 Q0,0 0,13 Q0,0 -13,0 Q0,0 0,-13 Z"/></g>
+  <text x="426" y="355" fill="#F4F4F8" font-size="26" font-weight="500">vela</text>
+  <line x1="384" y1="324" x2="384" y2="312" stroke="#6E8BFF" stroke-width="0.75"/>
+  <text x="372" y="308" class="dim">x</text>
+  <text x="356" y="424" class="lab">Clear space <tspan class="labn">= one x-height</tspan></text>
+
+  <!-- min size -->
+  <rect x="614" y="292" width="214" height="108" rx="14" fill="#101016" stroke="#2A2A36"/>
+  <g transform="translate(648,346)" fill="#6E8BFF"><path d="M0,-9 Q0,0 9,0 Q0,0 0,9 Q0,0 -9,0 Q0,0 0,-9 Z"/></g>
+  <text x="664" y="353" fill="#F4F4F8" font-size="19" font-weight="500">vela</text>
+  <line x1="648" y1="372" x2="726" y2="372" stroke="#6E8BFF" stroke-width="0.75"/>
+  <text x="687" y="388" class="dim" text-anchor="middle">≥ 88px</text>
+  <text x="614" y="424" class="lab">Minimum size <tspan class="labn">· full lockup</tspan></text>
+
+  <line x1="32" y1="452" x2="828" y2="452" stroke="#22222C"/>
+  <text x="32" y="478" class="anno">Type voice: a humanist geometric sans (system stack: SF Pro / Roboto), weight 500, tracking +0.5, one family with the in-app type.*</text>
+  <text x="32" y="498" class="anno">Lowercase on purpose: it sits quietly. No italic, no all-caps wordmark; the only uppercase is the type.caption card header.</text>
+  <text x="32" y="522" class="dim">Tokens: text #F4F4F8 / ink #16161D · accent #6E8BFF / #3F5BD6 · lockup gap = ½x · wordmark weight 500 · tracking +0.5.</text>
+</svg>
