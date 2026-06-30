@@ -1,0 +1,81 @@
+<svg width="100%" viewBox="0 0 860 500" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela connect paths: the branch by authClass and the OAuth system-browser round-trip</title>
+  <desc>Top: three branch chips for the connect mechanism, oauth2 opening a system browser, key or location opening the credential sheet in section 6, and none meaning no connect. Middle: the oauth2 round-trip drawn as four nodes left to right, the Connections row where Connect is tapped, the external system browser where the user approves scopes via openAuthSessionAsync, the return to Vela at vela://oauth/done carrying service and status, and the row flipping to Connected after a re-fetch under row-level security. A banner states no token reaches the device because the backend exchanges the code server-side and stores it in Vault. Bottom: a note that key and location connects skip the browser and post to credentials-store, and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .kick{font-size:8.5px;fill:#6E8BFF;font-family:ui-monospace,Menlo,monospace;letter-spacing:0.5px;}
+    .mono{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="499" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Connect paths · by authClass</text>
+  <text x="32" y="60" class="sub">connectMechanism(authClass) routes the connect. OAuth opens a browser; key and location open a sheet; none connects to nothing.</text>
+
+  <!-- ===== BRANCH CHIPS ===== -->
+  <text x="32" y="92" class="cap">THE BRANCH · connectMechanism(authClass)</text>
+  <rect x="32" y="104" width="250" height="46" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="124" class="kick">oauth2</text><text x="48" y="141" class="title">→ system browser</text>
+  <rect x="300" y="104" width="270" height="46" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="316" y="124" class="kick">api_key · admin_key · platform_key</text><text x="316" y="141" class="title">→ credential sheet (§6)</text>
+  <rect x="588" y="104" width="240" height="46" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="604" y="124" class="kick">none</text><text x="604" y="141" class="title">→ no connect (Clock)</text>
+
+  <!-- ===== OAUTH ROUND-TRIP ===== -->
+  <text x="32" y="184" class="sec">oauth2 · the system-browser round-trip (Linear · Google Calendar)</text>
+  <!-- node 1 -->
+  <rect x="40" y="200" width="168" height="82" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="56" y="220" class="kick">1 · in app</text>
+  <text x="56" y="240" class="title">Connections row</text>
+  <text x="56" y="258" class="meta">tap Connect</text>
+  <!-- arrow A -->
+  <path d="M214,241 h22" stroke="#6B6B78" stroke-width="1.4"/>
+  <path d="M236,236 l6,5 l-6,5" fill="none" stroke="#6B6B78" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- node 2 (external) -->
+  <rect x="248" y="200" width="178" height="82" rx="12" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="264" y="220" class="kick" fill="#9B9BA8">2 · external</text>
+  <text x="264" y="240" class="title">System browser</text>
+  <text x="264" y="258" class="meta">approve scopes</text>
+  <text x="264" y="274" class="cal">openAuthSessionAsync</text>
+  <!-- arrow B -->
+  <path d="M432,241 h22" stroke="#6B6B78" stroke-width="1.4"/>
+  <path d="M454,236 l6,5 l-6,5" fill="none" stroke="#6B6B78" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- node 3 -->
+  <rect x="466" y="200" width="178" height="82" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="482" y="220" class="kick">3 · back to app</text>
+  <text x="482" y="240" class="title">Return deep-link</text>
+  <text x="482" y="258" class="mono" fill="#6E8BFF">vela://oauth/done</text>
+  <text x="482" y="274" class="cal">?service &amp; status</text>
+  <!-- arrow C -->
+  <path d="M650,241 h22" stroke="#6B6B78" stroke-width="1.4"/>
+  <path d="M672,236 l6,5 l-6,5" fill="none" stroke="#6B6B78" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- node 4 -->
+  <rect x="684" y="200" width="144" height="82" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="700" y="220" class="kick">4 · resolved</text>
+  <text x="700" y="240" class="title">Connected</text>
+  <text x="700" y="258" class="meta">re-fetch (RLS)</text>
+  <path d="M700,270 l5,5 l10,-11" fill="none" stroke="#4CB782" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- no-token banner -->
+  <rect x="40" y="298" width="788" height="40" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="56" y="323" class="note"><tspan fill="#6E8BFF" font-weight="700">No token reaches the device.</tspan> The code is exchanged server-side; the redirect carries only a success signal (AOD-9 §7.1).</text>
+
+  <!-- key/location + none -->
+  <text x="32" y="372" class="sec">key · location · none (no browser)</text>
+  <rect x="32" y="384" width="796" height="58" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="48" y="408" class="mono" fill="#6E8BFF">admin_key · api_key</text><text x="240" y="408" class="meta">a key field → POST credentials-store → Vault</text>
+  <text x="48" y="430" class="mono" fill="#6E8BFF">platform_key</text><text x="240" y="430" class="meta">a location search → stored as connection config (no Vault), no per-user secret</text>
+  <text x="812" y="408" text-anchor="end" class="cal">interior = §6</text>
+  <text x="812" y="430" text-anchor="end" class="cal">AOD-9 §7.2</text>
+
+  <line x1="32" y1="466" x2="828" y2="466" stroke="#22222C"/>
+  <text x="32" y="484" class="note"><tspan fill="#6E8BFF" font-weight="700">This design places the handoff.</tspan> The broker internals (exchange, refresh, Vault) are AOD-9; this fixes the connect affordance and the return.</text>
+</svg>
