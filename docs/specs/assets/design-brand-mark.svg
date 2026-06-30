@@ -1,0 +1,94 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela compact mark: the ambient star, app-icon glyph and construction</title>
+  <desc>The Vela logomark is a four-point ambient star, a single point of light. The sheet shows the app icon on the dark surface and on the light surface, a monochrome knockout for single-color contexts, the geometric construction on a square keyline with an optical-center cross and a bounding circle, the clear-space rule of one half mark-height on every side, and a minimum-size row from forty-eight down to sixteen pixels where the small secondary constellation star drops below twenty-four pixels for legibility.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .lab{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .labn{font-size:10.5px;fill:#8A8A97;}
+    .anno{font-size:11px;fill:#C9C9D4;}
+    .key{font-size:10px;fill:#6E8BFF;letter-spacing:0.5px;}
+    .dim{font-size:10px;fill:#6F6F7C;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela mark · the ambient star</text>
+  <text x="32" y="60" class="sub">A single four-point point of light. One mark, drawn in the one accent, on the dark surface the product already is.</text>
+
+  <!-- app icon dark -->
+  <rect x="32" y="92" width="150" height="150" rx="33" fill="#121218" stroke="#2A2A36"/>
+  <g transform="translate(107,167)" fill="#6E8BFF">
+    <path d="M0,-40 Q0,0 40,0 Q0,0 0,40 Q0,0 -40,0 Q0,0 0,-40 Z"/>
+  </g>
+  <line x1="129" y1="145" x2="142" y2="132" stroke="#6E8BFF" stroke-width="1.4" opacity="0.35"/>
+  <g transform="translate(146,128)" fill="#6E8BFF" opacity="0.85">
+    <path d="M0,-11 Q0,0 11,0 Q0,0 0,11 Q0,0 -11,0 Q0,0 0,-11 Z"/>
+  </g>
+  <text x="32" y="264" class="lab">App icon · dark <tspan class="labn">(primary)</tspan></text>
+
+  <!-- app icon light -->
+  <rect x="206" y="92" width="150" height="150" rx="33" fill="#F6F6FA" stroke="#DADAE2"/>
+  <g transform="translate(281,167)" fill="#3F5BD6">
+    <path d="M0,-40 Q0,0 40,0 Q0,0 0,40 Q0,0 -40,0 Q0,0 0,-40 Z"/>
+  </g>
+  <line x1="303" y1="145" x2="316" y2="132" stroke="#3F5BD6" stroke-width="1.4" opacity="0.4"/>
+  <g transform="translate(320,128)" fill="#3F5BD6" opacity="0.9">
+    <path d="M0,-11 Q0,0 11,0 Q0,0 0,11 Q0,0 -11,0 Q0,0 0,-11 Z"/>
+  </g>
+  <text x="206" y="264" class="lab">App icon · light</text>
+
+  <!-- monochrome knockout -->
+  <rect x="380" y="92" width="150" height="150" rx="33" fill="#F4F4F8" stroke="#DADAE2"/>
+  <g transform="translate(455,167)" fill="#0B0B0F">
+    <path d="M0,-40 Q0,0 40,0 Q0,0 0,40 Q0,0 -40,0 Q0,0 0,-40 Z"/>
+  </g>
+  <text x="380" y="264" class="lab">Monochrome <tspan class="labn">(1-color)</tspan></text>
+
+  <!-- construction panel -->
+  <rect x="560" y="92" width="268" height="150" rx="14" fill="#101016" stroke="#2A2A36"/>
+  <!-- keyline square + bounding circle + center cross -->
+  <g transform="translate(636,167)">
+    <rect x="-44" y="-44" width="88" height="88" rx="6" fill="none" stroke="#3A3A46" stroke-dasharray="3 3"/>
+    <circle cx="0" cy="0" r="44" fill="none" stroke="#2E2E3A" stroke-dasharray="2 3"/>
+    <line x1="-52" y1="0" x2="52" y2="0" stroke="#2A2A36" stroke-width="0.75"/>
+    <line x1="0" y1="-52" x2="0" y2="52" stroke="#2A2A36" stroke-width="0.75"/>
+    <path d="M0,-40 Q0,0 40,0 Q0,0 0,40 Q0,0 -40,0 Q0,0 0,-40 Z" fill="#6E8BFF"/>
+  </g>
+  <text x="700" y="150" class="key">SQUARE KEYLINE</text>
+  <text x="700" y="166" class="dim">88 box, tips touch</text>
+  <text x="700" y="186" class="key">CONCAVE EDGES</text>
+  <text x="700" y="202" class="dim">curve to optical center</text>
+  <text x="700" y="222" class="dim">radius : waist = 1 : 0</text>
+
+  <!-- clear space -->
+  <text x="32" y="300" class="lab">Clear space <tspan class="labn">= ½ mark height (x) on every side</tspan></text>
+  <g transform="translate(110,372)">
+    <rect x="-58" y="-58" width="116" height="116" fill="none" stroke="#3A3A46" stroke-dasharray="4 4"/>
+    <rect x="-29" y="-29" width="58" height="58" fill="none" stroke="#2E2E3A"/>
+    <path d="M0,-29 Q0,0 29,0 Q0,0 0,29 Q0,0 -29,0 Q0,0 0,-29 Z" fill="#6E8BFF"/>
+    <line x1="-29" y1="44" x2="-58" y2="44" stroke="#6E8BFF" stroke-width="0.75"/>
+    <line x1="29" y1="44" x2="58" y2="44" stroke="#6E8BFF" stroke-width="0.75"/>
+    <text x="-44" y="40" class="dim" text-anchor="middle">½x</text>
+    <text x="44" y="40" class="dim" text-anchor="middle">½x</text>
+  </g>
+
+  <!-- min size row -->
+  <text x="300" y="300" class="lab">Minimum size <tspan class="labn">· ≥ 16px digital</tspan></text>
+  <g transform="translate(320,360)" fill="#6E8BFF"><path d="M0,-24 Q0,0 24,0 Q0,0 0,24 Q0,0 -24,0 Q0,0 0,-24 Z"/>
+    <line x1="13" y1="-13" x2="20" y2="-20" stroke="#6E8BFF" stroke-width="1" opacity="0.35"/>
+    <g transform="translate(22,-22)" opacity="0.85"><path d="M0,-6 Q0,0 6,0 Q0,0 0,6 Q0,0 -6,0 Q0,0 0,-6 Z"/></g>
+  </g>
+  <text x="320" y="400" class="dim" text-anchor="middle">48</text>
+  <g transform="translate(400,360)" fill="#6E8BFF"><path d="M0,-16 Q0,0 16,0 Q0,0 0,16 Q0,0 -16,0 Q0,0 0,-16 Z"/></g>
+  <text x="400" y="400" class="dim" text-anchor="middle">32</text>
+  <g transform="translate(464,360)" fill="#6E8BFF"><path d="M0,-12 Q0,0 12,0 Q0,0 0,12 Q0,0 -12,0 Q0,0 0,-12 Z"/></g>
+  <text x="464" y="400" class="dim" text-anchor="middle">24</text>
+  <g transform="translate(520,360)" fill="#6E8BFF"><path d="M0,-8 Q0,0 8,0 Q0,0 0,8 Q0,0 -8,0 Q0,0 0,-8 Z"/></g>
+  <text x="520" y="400" class="dim" text-anchor="middle">16</text>
+  <text x="300" y="424" class="anno">The secondary constellation star drops below 24px; the single star carries the small sizes.</text>
+
+  <line x1="32" y1="470" x2="828" y2="470" stroke="#22222C"/>
+  <text x="32" y="496" class="anno">The mark is the product distilled: one glowing point on a dark field, the same thing a lit widget is. It never appears in a second hue.</text>
+  <text x="32" y="514" class="anno">On light surfaces it uses the light-theme accent (#3F5BD6); for one-color print or stamps it knocks out solid (no second star).</text>
+  <text x="32" y="538" class="dim">Tokens: accent #6E8BFF (dark) / #3F5BD6 (light) · tile #121218 · icon radius ≈ 22% of edge · stroke: none (filled glyph).</text>
+</svg>

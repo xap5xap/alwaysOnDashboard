@@ -1,0 +1,68 @@
+<svg width="100%" viewBox="0 0 860 620" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela brand palette: dark primary, light, reserved status, and ambient night</title>
+  <desc>The Vela color system, anchored on the shipped app themes. The dark theme is the primary ambient surface with background, surface, raised surface, border, text, muted text, and the single blue accent. The light theme is the foreground-app variant with the same roles and a deeper blue accent. The status hues amber, red, and green are reserved for the stale, error, and confirm dots and never used as brand color. The deep-red ambient night palette recolors the Clock at night. The whole system uses exactly one accent per theme; there is no rainbow.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .row{font-size:11px;font-weight:700;fill:#F4F4F8;letter-spacing:1px;}
+    .rown{font-size:10.5px;font-weight:400;fill:#8A8A97;letter-spacing:0;}
+    .role{font-size:10px;fill:#9B9BA8;}
+    .hex{font-size:9.5px;fill:#6F6F7C;font-family:ui-monospace,Menlo,monospace;}
+    .anno{font-size:11px;fill:#C9C9D4;}
+    .acc{font-size:11px;font-weight:700;fill:#6E8BFF;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="619" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela palette · one accent, dark-first</text>
+  <text x="32" y="60" class="sub">The shipped app themes, formalized as the brand color system. Dark is primary; light is the foreground variant. Handed to AOD-19.</text>
+
+  <!-- DARK row -->
+  <text x="32" y="88" class="row">DARK <tspan class="rown">· primary ambient surface</tspan></text>
+  <g>
+    <rect x="32"  y="100" width="96" height="52" rx="8" fill="#0B0B0F" stroke="#3A3A46"/><text x="32" y="96" class="role">background</text><text x="32" y="170" class="hex">#0B0B0F</text>
+    <rect x="140" y="100" width="96" height="52" rx="8" fill="#16161D" stroke="#3A3A46"/><text x="140" y="96" class="role">surface</text><text x="140" y="170" class="hex">#16161D</text>
+    <rect x="248" y="100" width="96" height="52" rx="8" fill="#1F1F29" stroke="#3A3A46"/><text x="248" y="96" class="role">surfaceAlt</text><text x="248" y="170" class="hex">#1F1F29</text>
+    <rect x="356" y="100" width="96" height="52" rx="8" fill="#2A2A36" stroke="#3A3A46"/><text x="356" y="96" class="role">border</text><text x="356" y="170" class="hex">#2A2A36</text>
+    <rect x="464" y="100" width="96" height="52" rx="8" fill="#F4F4F8"/><text x="464" y="96" class="role">text</text><text x="464" y="170" class="hex">#F4F4F8</text>
+    <rect x="572" y="100" width="96" height="52" rx="8" fill="#9B9BA8"/><text x="572" y="96" class="role">textMuted</text><text x="572" y="170" class="hex">#9B9BA8</text>
+    <rect x="680" y="100" width="96" height="52" rx="8" fill="#6E8BFF"/><text x="680" y="96" class="role">accent</text><text x="680" y="170" class="hex">#6E8BFF</text>
+  </g>
+
+  <!-- LIGHT row -->
+  <text x="32" y="206" class="row">LIGHT <tspan class="rown">· foreground app + store on white</tspan></text>
+  <g>
+    <rect x="32"  y="218" width="96" height="52" rx="8" fill="#F6F6FA" stroke="#3A3A46"/><text x="32" y="214" class="role">background</text><text x="32" y="288" class="hex">#F6F6FA</text>
+    <rect x="140" y="218" width="96" height="52" rx="8" fill="#FFFFFF" stroke="#3A3A46"/><text x="140" y="214" class="role">surface</text><text x="140" y="288" class="hex">#FFFFFF</text>
+    <rect x="248" y="218" width="96" height="52" rx="8" fill="#EEEEF3" stroke="#3A3A46"/><text x="248" y="214" class="role">surfaceAlt</text><text x="248" y="288" class="hex">#EEEEF3</text>
+    <rect x="356" y="218" width="96" height="52" rx="8" fill="#DADAE2" stroke="#3A3A46"/><text x="356" y="214" class="role">border</text><text x="356" y="288" class="hex">#DADAE2</text>
+    <rect x="464" y="218" width="96" height="52" rx="8" fill="#16161D"/><text x="464" y="214" class="role">text</text><text x="464" y="288" class="hex">#16161D</text>
+    <rect x="572" y="218" width="96" height="52" rx="8" fill="#6B6B78"/><text x="572" y="214" class="role">textMuted</text><text x="572" y="288" class="hex">#6B6B78</text>
+    <rect x="680" y="218" width="96" height="52" rx="8" fill="#3F5BD6"/><text x="680" y="214" class="role">accent</text><text x="680" y="288" class="hex">#3F5BD6</text>
+  </g>
+
+  <!-- STATUS row -->
+  <text x="32" y="324" class="row">STATUS <tspan class="rown">· reserved for the dot + badge only, never brand color</tspan></text>
+  <g>
+    <rect x="32"  y="336" width="96" height="52" rx="8" fill="#F2B84B"/><text x="32" y="332" class="role">warning · dark</text><text x="32" y="406" class="hex">#F2B84B</text>
+    <rect x="140" y="336" width="96" height="52" rx="8" fill="#FF6B6B"/><text x="140" y="332" class="role">error · dark</text><text x="140" y="406" class="hex">#FF6B6B</text>
+    <rect x="248" y="336" width="96" height="52" rx="8" fill="#4CB782"/><text x="248" y="332" class="role">success · dark</text><text x="248" y="406" class="hex">#4CB782</text>
+    <rect x="356" y="336" width="96" height="52" rx="8" fill="#B5791B"/><text x="356" y="332" class="role">warning · light</text><text x="356" y="406" class="hex">#B5791B</text>
+    <rect x="464" y="336" width="96" height="52" rx="8" fill="#D64545"/><text x="464" y="332" class="role">error · light</text><text x="464" y="406" class="hex">#D64545</text>
+    <rect x="572" y="336" width="96" height="52" rx="8" fill="#2F8F63"/><text x="572" y="332" class="role">success · light</text><text x="572" y="406" class="hex">#2F8F63</text>
+  </g>
+
+  <!-- NIGHT row -->
+  <text x="32" y="442" class="row">AMBIENT NIGHT <tspan class="rown">· deep-red Clock opt-in (design-widget-system §3.2)</tspan></text>
+  <g>
+    <rect x="32"  y="454" width="96" height="52" rx="8" fill="#0A0506" stroke="#3A3A46"/><text x="32" y="450" class="role">night.bg</text><text x="32" y="524" class="hex">#0A0506</text>
+    <rect x="140" y="454" width="96" height="52" rx="8" fill="#140709" stroke="#3A3A46"/><text x="140" y="450" class="role">night.surface</text><text x="140" y="524" class="hex">#140709</text>
+    <rect x="248" y="454" width="96" height="52" rx="8" fill="#2E1214" stroke="#3A3A46"/><text x="248" y="450" class="role">night.border</text><text x="248" y="524" class="hex">#2E1214</text>
+    <rect x="356" y="454" width="96" height="52" rx="8" fill="#C2362B"/><text x="356" y="450" class="role">night.primary</text><text x="356" y="524" class="hex">#C2362B</text>
+    <rect x="464" y="454" width="96" height="52" rx="8" fill="#8A201B"/><text x="464" y="450" class="role">night.secondary</text><text x="464" y="524" class="hex">#8A201B</text>
+    <rect x="572" y="454" width="96" height="52" rx="8" fill="#5E1714"/><text x="572" y="450" class="role">night.muted</text><text x="572" y="524" class="hex">#5E1714</text>
+  </g>
+
+  <line x1="32" y1="554" x2="828" y2="554" stroke="#22222C"/>
+  <text x="32" y="580" class="anno"><tspan class="acc">One accent per theme.</tspan> The accent carries actions, the in-flight refresh, and a card's one highlighted figure. Status hues are not brand color.</text>
+  <text x="32" y="600" class="anno">No new base color is invented here; the brand adopts the shipped set and hands it to AOD-19 to formalize as design tokens.</text>
+</svg>
