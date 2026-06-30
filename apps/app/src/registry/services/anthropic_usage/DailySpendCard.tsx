@@ -1,18 +1,26 @@
-// The "Daily Spend Sparkline" leaf renderer (AOD-8 §6.1, integration-claude.md §4.2). Reached only on
-// data-bearing lifecycle states; the host draws every other state. Receives only { data, config, size }.
-// The server maps each daily bucket to a DailyCost row (cents -> dollars / 100, oldest-first, §6.1); this
-// card draws them as a simple proportional bar sparkline. An empty days[] is the normal "no spend yet
-// this month" state, rendered flat, never a crash. Functional and on-brand-enough; the sparkline visual
-// polish and the currency typography are a design follow-up (§10).
+// The "Daily Spend Sparkline" leaf renderer (AOD-8 §6.1, integration-claude.md §4.2, design-claude-usage.md
+// §6). Reached only on data-bearing lifecycle states; the host draws every other state. Receives only
+// { data, config, size }. The server maps each daily bucket to a DailyCost row (cents -> dollars / 100,
+// oldest-first, §6.1); this card draws them as the §4 sparkline. An empty days[] is the normal "no spend
+// yet this month" state, drawn as the §5.1 EmptyBody, never a crash.
+//
+// AOD-36 polish: the chart is the hero, the total supports it (the inverse of Spend MTD). The sparkline
+// (§4) is the largest, brightest element; the MTD total is a supporting type.title anchor in the §5.1
+// money typography with a quiet "MONTH TO DATE" qualifier. At wide it is a banner (total left, sparkline
+// filling the right); at large it is a square (a more prominent total, a taller sparkline, and the
+// large-only "today $X.XX" value label over the today bar). Both show the oldest -> Today axis endpoints
+// so the direction reads. The leaf's old "Claude Daily Spend" label is gone: the host owns the caption (§4).
 import React from 'react';
 import { Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { DailyCost, DailySpendData } from './types';
+import { EmptyBody } from '../../../widgets/EmptyBody';
+import { MoneyValue, formatPlainMoney } from './MoneyValue';
+import { Sparkline } from './Sparkline';
+import { ChartEmptyGlyph } from './glyphs';
 
-const SPARK_HEIGHT = 48; // px the tallest bar fills; the rest scale to the window max.
-
-/** Defensive read: a partial payload renders as the empty card, never a crash (§4.2). */
+/** Defensive read: a partial payload renders as the empty body, never a crash (§4.2). */
 function asDailySpend(data: unknown): DailySpendData {
   const d = (data ?? {}) as Partial<DailySpendData>;
   const days = Array.isArray(d.days) ? (d.days as DailyCost[]) : [];
@@ -23,58 +31,132 @@ function asDailySpend(data: unknown): DailySpendData {
   };
 }
 
-/** Major-unit money with the echoed currency: a $ symbol for USD, else a code suffix (§4.0a). */
-function formatMoney(amount: number, currency: string): string {
-  const fixed = amount.toFixed(2);
-  return currency === 'USD' ? `$${fixed}` : `${fixed} ${currency}`;
+/** Parse "YYYY-MM-DD" as a LOCAL date and label it "Jun 1" (the oldest-day axis endpoint). */
+function axisStartLabel(ymd: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd);
+  if (!m) return '';
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function DailySpendCard({ data }: WidgetRenderProps) {
+export function DailySpendCard({ data, size }: WidgetRenderProps) {
+  const { theme } = useUnistyles();
   const { days, currency, total } = asDailySpend(data);
 
   if (days.length === 0) {
+    // §5.1 empty body: a calm "No spend yet this month" with the per-widget flat-chart glyph, no action
+    // (nothing is wrong, the org simply has not spent yet). Wrapped to keep the *-empty testID contract.
     return (
-      <View style={styles.empty} accessibilityRole="summary">
-        <Text style={styles.emptyText} testID="claude-daily-spend-empty">
-          No spend yet this month
-        </Text>
+      <View style={styles.fill} testID="claude-daily-spend-empty">
+        <EmptyBody
+          line="No spend yet this month"
+          subline="Costs appear as you use the API"
+          glyph={<ChartEmptyGlyph color={theme.colors.accent} />}
+        />
       </View>
     );
   }
 
-  // Scale each bar to the window's max so the sparkline shows relative daily movement; a zero-spend month
-  // (max 0) draws a flat baseline, the spec's "flat sparkline" state (§4.2), never a divide-by-zero.
-  const max = days.reduce((m, d) => (d.amount > m ? d.amount : m), 0);
+  const isLarge = size === 'large';
+  const chartHeight = isLarge ? theme.sparkline.chartHeight.large : theme.sparkline.chartHeight.wide;
+  const todayAmount = days[days.length - 1]?.amount ?? 0;
 
-  return (
-    <View style={styles.body} accessibilityRole="summary" testID="claude-daily-spend">
-      <View style={styles.header}>
-        <Text style={styles.label} numberOfLines={1}>
-          Claude Daily Spend
-        </Text>
-        <Text style={styles.total} numberOfLines={1} testID="claude-daily-spend-total">
-          {formatMoney(total, currency)}
-        </Text>
+  // The supporting MTD anchor (equals SpendMtdData.amount over the same window, §6.1): the §5.1 money
+  // typography at the smaller type.title step. Not the hero; the chart is.
+  const totalBlock = (
+    <View>
+      <MoneyValue
+        amount={total}
+        currency={currency}
+        dollarsSize={theme.type.title.fontSize ?? 18}
+        dollarsWeight={theme.type.title.fontWeight}
+        dollarsColor={theme.colors.text}
+        centsColor={theme.colors.textMuted}
+        testID="claude-daily-spend-total"
+      />
+      <Text style={styles.mtdLabel}>MONTH TO DATE</Text>
+    </View>
+  );
+
+  const spark = (
+    <Sparkline
+      days={days}
+      height={chartHeight}
+      barColor={theme.colors.accent}
+      baselineColor={theme.colors.border}
+      barGap={theme.sparkline.barGap}
+      barRadius={theme.sparkline.barRadius}
+      minBarHeight={theme.sparkline.minBarHeight}
+      todayOpacity={theme.sparkline.todayOpacity}
+      pastOpacity={theme.sparkline.pastOpacity}
+      testID="claude-sparkline"
+    />
+  );
+
+  const axis = (
+    <View style={styles.axisRow}>
+      <Text style={styles.axisStart} numberOfLines={1}>
+        {axisStartLabel(days[0].date)}
+      </Text>
+      <Text style={styles.axisToday} numberOfLines={1}>
+        Today
+      </Text>
+    </View>
+  );
+
+  // wide (3x1): a banner. The total on the left; the sparkline filling the right with its axis under it.
+  if (!isLarge) {
+    return (
+      <View style={styles.wide} accessibilityRole="summary" testID="claude-daily-spend">
+        {totalBlock}
+        <View style={styles.wideChart}>
+          {spark}
+          {axis}
+        </View>
       </View>
-      <View style={styles.spark}>
-        {days.map((d) => (
-          <View
-            key={d.date}
-            style={[styles.bar, { height: max > 0 ? Math.max(2, (d.amount / max) * SPARK_HEIGHT) : 2 }]}
-          />
-        ))}
+    );
+  }
+
+  // large (2x2): a square. A more prominent total on top; the today value label; a taller sparkline.
+  return (
+    <View style={styles.large} accessibilityRole="summary" testID="claude-daily-spend">
+      {totalBlock}
+      <Text style={styles.todayLabel} numberOfLines={1} testID="claude-daily-spend-today">
+        today {formatPlainMoney(todayAmount, currency)}
+      </Text>
+      <View style={styles.largeChart}>
+        {spark}
+        {axis}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  body: { gap: theme.spacing(1.5) },
-  empty: { paddingVertical: theme.spacing(2) },
-  emptyText: { color: theme.colors.textMuted, fontSize: 14 },
-  header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: theme.spacing(2) },
-  label: { color: theme.colors.accent, fontSize: 13, fontWeight: '600' },
-  total: { color: theme.colors.text, fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  spark: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: SPARK_HEIGHT },
-  bar: { flex: 1, backgroundColor: theme.colors.accent, borderRadius: 1, minWidth: 2 },
+  fill: { flex: 1 },
+
+  // wide banner: total left, chart fills right
+  wide: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(3) },
+  wideChart: { flex: 1, gap: theme.spacing(1) },
+
+  // large square: total on top, today label, tall chart
+  large: { flex: 1, gap: theme.spacing(1.5) },
+  largeChart: { flex: 1, justifyContent: 'flex-end', gap: theme.spacing(1) },
+
+  // "MONTH TO DATE" qualifier under the total (the small tracked badge step), muted
+  mtdLabel: { ...theme.type.badge, color: theme.colors.textMuted, marginTop: theme.spacing(0.5) },
+
+  // the large-only "today $X.XX" annotation over the today bar (accent, the one numeric label the chart carries)
+  todayLabel: {
+    ...theme.type.meta,
+    fontWeight: '600',
+    color: theme.colors.accent,
+    fontVariant: ['tabular-nums'],
+    textAlign: 'right',
+  },
+
+  // oldest -> Today axis endpoints under the chart; Today bright, the start muted
+  axisRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  axisStart: { ...theme.type.caption, letterSpacing: 0, color: theme.colors.textMuted },
+  axisToday: { ...theme.type.caption, letterSpacing: 0, fontWeight: '700', color: theme.colors.text },
 }));
