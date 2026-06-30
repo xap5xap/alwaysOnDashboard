@@ -1,0 +1,76 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela paywall per-trigger framing: one modal, the lead line chosen by the trigger param</title>
+  <desc>The diagram shows how one paywall modal leads with a different angle depending on the trigger param passed by the gate. At the top, five lock sources flow into one paywall route carrying a trigger parameter: enter kiosk, themes, a third service, a second dashboard, and faster refresh. Below, a table maps each trigger value to its lead line and the entitlement lever it gates: kiosk leads with Kiosk Mode turns this device into an always-on wall display, themes with Make it yours with themes, services with You are using both free services, dashboards with One dashboard on Free, more on Pro, and refresh with Free refreshes every 15 minutes, Pro goes live. A note states the shared body, value props, packages, trial CTA, and restore are identical across triggers, only the lead line changes, and that the angles are AOD-12 section 9 and the body is this design's section 6.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .node{font-size:10.5px;font-weight:600;fill:#F4F4F8;}
+    .lead{font-size:11px;fill:#F4F4F8;}
+    .trg{font-size:10px;font-weight:700;fill:#6E8BFF;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="559" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Paywall per-trigger framing · one modal, the lead by trigger</text>
+  <text x="32" y="60" class="sub">Every Gate lock routes to one paywall route with a trigger param (app-ia §4.5). The body is identical; only the lead changes.</text>
+
+  <!-- ===== SOURCES → ROUTE ===== -->
+  <text x="32" y="92" class="sec">FIVE LOCKS · ONE ROUTE</text>
+  <rect x="32" y="104" width="120" height="28" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="92" y="122" text-anchor="middle" class="node">Enter Kiosk</text>
+  <rect x="32" y="138" width="120" height="28" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="92" y="156" text-anchor="middle" class="node">Themes row</text>
+  <rect x="32" y="172" width="120" height="28" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="92" y="190" text-anchor="middle" class="node">3rd service</text>
+  <rect x="32" y="206" width="120" height="28" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="92" y="224" text-anchor="middle" class="node">2nd dashboard</text>
+  <rect x="32" y="240" width="120" height="28" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="92" y="258" text-anchor="middle" class="node">Faster refresh</text>
+  <!-- arrows merge -->
+  <path d="M152,118 C200,118 200,176 244,176" fill="none" stroke="#3A3A48" stroke-width="1.5"/>
+  <path d="M152,152 C196,152 196,178 244,178" fill="none" stroke="#3A3A48" stroke-width="1.5"/>
+  <path d="M152,186 h92" fill="none" stroke="#3A3A48" stroke-width="1.5"/>
+  <path d="M152,220 C196,220 196,182 244,182" fill="none" stroke="#3A3A48" stroke-width="1.5"/>
+  <path d="M152,254 C200,254 200,184 244,184" fill="none" stroke="#3A3A48" stroke-width="1.5"/>
+  <path d="M244,180 l-8,-3 l0,6 z" fill="#3A3A48"/>
+  <rect x="246" y="160" width="150" height="40" rx="10" fill="#101019" stroke="#6E8BFF" stroke-opacity="0.6"/>
+  <text x="321" y="178" text-anchor="middle" class="acc" font-size="11">paywall route</text>
+  <text x="321" y="192" text-anchor="middle" class="trg">?trigger=…</text>
+
+  <!-- ===== TABLE: trigger → lead ===== -->
+  <text x="32" y="296" class="sec">TRIGGER → LEAD LINE · the body below the lead is unchanged</text>
+  <rect x="32" y="308" width="796" height="190" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <line x1="170" y1="308" x2="170" y2="498" stroke="#22222C"/>
+  <text x="48" y="330" class="cap">TRIGGER</text>
+  <text x="186" y="330" class="cap">LEAD LINE (calm voice, brand §7)</text>
+
+  <text x="48" y="356" class="trg">kiosk</text>
+  <text x="186" y="356" class="lead">"Kiosk Mode turns this device into an always-on wall display."</text>
+  <line x1="40" y1="368" x2="820" y2="368" stroke="#1A1A22"/>
+
+  <text x="48" y="390" class="trg">themes</text>
+  <text x="186" y="390" class="lead">"Make it yours. Themes are a Pro touch."</text>
+  <line x1="40" y1="402" x2="820" y2="402" stroke="#1A1A22"/>
+
+  <text x="48" y="424" class="trg">services</text>
+  <text x="186" y="424" class="lead">"You are using both free services. Pro connects unlimited services."</text>
+  <line x1="40" y1="436" x2="820" y2="436" stroke="#1A1A22"/>
+
+  <text x="48" y="458" class="trg">dashboards</text>
+  <text x="186" y="458" class="lead">"Free includes one dashboard. Pro adds as many as you like."</text>
+  <line x1="40" y1="470" x2="820" y2="470" stroke="#1A1A22"/>
+
+  <text x="48" y="492" class="trg">refresh</text>
+  <text x="186" y="492" class="lead">"Free refreshes every 15 minutes. Pro goes live, down to per-widget rates."</text>
+
+  <line x1="32" y1="520" x2="828" y2="520" stroke="#22222C"/>
+  <text x="32" y="540" class="note"><tspan class="acc">Only the lead changes.</tspan> The value props, packages, trial CTA, and restore (§6) are identical. Angles = AOD-12 §9; the body is this design's.</text>
+</svg>

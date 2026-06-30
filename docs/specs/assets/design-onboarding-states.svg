@@ -1,0 +1,87 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela onboarding empty and success states: nothing connected yet, first service connected, and the finish into the empty dashboard</title>
+  <desc>Three device frames show the empty and success states the issue names. The first frame is the empty state of the connect step, nothing connected yet: a calm Nothing connected yet line over the connect rows with Skip for now, never an error treatment. The second frame is the success state after the first connect: a check mark, a Linear connected confirmation, a Connect another ghost action, and a Continue primary. The third frame is the finish handoff, the AOD-27 empty dashboard, with the hub header over a centered Your dashboard is empty line and an Add widget primary, tagged AOD-27 owns this. Below, a row distinguishes the two empties, the onboarding connect-step empty owned here and the dashboard empty owned by AOD-27, and a token block notes both are calm CTAs, never errors, and add no new token.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:15px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Onboarding empty + success states</text>
+  <text x="32" y="60" class="sub">The Must-cover states: nothing connected yet, first service connected, and the finish into the AOD-27 empty dashboard.</text>
+  <text x="32" y="92" class="sec">EMPTY → SUCCESS → FINISH</text>
+
+  <!-- ===== FRAME A: connect-step EMPTY ===== -->
+  <text x="32" y="116" class="cap">EMPTY · nothing connected yet</text>
+  <rect x="32" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <circle cx="140" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="156" cy="148" r="4" fill="#6E8BFF"/>
+  <circle cx="172" cy="148" r="4" fill="#2A2A36"/>
+  <text x="48" y="184" class="title">Connect your first service</text>
+  <text x="48" y="202" class="meta">Nothing connected yet. Pick one to begin.</text>
+  <rect x="48" y="214" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="238" class="title">Linear</text>
+  <text x="250" y="238" text-anchor="end" class="acc" font-size="11">Connect</text>
+  <rect x="48" y="258" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="282" class="title">Google Calendar</text>
+  <text x="250" y="282" text-anchor="end" class="acc" font-size="11">Connect</text>
+  <rect x="48" y="302" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="326" class="title">Weather</text>
+  <text x="250" y="326" text-anchor="end" class="acc" font-size="11">Set location</text>
+  <text x="48" y="368" class="meta">Skip for now</text>
+  <text x="48" y="410" class="cal" fill="#6E8BFF">a calm CTA, not an error</text>
+
+  <!-- ===== FRAME B: SUCCESS ===== -->
+  <text x="306" y="116" class="cap">SUCCESS · first service connected</text>
+  <rect x="306" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <circle cx="414" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="430" cy="148" r="4" fill="#6E8BFF"/>
+  <circle cx="446" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="430" cy="214" r="24" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <path d="M419,214 l7,8 l15,-17" fill="none" stroke="#6E8BFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="430" y="272" text-anchor="middle" class="title" font-size="15">Linear connected</text>
+  <text x="430" y="294" text-anchor="middle" class="meta">My Issues is ready to glance at.</text>
+  <rect x="338" y="316" width="184" height="38" rx="10" fill="#6E8BFF"/>
+  <text x="430" y="340" text-anchor="middle" class="on" font-size="13">Continue</text>
+  <text x="430" y="382" text-anchor="middle" class="acc" font-size="12">Connect another</text>
+  <text x="338" y="418" class="cal">success = §5.1 check · accent · type.title</text>
+
+  <!-- ===== FRAME C: FINISH into empty dashboard ===== -->
+  <text x="580" y="116" class="cap">FINISH · the AOD-27 empty dashboard</text>
+  <rect x="580" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <path d="M602,156 L604,161 L609,163 L604,165 L602,170 L600,165 L595,163 L600,161 Z" fill="#6E8BFF"/>
+  <text x="616" y="167" class="word">vela</text>
+  <text x="744" y="164" class="acc" font-size="10">Add</text>
+  <text x="812" y="164" text-anchor="end" class="acc" font-size="10">Settings</text>
+  <line x1="596" y1="180" x2="812" y2="180" stroke="#2A2A36"/>
+  <path d="M704,256 v22 M693,267 h22" stroke="#6E8BFF" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+  <text x="704" y="312" text-anchor="middle" class="title" font-size="14">Your dashboard is empty.</text>
+  <text x="704" y="332" text-anchor="middle" class="meta">Add a widget to get started.</text>
+  <rect x="640" y="350" width="128" height="38" rx="10" fill="#6E8BFF"/>
+  <text x="704" y="374" text-anchor="middle" class="on" font-size="13">Add widget</text>
+  <text x="596" y="418" class="cal" fill="#6E8BFF">AOD-27 §5 owns this · onboarding finishes here</text>
+
+  <!-- ===== THE TWO EMPTIES ===== -->
+  <line x1="32" y1="462" x2="828" y2="462" stroke="#22222C"/>
+  <text x="32" y="484" class="sec">TWO EMPTIES, TWO OWNERS · neither is an error</text>
+  <rect x="32" y="496" width="388" height="84" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="48" y="518" class="note"><tspan class="acc">Connect-step empty → AOD-29 (here).</tspan></text>
+  <text x="48" y="536" class="tok">"Nothing connected yet." over the connect rows.</text>
+  <text x="48" y="550" class="tok">Offers Connect per service + Skip for now.</text>
+  <text x="48" y="566" class="tok">Calm CTA voice (brand §7), not a needs-config error.</text>
+  <rect x="440" y="496" width="388" height="84" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="456" y="518" class="note"><tspan class="acc">Dashboard empty → AOD-27 §5.</tspan></text>
+  <text x="456" y="536" class="tok">"Your dashboard is empty." + Add widget.</text>
+  <text x="456" y="550" class="tok">Onboarding replaces into it; it is not redrawn here.</text>
+  <text x="456" y="566" class="tok">No new token: §5.1 check · type · AOD-20 §5 button.</text>
+</svg>

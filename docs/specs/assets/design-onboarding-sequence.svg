@@ -1,0 +1,99 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela onboarding first-run sequence: welcome, connect your first service, and finish into the dashboard</title>
+  <desc>Three device frames trace the first-run sequence the gate routes to. A stepper of three dots runs along the top. The first frame is the welcome step with the vela star and wordmark centered, an Always on, never loud tagline, a Get started primary, and a Skip for now ghost. The second frame is the connect-your-first-service step, which composes the AOD-28 connections list: a calm Connect your first service heading, then rows for Linear and Google Calendar offering Connect, Claude usage offering Add key, and Weather offering Set location, with a Skip for now ghost below, tagged composes AOD-28. The third frame is the finish step with a success check, a You are set line, and a Go to dashboard primary, tagged finishes into the AOD-27 empty dashboard. Below, a flow line shows welcome to connect to finish to dashboard with the skip path bypassing connect, and a token block notes the sequence composes AOD-28 and adds no new token.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:22px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .node{font-size:11px;font-weight:600;fill:#F4F4F8;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Onboarding first-run sequence · welcome → connect → finish</text>
+  <text x="32" y="60" class="sub">The screens the gate routes to (app-ia §4.2, session + first run). A guided-but-skippable sequence; the connect step composes AOD-28.</text>
+  <text x="32" y="92" class="sec">THE SEQUENCE · a 3-dot stepper · skip lands on the empty dashboard</text>
+
+  <!-- ===== STEP 1: WELCOME ===== -->
+  <text x="32" y="116" class="cap">1 · WELCOME</text>
+  <rect x="32" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <circle cx="140" cy="148" r="4" fill="#6E8BFF"/>
+  <circle cx="156" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="172" cy="148" r="4" fill="#2A2A36"/>
+  <path d="M150,210 L155,221 L166,226 L155,231 L150,242 L145,231 L134,226 L145,221 Z" fill="#6E8BFF"/>
+  <text x="156" y="284" text-anchor="middle" class="word">vela</text>
+  <text x="156" y="310" text-anchor="middle" class="meta">Always on. Never loud.</text>
+  <rect x="64" y="338" width="184" height="38" rx="10" fill="#6E8BFF"/>
+  <text x="156" y="362" text-anchor="middle" class="on" font-size="13">Get started</text>
+  <text x="156" y="404" text-anchor="middle" class="meta">Skip for now</text>
+
+  <!-- ===== STEP 2: CONNECT FIRST SERVICE ===== -->
+  <text x="306" y="116" class="cap">2 · CONNECT YOUR FIRST SERVICE</text>
+  <rect x="306" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <circle cx="414" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="430" cy="148" r="4" fill="#6E8BFF"/>
+  <circle cx="446" cy="148" r="4" fill="#2A2A36"/>
+  <text x="322" y="180" class="title">Connect your first service</text>
+  <text x="322" y="198" class="meta">Pick what you want to glance at.</text>
+  <!-- rows: composing AOD-28 connection rows -->
+  <rect x="322" y="210" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="336" y="234" class="title">Linear</text>
+  <text x="524" y="234" text-anchor="end" class="acc" font-size="11">Connect</text>
+  <rect x="322" y="254" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="336" y="278" class="title">Google Calendar</text>
+  <text x="524" y="278" text-anchor="end" class="acc" font-size="11">Connect</text>
+  <rect x="322" y="298" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="336" y="322" class="title">Claude usage</text>
+  <text x="524" y="322" text-anchor="end" class="acc" font-size="11">Add key</text>
+  <rect x="322" y="342" width="216" height="40" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="336" y="366" class="title">Weather</text>
+  <text x="524" y="366" text-anchor="end" class="acc" font-size="11">Set location</text>
+  <text x="322" y="404" class="meta">Skip for now</text>
+  <text x="322" y="424" class="cal" fill="#6E8BFF">composes AOD-28 · rows + connect paths</text>
+
+  <!-- ===== STEP 3: FINISH ===== -->
+  <text x="580" y="116" class="cap">3 · YOU ARE SET</text>
+  <rect x="580" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <circle cx="688" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="704" cy="148" r="4" fill="#2A2A36"/>
+  <circle cx="720" cy="148" r="4" fill="#6E8BFF"/>
+  <circle cx="704" cy="226" r="26" fill="none" stroke="#6E8BFF" stroke-width="2"/>
+  <path d="M692,226 l8,9 l16,-18" fill="none" stroke="#6E8BFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="704" y="288" text-anchor="middle" class="title" font-size="15">You are set.</text>
+  <text x="704" y="310" text-anchor="middle" class="meta">Linear is connected.</text>
+  <rect x="612" y="338" width="184" height="38" rx="10" fill="#6E8BFF"/>
+  <text x="704" y="362" text-anchor="middle" class="on" font-size="13">Go to dashboard</text>
+  <text x="612" y="424" class="cal" fill="#6E8BFF">finishes → AOD-27 empty dashboard</text>
+
+  <!-- ===== FLOW LINE ===== -->
+  <line x1="32" y1="468" x2="828" y2="468" stroke="#22222C"/>
+  <text x="32" y="490" class="sec">THE FLOW · replace into the dashboard (app-ia §6.1); the connect step is optional</text>
+  <rect x="40" y="506" width="92" height="34" rx="17" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="86" y="528" text-anchor="middle" class="node">Welcome</text>
+  <path d="M132,523 h26" stroke="#3A3A48" stroke-width="1.5"/><path d="M158,519 l6,4 l-6,4" fill="none" stroke="#3A3A48" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="166" y="506" width="110" height="34" rx="17" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="221" y="528" text-anchor="middle" class="node">Connect (opt.)</text>
+  <path d="M276,523 h26" stroke="#3A3A48" stroke-width="1.5"/><path d="M302,519 l6,4 l-6,4" fill="none" stroke="#3A3A48" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="310" y="506" width="78" height="34" rx="17" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="349" y="528" text-anchor="middle" class="node">Finish</text>
+  <path d="M388,523 h26" stroke="#3A3A48" stroke-width="1.5"/><path d="M414,519 l6,4 l-6,4" fill="none" stroke="#3A3A48" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="422" y="504" width="128" height="38" rx="10" fill="#101019" stroke="#6E8BFF" stroke-opacity="0.6"/>
+  <text x="486" y="527" text-anchor="middle" class="acc" font-size="12">Dashboard (AOD-27)</text>
+  <!-- skip arc -->
+  <path d="M86,540 C86,572 486,572 486,544" fill="none" stroke="#3A3A48" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <path d="M486,544 l-3,-7 l6,0 z" fill="#3A3A48"/>
+  <text x="250" y="588" class="cal">Skip for now → straight to the empty dashboard (AOD-27 §5 "Add your first widget")</text>
+
+  <rect x="596" y="500" width="232" height="64" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="612" y="520" class="note"><tspan class="acc">No new token.</tspan></text>
+  <text x="612" y="538" class="tok">stepper = 3 dots (accent / border).</text>
+  <text x="612" y="552" class="tok">rows + connect = AOD-28; CTA = AOD-20 §5.</text>
+</svg>

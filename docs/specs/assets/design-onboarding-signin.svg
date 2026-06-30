@@ -1,0 +1,89 @@
+<svg width="100%" viewBox="0 0 860 600" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela Sign In interior: the auth card filled with the sign-in form, the busy and error states, and the sign-up mode</title>
+  <desc>Three device frames show the Sign In interior this design fills inside the AOD-21 auth card. The first frame is the default sign-in state with the vela wordmark and star, a Sign in to your dashboard subtitle, an email field, a password field, a Sign in primary button, and a Create an account secondary action, tagged card equals the AOD-20 auth card and the zone equals AOD-21. The second frame is the submitting and error state, with an Invalid login credentials error line above the primary and the primary showing a spinner reading Signing in. The third frame is the sign-up mode with a Create your account subtitle, the same fields, a password hint, a Create account primary, and a Sign in instead secondary, canonicalizing the shipped Create an account affordance as a mode toggle. Below, a token block names the field, primary, secondary, error, busy, and card roles, and a footer states the auth card chrome and the auth zone are AOD-21's.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .word{font-size:18px;font-weight:500;fill:#F4F4F8;letter-spacing:0.5px;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .on{fill:#FFFFFF;font-weight:700;}
+    .err{fill:#FF6B6B;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="599" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Sign In interior · the auth card filled</text>
+  <text x="32" y="60" class="sub">Fills the AOD-20 §8 auth card placed by AOD-21 §12. Canonicalizes the shipped SignIn.tsx form interior only.</text>
+  <text x="32" y="92" class="sec">THE FORM · email + password · one primary · a mode toggle</text>
+
+  <!-- ===== FRAME A: default ===== -->
+  <text x="32" y="116" class="cap">SIGN IN · default</text>
+  <rect x="32" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="48" y="142" width="216" height="284" rx="16" fill="#16161D" stroke="#2A2A36"/>
+  <path d="M66,170 L68.5,175.5 L74,178 L68.5,180.5 L66,186 L63.5,180.5 L58,178 L63.5,175.5 Z" fill="#6E8BFF"/>
+  <text x="82" y="184" class="word">vela</text>
+  <text x="64" y="207" class="meta">Sign in to your dashboard</text>
+  <rect x="64" y="218" width="184" height="34" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="76" y="239" class="meta">you@example.com</text>
+  <rect x="64" y="260" width="184" height="34" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="76" y="282" class="meta">• • • • • • • •</text>
+  <rect x="64" y="306" width="184" height="36" rx="8" fill="#6E8BFF"/>
+  <text x="156" y="329" text-anchor="middle" class="on" font-size="13">Sign in</text>
+  <text x="156" y="362" text-anchor="middle" class="meta">Create an account</text>
+  <text x="64" y="410" class="cal" fill="#6E8BFF">card = AOD-20 §8 · zone = AOD-21</text>
+
+  <!-- ===== FRAME B: busy + error ===== -->
+  <text x="306" y="116" class="cap">SIGN IN · submitting + error</text>
+  <rect x="306" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="322" y="142" width="216" height="284" rx="16" fill="#16161D" stroke="#2A2A36"/>
+  <path d="M340,170 L342.5,175.5 L348,178 L342.5,180.5 L340,186 L337.5,180.5 L332,178 L337.5,175.5 Z" fill="#6E8BFF"/>
+  <text x="356" y="184" class="word">vela</text>
+  <text x="338" y="207" class="meta">Sign in to your dashboard</text>
+  <rect x="338" y="216" width="184" height="34" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="350" y="237" class="meta">you@example.com</text>
+  <rect x="338" y="256" width="184" height="34" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="350" y="278" class="meta">• • • • • • • •</text>
+  <text x="338" y="307" class="meta err">Invalid login credentials.</text>
+  <rect x="338" y="314" width="184" height="36" rx="8" fill="#6E8BFF"/>
+  <circle cx="408" cy="332" r="7" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="22 10"/>
+  <text x="424" y="337" class="on" font-size="13">Signing in</text>
+  <text x="430" y="372" text-anchor="middle" class="meta" opacity="0.5">Create an account</text>
+  <text x="338" y="410" class="cal">error → type.meta / colors.error</text>
+
+  <!-- ===== FRAME C: sign up ===== -->
+  <text x="580" y="116" class="cap">CREATE ACCOUNT · sign-up mode</text>
+  <rect x="580" y="124" width="248" height="320" rx="24" fill="#0B0B0F" stroke="#2A2A36"/>
+  <rect x="596" y="142" width="216" height="284" rx="16" fill="#16161D" stroke="#2A2A36"/>
+  <path d="M614,170 L616.5,175.5 L622,178 L616.5,180.5 L614,186 L611.5,180.5 L606,178 L611.5,175.5 Z" fill="#6E8BFF"/>
+  <text x="630" y="184" class="word">vela</text>
+  <text x="612" y="207" class="meta">Create your account</text>
+  <rect x="612" y="216" width="184" height="34" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="624" y="237" class="meta">you@example.com</text>
+  <rect x="612" y="256" width="184" height="34" rx="8" fill="#1F1F29" stroke="#2A2A36"/>
+  <text x="624" y="278" class="meta">• • • • • • • •</text>
+  <text x="612" y="302" class="cal">Use 8 or more characters.</text>
+  <rect x="612" y="310" width="184" height="36" rx="8" fill="#6E8BFF"/>
+  <text x="704" y="333" text-anchor="middle" class="on" font-size="13">Create account</text>
+  <text x="704" y="366" text-anchor="middle" class="meta">Sign in instead</text>
+  <text x="612" y="410" class="cal" fill="#6E8BFF">canonicalizes "Create an account"</text>
+
+  <!-- ===== TOKEN BLOCK ===== -->
+  <line x1="32" y1="468" x2="828" y2="468" stroke="#22222C"/>
+  <text x="32" y="490" class="sec">COMPOSES · AOD-20 components, no new token</text>
+  <rect x="32" y="500" width="388" height="80" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="48" y="520" class="tok">field   : AOD-20 §6 input · surfaceAlt fill · placeholder → textMuted</text>
+  <text x="48" y="536" class="tok">primary : AOD-20 §5 primary · accent fill · onAccent label</text>
+  <text x="48" y="552" class="tok">toggle  : AOD-20 §5 ghost/secondary · sign in ⇄ sign up</text>
+  <text x="48" y="568" class="tok">error   : type.meta / colors.error · busy = spinner (onAccent)</text>
+  <rect x="440" y="500" width="388" height="80" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="456" y="520" class="note"><tspan class="acc">AOD-21 owns the card and the zone.</tspan></text>
+  <text x="456" y="538" class="tok">The auth card chrome (AOD-20 §8) + the (auth) zone +</text>
+  <text x="456" y="554" class="tok">the gate are AOD-21's. This fills the form interior only:</text>
+  <text x="456" y="570" class="tok">fields, primary, the sign-up toggle, the error + busy states.</text>
+</svg>
