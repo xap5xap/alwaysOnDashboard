@@ -1,0 +1,98 @@
+<svg width="100%" viewBox="0 0 860 700" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela non-color scales: the app-wide type ramp, the spacing scale, and the radius scale</title>
+  <desc>The Vela type, spacing, and radius scales. At the top, the type ramp: the ten named steps from display at ninety-six through hero, expanded, title, heading, body, label, meta, caption, and badge at ten, each with a real sample, its size and weight, and an app-wide role such as a button label or a settings title. Numeric steps carry tabular figures and the large steps are shown capped to fit. Below on the left, the spacing scale built on a four-pixel base, with rungs at four, eight, twelve, sixteen, twenty-four, thirty-two, and forty-eight pixels shown as accent bars and labeled with their role such as card padding. Below on the right, the radius scale: small at eight, medium at fourteen, large at twenty-two, and the newly added full at nine thousand nine hundred ninety-nine for pills, each shown as a rounded shape. The type token stays a narrow Pick of TextStyle; lineHeight is the one candidate addition.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .colh{font-size:9px;font-weight:700;fill:#6F6F7C;letter-spacing:1px;}
+    .step{font-size:11px;font-weight:600;fill:#F4F4F8;}
+    .spec{font-size:10.5px;fill:#9B9BA8;font-family:ui-monospace,Menlo,monospace;}
+    .role{font-size:10.5px;fill:#8A8A97;}
+    .s{fill:#F4F4F8;}
+    .sm{fill:#9B9BA8;}
+    .tab{font-variant-numeric:tabular-nums;}
+    .add{font-size:8px;font-weight:700;fill:#6E8BFF;letter-spacing:0.5px;}
+    .note{font-size:11px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="699" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Vela type · spacing · radius</text>
+  <text x="32" y="60" class="sub">The non-color scales, single scales with role mappings. Type is verbatim and app-wide; spacing keeps spacing(n)=n×4; radius adds full.</text>
+
+  <!-- ===== TYPE ===== -->
+  <text x="32" y="90" class="sec">TYPE · the type.* scale, app-wide (same rhythm in widgets and app screens)</text>
+  <text x="32"  y="110" class="colh">STEP</text>
+  <text x="150" y="110" class="colh">SAMPLE</text>
+  <text x="470" y="110" class="colh">SPEC · APP ROLE</text>
+  <line x1="32" y1="118" x2="828" y2="118" stroke="#22222C"/>
+
+  <!-- rows step 30, baseline starts 146 -->
+  <g>
+    <text x="32" y="146" class="step">display</text>
+    <text x="150" y="148" class="s tab" font-size="24" font-weight="700" letter-spacing="-1">21:48</text>
+    <text x="470" y="143" class="spec">96 / 700 · tabular</text><text x="470" y="156" class="role">The wall hero (Clock large). Shown capped.</text>
+
+    <text x="32" y="176" class="step">hero</text>
+    <text x="150" y="179" class="s tab" font-size="24" font-weight="700" letter-spacing="-0.5">72°</text>
+    <text x="470" y="173" class="spec">44 / 700 · tabular</text><text x="470" y="186" class="role">Temperature, spend, paywall price.</text>
+
+    <text x="32" y="206" class="step">xl</text>
+    <text x="150" y="209" class="s tab" font-size="22" font-weight="700">$1,240</text>
+    <text x="470" y="203" class="spec">40 / 700 · tabular</text><text x="470" y="216" class="role">A large value; an onboarding stat.</text>
+
+    <text x="32" y="236" class="step">title</text>
+    <text x="150" y="239" class="s" font-size="18" font-weight="600">Design sync</text>
+    <text x="470" y="233" class="spec">18 / 600</text><text x="470" y="246" class="role">Card line, settings title, dialog title.</text>
+
+    <text x="32" y="266" class="step">heading</text>
+    <text x="150" y="269" class="s" font-size="15" font-weight="600">Partly cloudy</text>
+    <text x="470" y="263" class="spec">15 / 600</text><text x="470" y="276" class="role">Settings row label, form group head.</text>
+
+    <text x="32" y="296" class="step">body</text>
+    <text x="150" y="299" class="sm" font-size="14" font-weight="500">Default body text</text>
+    <text x="470" y="293" class="spec">14 / 500</text><text x="470" y="306" class="role">Paragraph, empty-body line, button label.</text>
+
+    <text x="32" y="326" class="step">label</text>
+    <text x="150" y="329" class="s" font-size="13" font-weight="600">12 open · AOD</text>
+    <text x="470" y="323" class="spec">13 / 600</text><text x="470" y="336" class="role">Input label, small button, value label.</text>
+
+    <text x="32" y="356" class="step">meta</text>
+    <text x="150" y="359" class="sm" font-size="13" font-weight="400">updated 2m ago</text>
+    <text x="470" y="353" class="spec">13 / 400</text><text x="470" y="366" class="role">Row subtitle, helper line.</text>
+
+    <text x="32" y="386" class="step">caption</text>
+    <text x="150" y="389" class="sm" font-size="11" font-weight="500" letter-spacing="1">LINEAR · MY ISSUES</text>
+    <text x="470" y="383" class="spec">11 / 500 · +1</text><text x="470" y="396" class="role">Header kicker, input hint.</text>
+
+    <text x="32" y="416" class="step">badge</text>
+    <text x="150" y="419" font-size="10" font-weight="700" letter-spacing="1" fill="#6E8BFF">PRO</text>
+    <text x="470" y="413" class="spec">10 / 700 · uppercase · +1</text><text x="470" y="426" class="role">Badge, count pill, tag.</text>
+  </g>
+
+  <line x1="32" y1="440" x2="828" y2="440" stroke="#22222C"/>
+
+  <!-- ===== SPACING ===== -->
+  <text x="32" y="466" class="sec">SPACING · spacing(n) = n × 4</text>
+  <g>
+    <text x="32" y="492" class="spec">spacing(1)</text><text x="108" y="492" class="role">4</text><rect x="128" y="483" width="4" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="492" class="role">icon-to-text</text>
+    <text x="32" y="514" class="spec">spacing(2)</text><text x="108" y="514" class="role">8</text><rect x="128" y="505" width="8" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="514" class="role">intra-card row gap</text>
+    <text x="32" y="536" class="spec">spacing(3)</text><text x="108" y="536" class="role">12</text><rect x="128" y="527" width="12" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="536" class="role">card padding</text>
+    <text x="32" y="558" class="spec">spacing(4)</text><text x="108" y="558" class="role">16</text><rect x="128" y="549" width="16" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="558" class="role">element gap, row padding</text>
+    <text x="32" y="580" class="spec">spacing(6)</text><text x="108" y="580" class="role">24</text><rect x="128" y="571" width="24" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="580" class="role">section gap, card gutter</text>
+    <text x="32" y="602" class="spec">spacing(8)</text><text x="108" y="602" class="role">32</text><rect x="128" y="593" width="32" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="602" class="role">large section</text>
+    <text x="32" y="624" class="spec">spacing(12)</text><text x="108" y="624" class="role">48</text><rect x="128" y="615" width="48" height="12" rx="2" fill="#6E8BFF"/><text x="186" y="624" class="role">screen margin</text>
+  </g>
+
+  <!-- ===== RADIUS ===== -->
+  <text x="470" y="466" class="sec">RADIUS · sm / md / lg + full</text>
+  <g>
+    <rect x="470" y="478" width="44" height="40" rx="8" fill="#16161D" stroke="#2A2A36"/><text x="528" y="496" class="spec">radius.sm · 8</text><text x="528" y="510" class="role">chips, inputs, badge</text>
+    <rect x="470" y="526" width="44" height="40" rx="14" fill="#16161D" stroke="#2A2A36"/><text x="528" y="544" class="spec">radius.md · 14</text><text x="528" y="558" class="role">the canonical card</text>
+    <rect x="470" y="574" width="44" height="40" rx="22" fill="#16161D" stroke="#2A2A36"/><text x="528" y="592" class="spec">radius.lg · 22</text><text x="528" y="606" class="role">sheets, modals, paywall</text>
+    <rect x="470" y="622" width="64" height="28" rx="14" fill="#16161D" stroke="#2A2A36"/><text x="548" y="636" class="spec">radius.full · 9999 <tspan class="add">+NEW</tspan></text><text x="548" y="650" class="role">pills, progress bar end</text>
+  </g>
+
+  <line x1="32" y1="666" x2="828" y2="666" stroke="#22222C"/>
+  <text x="32" y="688" class="note"><tspan fill="#6E8BFF" font-weight="700">Type is a narrow Pick of TextStyle</tspan> (fontSize/weight/letterSpacing/fontVariant/textTransform); lineHeight is the one narrow-safe candidate for multi-line app text.</text>
+</svg>
