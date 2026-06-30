@@ -1,0 +1,92 @@
+<svg width="100%" viewBox="0 0 860 566" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela connections list: the filled Connections section inside the Settings shell</title>
+  <desc>Left: a device frame showing the Settings home pushed header tagged as the AOD-21 shell, then the Connections row-group this design fills, a raised panel holding one row per connectable service. Linear and Google Calendar are connected over OAuth with a Disconnect action; Weather is connected over a platform location with a Disconnect action; Claude usage shows a warning dot and Reconnect needed with a Reconnect action; Clock is built in with a muted no-connection-needed label. A tag notes the Themes, Kiosk, and Account rows below are the AOD-21 shell and are not redrawn. Right: the row anatomy with identity and trailing slots, the authClass to connect-affordance legend mapping oauth2 to Connect, admin_key and api_key to Add key, platform_key to Set location, and none to no action, the list-level loading and error states, and a token block.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .title{font-size:13.5px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:10.5px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .err{fill:#FF6B6B;font-weight:700;}
+    .badge{font-size:9px;font-weight:700;letter-spacing:1px;fill:#6E8BFF;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .cal{font-size:8.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .mono{font-size:9.5px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="565" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Connections list · the filled section</text>
+  <text x="32" y="60" class="sub">One ConnectionRow per connectableServices(), overlaid with its live status. Fills the AOD-21 §6 Connections section.</text>
+
+  <!-- ===== DEVICE: SETTINGS · CONNECTIONS ===== -->
+  <text x="32" y="92" class="cap">SETTINGS · the Connections section</text>
+  <rect x="32" y="104" width="372" height="438" rx="28" fill="#0B0B0F" stroke="#2A2A36"/>
+  <!-- pushed header (AOD-21 shell) -->
+  <path d="M58,150 l-9,7 l9,7" fill="none" stroke="#6E8BFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="78" y="162" class="title" font-size="16">Settings</text>
+  <text x="388" y="162" text-anchor="end" class="cal">shell = AOD-21</text>
+  <!-- connections group -->
+  <text x="48" y="196" class="cap">CONNECTIONS</text>
+  <text x="388" y="196" text-anchor="end" class="cal" fill="#6E8BFF">interior · this design</text>
+  <rect x="48" y="206" width="340" height="290" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <!-- row 1 Linear (oauth2, connected) -->
+  <text x="64" y="234" class="title">Linear</text><text x="64" y="250" class="meta">Connected · xavier</text>
+  <text x="372" y="242" text-anchor="end" class="err" font-size="11">Disconnect</text>
+  <line x1="64" y1="263" x2="372" y2="263" stroke="#2A2A36"/>
+  <!-- row 2 Google Calendar (oauth2, connected) -->
+  <text x="64" y="291" class="title">Google Calendar</text><text x="64" y="307" class="meta">Connected · xavier@gmail.com</text>
+  <text x="372" y="299" text-anchor="end" class="err" font-size="11">Disconnect</text>
+  <line x1="64" y1="320" x2="372" y2="320" stroke="#2A2A36"/>
+  <!-- row 3 Weather (platform_key, connected) -->
+  <text x="64" y="348" class="title">Weather</text><text x="64" y="364" class="meta">Connected · Quito</text>
+  <text x="372" y="356" text-anchor="end" class="err" font-size="11">Disconnect</text>
+  <line x1="64" y1="377" x2="372" y2="377" stroke="#2A2A36"/>
+  <!-- row 4 Claude usage (admin_key, reauth) -->
+  <circle cx="70" cy="402" r="4.5" fill="#F2B84B"/>
+  <text x="84" y="406" class="title">Claude usage</text><text x="84" y="422" class="meta">Reconnect needed</text>
+  <text x="372" y="414" text-anchor="end" class="acc" font-size="11">Reconnect</text>
+  <line x1="64" y1="435" x2="372" y2="435" stroke="#2A2A36"/>
+  <!-- row 5 Clock (none) -->
+  <text x="64" y="463" class="title">Clock</text><text x="64" y="479" class="meta">Built in</text>
+  <text x="372" y="471" text-anchor="end" class="meta">No connection needed</text>
+  <!-- shell-rows tag -->
+  <text x="48" y="520" class="cal">↓ Themes · Kiosk · Account rows = AOD-21 shell (not redrawn)</text>
+
+  <!-- ===== ROW ANATOMY ===== -->
+  <text x="436" y="92" class="sec">ROW · anatomy (the AOD-20 list row)</text>
+  <rect x="436" y="104" width="392" height="64" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="456" y="132" class="title">Google Calendar</text>
+  <text x="456" y="150" class="meta">Connected · xavier@gmail.com</text>
+  <text x="812" y="141" text-anchor="end" class="err" font-size="12">Disconnect</text>
+  <text x="456" y="120" class="cal">identity · displayName + status</text>
+  <text x="812" y="120" text-anchor="end" class="cal">trailing · the affordance</text>
+
+  <!-- ===== AUTHCLASS LEGEND ===== -->
+  <text x="436" y="196" class="sec">authClass → CONNECT AFFORDANCE</text>
+  <rect x="436" y="206" width="392" height="130" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="452" y="232" class="mono" fill="#6E8BFF">oauth2</text><text x="556" y="232" class="title">Connect</text><text x="812" y="232" text-anchor="end" class="meta">Linear · Calendar</text>
+  <text x="452" y="258" class="mono" fill="#6E8BFF">admin_key</text><text x="556" y="258" class="title">Add key</text><text x="812" y="258" text-anchor="end" class="meta">Claude usage</text>
+  <text x="452" y="284" class="mono" fill="#6E8BFF">platform_key</text><text x="556" y="284" class="title">Set location</text><text x="812" y="284" text-anchor="end" class="meta">Weather</text>
+  <text x="452" y="310" class="mono" fill="#6E8BFF">none</text><text x="556" y="310" class="title">no action</text><text x="812" y="310" text-anchor="end" class="meta">Clock</text>
+  <text x="452" y="328" class="cal">status: connected→Disconnect · reauth/error→Reconnect</text>
+
+  <!-- ===== LIST STATES ===== -->
+  <text x="436" y="364" class="sec">LIST STATES</text>
+  <rect x="436" y="374" width="392" height="38" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="452" y="397" class="cal">loading</text>
+  <rect x="540" y="388" width="150" height="10" rx="5" fill="#23232E"/>
+  <text x="812" y="397" text-anchor="end" class="meta" font-size="11">Checking…</text>
+  <rect x="436" y="418" width="392" height="38" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="452" y="441" class="cal">error</text>
+  <text x="812" y="441" text-anchor="end" class="err" font-size="11">Could not load your connections.</text>
+
+  <text x="436" y="478" class="tok">list: connectableServices() · one row per service (ConnectionsList)</text>
+  <text x="436" y="492" class="tok">row: AOD-20 §8 list row · status dot = warning (reauth, AOD-37 §3.1)</text>
+  <text x="436" y="506" class="tok">registry-driven: + integration = +1 row, zero edits (AOD-8 §10)</text>
+
+  <line x1="32" y1="540" x2="828" y2="540" stroke="#22222C"/>
+  <text x="32" y="558" class="note"><tspan fill="#6E8BFF" font-weight="700">This design fills the Connections section.</tspan> The settings-home shell + the Account screen are AOD-21; the per-row detail is §4.</text>
+</svg>
