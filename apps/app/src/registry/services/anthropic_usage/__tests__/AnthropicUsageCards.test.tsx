@@ -187,3 +187,28 @@ describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', (
     expect(screen.queryByTestId('claude-daily-spend')).toBeNull();
   });
 });
+
+// The de-duplicated SERVICE · WIDGET caption (the AOD-64 header follow-up). The host owns the quiet
+// "SERVICE · WIDGET" caption (WidgetHostView §4.2), composing it from the service displayName ("Claude
+// usage") and the widget title. The titles are bare nouns ("Spend (MTD)" / "Daily Spend"), like every
+// sibling widget (Weather "Forecast", Linear "My Issues", Calendar "Next Event"), so the brand is NOT
+// printed twice. Regression guard: it used to read "Claude usage · Claude Spend (MTD)".
+describe('the host caption is de-duplicated (the SERVICE · WIDGET header convention)', () => {
+  it('Spend MTD reads "Claude usage · Spend (MTD)", not a doubled "Claude"', async () => {
+    mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
+    renderHost(spendSource(SPEND_MTD_DATA), mediumSpendInstance);
+
+    await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
+    expect(screen.getByText('Claude usage · Spend (MTD)')).toBeTruthy();
+    expect(screen.queryByText('Claude usage · Claude Spend (MTD)')).toBeNull();
+  });
+
+  it('Daily Spend reads "Claude usage · Daily Spend", not a doubled "Claude"', async () => {
+    mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
+    renderHost(dailySource(DAILY_SPEND_DATA), dailyInstance);
+
+    await waitFor(() => expect(screen.getByTestId('claude-daily-spend')).toBeTruthy());
+    expect(screen.getByText('Claude usage · Daily Spend')).toBeTruthy();
+    expect(screen.queryByText('Claude usage · Claude Daily Spend')).toBeNull();
+  });
+});
