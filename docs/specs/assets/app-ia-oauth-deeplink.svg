@@ -1,0 +1,73 @@
+<svg width="100%" viewBox="0 0 1040 380" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela OAuth connect deep-link (vela://oauth/done)</title>
+  <desc>The OAuth connect flow and the deep-link that completes it. From Settings Connections the connect action calls the oauth-start Edge Function with the user JWT; oauth-start writes an oauth_transactions row and returns the provider authorize URL. The app opens that URL in a system browser auth session whose return URL is vela://oauth/done. The provider redirects to the oauth-callback Edge Function over HTTPS (the registered redirect URI). The callback validates state, exchanges the code with the PKCE verifier and client secret entirely server-side, stores the tokens in Vault, and upserts the connection row. It then returns a 302 to vela://oauth/done with the service and a status, never a token. The app captures that return in the connect action and re-fetches its RLS-scoped connections; a cold deep-link is handled by app/oauth/done.tsx. There are two redirect URIs: provider to backend over HTTPS, and backend to app over the vela scheme.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:14px;font-weight:700;fill:#1a1a1a;}
+    .bt{font-size:13px;font-weight:600;fill:#1a1a1a;}
+    .bs{font-size:11px;fill:#5b5b5b;}
+    .tag{font-size:10px;font-weight:700;fill:#7a7a7a;letter-spacing:0.4px;}
+    .el{font-size:11px;fill:#5b5b5b;}
+    .elb{font-size:11.5px;font-weight:700;fill:#b07d1e;}
+    .note{font-size:12px;fill:#4a4a4a;}
+    .e{fill:none;stroke:#7a7a7a;stroke-width:1.5;}
+    .edl{fill:none;stroke:#d6a73a;stroke-width:1.8;stroke-dasharray:7 3 2 3;}
+    .bg-blue{fill:#e6ecfb;stroke:#6E8BFF;stroke-width:1.3;}
+    .bg-soft{fill:#f5f6fa;stroke:#d3d6e2;stroke-width:1;}
+    .bg-amber{fill:#f9edcf;stroke:#d6a73a;stroke-width:1;}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="1039" height="379" rx="10" fill="#ffffff" stroke="#e6e6e6"/>
+  <text x="32" y="32" class="h">OAuth connect deep-link  ·  vela://oauth/done</text>
+
+  <!-- N1 App  36-212 -->
+  <rect x="36" y="104" width="176" height="84" rx="9" class="bg-blue"/>
+  <text x="52" y="130" class="tag">APP</text>
+  <text x="52" y="150" class="bt">Settings · Connections</text>
+  <text x="52" y="168" class="bs">tap Connect (Linear /</text>
+  <text x="52" y="183" class="bs">Google Calendar)</text>
+
+  <!-- N2 oauth-start  296-464 -->
+  <rect x="296" y="104" width="168" height="84" rx="9" class="bg-soft"/>
+  <text x="312" y="130" class="tag">EDGE</text>
+  <text x="312" y="150" class="bt">oauth-start</text>
+  <text x="312" y="168" class="bs">writes oauth_transactions</text>
+  <text x="312" y="183" class="bs">returns authorize URL</text>
+
+  <!-- N3 browser/provider  548-724 -->
+  <rect x="548" y="104" width="176" height="84" rx="9" class="bg-amber"/>
+  <text x="564" y="130" class="tag">SYSTEM BROWSER</text>
+  <text x="564" y="150" class="bt">Provider consent</text>
+  <text x="564" y="168" class="bs">user approves scopes</text>
+  <text x="564" y="183" class="bs">return = vela://oauth/done</text>
+
+  <!-- N4 oauth-callback  808-1004 -->
+  <rect x="808" y="104" width="196" height="84" rx="9" class="bg-soft"/>
+  <text x="824" y="130" class="tag">EDGE</text>
+  <text x="824" y="150" class="bt">oauth-callback (HTTPS)</text>
+  <text x="824" y="168" class="bs">validate state · exchange code +</text>
+  <text x="824" y="183" class="bs">verifier + secret · Vault · upsert</text>
+
+  <!-- top arrows, labels centered above each gap -->
+  <path d="M212 146 H296" class="e" marker-end="url(#arrow)"/>
+  <text x="254" y="134" text-anchor="middle" class="el">1 · JWT</text>
+  <path d="M464 146 H548" class="e" marker-end="url(#arrow)"/>
+  <text x="506" y="134" text-anchor="middle" class="el">2 · open browser</text>
+  <path d="M724 146 H808" class="e" marker-end="url(#arrow)"/>
+  <text x="766" y="134" text-anchor="middle" class="el">3 · 302 (HTTPS)</text>
+
+  <!-- deep-link return (amber), callback -> app, along the bottom -->
+  <path d="M906 188 V232 H124 V188" class="edl" marker-end="url(#arrow)"/>
+  <text x="520" y="224" text-anchor="middle" class="elb">4 · 302 vela://oauth/done?service=linear&amp;status=ok  (no token)  &#8594;  app re-fetches RLS-scoped connections</text>
+
+  <!-- notes -->
+  <text x="32" y="276" class="note">Two redirect URIs: provider &#8594; backend over HTTPS (oauth-callback, the registered redirect URI); backend &#8594; app (vela scheme). Tokens never touch the device.</text>
+  <text x="32" y="296" class="note">Primary capture: WebBrowser.openAuthSessionAsync resolves the vela://oauth/done return inside the connect action; the app re-fetches connections.</text>
+  <text x="32" y="316" class="note">Fallback: app/oauth/done.tsx handles a cold deep-link (app reopened from the link), reads {service, status}, and routes to Settings &#8594; Connections.</text>
+  <text x="32" y="344" class="note">The scheme "vela" is registered in app.json. Non-OAuth services skip this: Anthropic usage and Weather POST once to credentials-store.</text>
+</svg>
