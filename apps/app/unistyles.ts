@@ -2,11 +2,32 @@
 // theme the host chrome and the leaf cards style against. AOD-62 lifts the AOD-37 design-token
 // foundation (design-widget-system.md §3) into this file: the typography scale (type.*), the deep-red
 // night palette (night.*), the dim overlay token, the status-dot sizing, and the Clock time ramp
-// (clockSize). The shipped dark/light colors are recapped unchanged (§3.1). Imported once at app entry
-// (app/_layout.tsx) before any StyleSheet.create runs, and again from jest setupFiles so themes exist
-// under test.
+// (clockSize). AOD-66 then reconciles the AOD-19 canonical token system (design-tokens.md §9): the
+// shipped colours are re-expressed as aliases of a shared primitive ramp set (tier 1, byte-identical
+// hexes, §4) and the additive app-wide tokens land (onAccent / scrim / focusRing, the elevation ladder,
+// radius.full). No rendered value changes. Imported once at app entry (app/_layout.tsx) before any
+// StyleSheet.create runs, and again from jest setupFiles so themes exist under test.
 import { StyleSheet } from 'react-native-unistyles';
 import type { TextStyle } from 'react-native';
+
+// --- §4.1 primitive colour ramps (AOD-19 tier 1) ----------------------------------------------------
+// Raw, role-free palette values: theme-independent and shared the way sharedTokens is. This is the ONLY
+// place a colour hex is written as a literal; every semantic role below (darkTheme/lightTheme colours and
+// night.*) aliases a step here, so a theme swap re-aliases rather than rewrites (design-tokens.md §3.1,
+// §4.1). Step numbering: lower = lighter, higher = darker. Values are the shipped theme VERBATIM (no hue
+// added, the one-accent rule holds, §4.6); naming them changes no rendered value.
+export const primitive = {
+  neutral: {
+    0: '#FFFFFF', 50: '#F6F6FA', 100: '#F4F4F8', 200: '#EEEEF3', 300: '#E4E4EC',
+    400: '#DADAE2', 500: '#9B9BA8', 600: '#6B6B78', 700: '#2A2A36', 750: '#23232E',
+    800: '#1F1F29', 850: '#16161D', 900: '#0B0B0F', 950: '#000000',
+  },
+  blue: { 400: '#6E8BFF', 600: '#3F5BD6' }, // the one accent (dark / light)
+  amber: { 400: '#F2B84B', 600: '#B5791B' }, // status: warning (stale)
+  red: { 400: '#FF6B6B', 600: '#D64545' }, // status: error
+  green: { 400: '#4CB782', 600: '#2F8F63' }, // status: success
+  ember: { 500: '#C2362B', 600: '#8A201B', 700: '#5E1714', 850: '#2E1214', 900: '#140709', 950: '#0A0506' }, // ambient-night reds
+} as const;
 
 // --- §3.3 typography scale --------------------------------------------------------------------------
 // Named steps replacing the renderers' ad-hoc font sizes, so every card shares one vertical rhythm and
@@ -45,13 +66,15 @@ const type: Record<TypeStep, TypeToken> = {
 // --- §3.2 the deep-red night / ambient palette ------------------------------------------------------
 // Read ONLY by a widget that opts out of the global overlay (dimsWithAmbient: false) and recolours
 // itself at phase 'night' (the Clock, §8.5). Theme-independent (deep red is deep red), so it is shared.
-const night = {
-  bg: '#0A0506', // backdrop behind a night-mode card (red-black)
-  surface: '#140709', // the card fill at night
-  border: '#2E1214', // the card border at night
-  primary: '#C2362B', // the hero value at night (the time)
-  secondary: '#8A201B', // the date and secondary text at night
-  muted: '#5E1714', // the zone kicker and tertiary text at night
+// §4.5: the ambient-night semantic group, now aliasing the ember.* primitives under its shipped role
+// names (so the Clock code is untouched). Every resolved hex identical to before.
+export const night = {
+  bg: primitive.ember[950], // #0A0506 backdrop behind a night-mode card (red-black)
+  surface: primitive.ember[900], // #140709 the card fill at night
+  border: primitive.ember[850], // #2E1214 the card border at night
+  primary: primitive.ember[500], // #C2362B the hero value at night (the time)
+  secondary: primitive.ember[600], // #8A201B the date and secondary text at night
+  muted: primitive.ember[700], // #5E1714 the zone kicker and tertiary text at night
 } as const;
 
 // --- §3.3 / §3.4 sizing tokens ----------------------------------------------------------------------
@@ -62,6 +85,18 @@ const clockSize = { small: 34, medium: 56, wide: 64, large: 96 } as const;
 const overlay = { color: '#000000', maxDim: 0.72 } as const;
 // §3.4 status-dot: the chrome indicator size (r 4.5 -> 9px), filled warning (stale) or error (error).
 const dot = { r: 4.5 } as const;
+// §5.2 elevation ladder: the no-shadow surface-step model (§5.1: a drop shadow reads as glare on an
+// emissive panel). Each level NAMES the semantic surface role it fills with, plus whether it carries the
+// 1px hairline border (always the `border` role when present). Theme-independent by design: §5.2 fixes
+// the ladder in role terms, so it is identical in dark and light; the consumer resolves
+// theme.colors[level.surface] (and theme.colors.border) at the call site. Adds NO colour. NOTE
+// elevation.overlay (level 2, a popover/menu surface) is distinct from the `overlay` dim token (§8.1) and
+// the `scrim` backdrop (§4.4); the three are compared in §8.3.
+const elevation = {
+  base: { surface: 'background', border: false }, // 0: the dashboard field, no border
+  raised: { surface: 'surface', border: true }, // 1: a card / panel, surface + 1px border
+  overlay: { surface: 'surfaceAlt', border: true }, // 2: a popover / menu / selected row, one step up
+} as const;
 // AOD-35 §10.1 weatherIcon: the one new token group the Calendar+Weather polish adds, a per-render-context
 // size ramp for the weather glyph family (the way clockSize ramps the Clock time). The glyphs draw in
 // colors.text at this stroke; no colour token is added (design-calendar-weather.md §4.1).
@@ -117,12 +152,13 @@ const progress = {
 
 const sharedTokens = {
   spacing: (v: number) => v * 4,
-  radius: { sm: 8, md: 14, lg: 22 },
+  radius: { sm: 8, md: 14, lg: 22, full: 9999 }, // §7.2: `full` (9999) added for pills / fully-rounded ends
   type,
   night,
   clockSize,
   overlay,
   dot,
+  elevation,
   weatherIcon,
   sparkline,
   money,
@@ -130,38 +166,48 @@ const sharedTokens = {
   progress,
 } as const;
 
-// --- §3.1 colour (shipped, recapped) ----------------------------------------------------------------
-const darkTheme = {
+// --- §3.1 colour: semantic roles as primitive aliases (AOD-66, §4.2 / §4.3) -------------------------
+// Each role aliases one primitive step; every resolved hex is IDENTICAL to the shipped theme (the inline
+// hex on each line is that resolved value). The additive app-wide roles (§4.4) follow the shipped block.
+export const darkTheme = {
   ...sharedTokens,
   colors: {
-    background: '#0B0B0F',
-    surface: '#16161D',
-    surfaceAlt: '#1F1F29',
-    border: '#2A2A36',
-    text: '#F4F4F8',
-    textMuted: '#9B9BA8',
-    accent: '#6E8BFF',
-    skeleton: '#23232E',
-    error: '#FF6B6B',
-    warning: '#F2B84B',
-    success: '#4CB782',
+    background: primitive.neutral[900], // #0B0B0F
+    surface: primitive.neutral[850], // #16161D
+    surfaceAlt: primitive.neutral[800], // #1F1F29
+    border: primitive.neutral[700], // #2A2A36
+    text: primitive.neutral[100], // #F4F4F8
+    textMuted: primitive.neutral[500], // #9B9BA8
+    accent: primitive.blue[400], // #6E8BFF (the one accent)
+    skeleton: primitive.neutral[750], // #23232E
+    error: primitive.red[400], // #FF6B6B
+    warning: primitive.amber[400], // #F2B84B
+    success: primitive.green[400], // #4CB782
+    // additive app-wide semantic roles (§4.4) — derived from existing primitives, no new hue:
+    onAccent: primitive.neutral[0], // #FFFFFF: legible foreground ON an accent fill (WCAG AA on blue.400)
+    focusRing: primitive.blue[400], // aliases accent today; named so an a11y ring is one token, free to diverge later
+    scrim: 'rgba(0, 0, 0, 0.6)', // neutral.950 (#000000) @ 0.60: backdrop behind a floating surface (§5.3); fixed, distinct from `overlay` (§8.3)
   },
 } as const;
 
-const lightTheme = {
+export const lightTheme = {
   ...sharedTokens,
   colors: {
-    background: '#F6F6FA',
-    surface: '#FFFFFF',
-    surfaceAlt: '#EEEEF3',
-    border: '#DADAE2',
-    text: '#16161D',
-    textMuted: '#6B6B78',
-    accent: '#3F5BD6',
-    skeleton: '#E4E4EC',
-    error: '#D64545',
-    warning: '#B5791B',
-    success: '#2F8F63',
+    background: primitive.neutral[50], // #F6F6FA
+    surface: primitive.neutral[0], // #FFFFFF
+    surfaceAlt: primitive.neutral[200], // #EEEEF3
+    border: primitive.neutral[400], // #DADAE2
+    text: primitive.neutral[850], // #16161D (light text == dark surface: one ramp read from both ends, §4.3)
+    textMuted: primitive.neutral[600], // #6B6B78
+    accent: primitive.blue[600], // #3F5BD6 (the one accent, deeper step for daylight)
+    skeleton: primitive.neutral[300], // #E4E4EC
+    error: primitive.red[600], // #D64545
+    warning: primitive.amber[600], // #B5791B
+    success: primitive.green[600], // #2F8F63
+    // additive app-wide semantic roles (§4.4):
+    onAccent: primitive.neutral[0], // #FFFFFF (WCAG AA on blue.600)
+    focusRing: primitive.blue[600], // aliases accent
+    scrim: 'rgba(0, 0, 0, 0.4)', // neutral.950 (#000000) @ 0.40: lighter scrim for the foreground theme (§4.4 / §8.3)
   },
 } as const;
 
