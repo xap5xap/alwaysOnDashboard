@@ -1,0 +1,97 @@
+<svg width="100%" viewBox="0 0 860 486" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela kiosk wall: the widget lifecycle states read at across-the-room scale</title>
+  <desc>Five widget cards drawn at wall scale show how the AOD-37 lifecycle states read on a glanceable wall. Fresh draws the Claude spend value of 42 dollars with a quiet header and no status dot. Stale keeps the same last-known 42 dollars value and adds an amber status dot with an updated six minutes ago caption. Error with data keeps the 42 dollars value and adds a red status dot with a could not refresh caption. Error with no data shows a could not load placeholder with an auto retry note. Disconnected shows a connect Claude prompt. Below, three wall-scale rules state that the colored status dot is the primary glanceable mark at two to three metres, the wall never blanks because the last-known value stays under stale and error, and the prompts are informational because the wall auto-refreshes so a passer-by never taps and the reconnect is the owner's action. A footer notes AOD-37 owns the state vocabulary and this design fixes only how it reads on the wall.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:8.5px;font-weight:700;fill:#9B9BA8;letter-spacing:0.8px;}
+    .val{font-size:30px;font-weight:700;fill:#F4F4F8;}
+    .meta{font-size:9.5px;fill:#9B9BA8;}
+    .warn{font-size:9.5px;fill:#F2B84B;}
+    .err{font-size:9.5px;fill:#FF6B6B;}
+    .acc{font-size:11px;fill:#6E8BFF;font-weight:700;}
+    .state{font-size:11px;font-weight:700;fill:#C9C9D4;}
+    .statem{font-size:9px;fill:#8A8A97;}
+    .prompt{font-size:10.5px;fill:#9B9BA8;}
+    .rule{font-size:11px;font-weight:600;fill:#F4F4F8;}
+    .rulem{font-size:10px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="485" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The wall at scale: fresh / stale / error</text>
+  <text x="32" y="60" class="sub">The AOD-37 lifecycle, read across a room. The dot is the mark; the wall never blanks; prompts are informational.</text>
+
+  <!-- state cards row -->
+  <!-- 1 fresh -->
+  <rect x="32" y="86" width="140" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="46" y="110" class="cap">CLAUDE · SPEND</text>
+  <text x="45" y="156" class="val">$42</text>
+  <text x="46" y="182" class="meta">$1.40/day</text>
+  <text x="46" y="212" class="state">fresh</text>
+  <text x="46" y="227" class="statem">no dot · baseline</text>
+
+  <!-- 2 stale -->
+  <rect x="185" y="86" width="140" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="199" y="110" class="cap">CLAUDE · SPEND</text>
+  <circle cx="311" cy="106" r="4.5" fill="#F2B84B"/>
+  <text x="198" y="156" class="val">$42</text>
+  <text x="199" y="182" class="warn">updated 6m ago</text>
+  <text x="199" y="212" class="state">stale</text>
+  <text x="199" y="227" class="statem">amber dot · last value</text>
+
+  <!-- 3 error with data -->
+  <rect x="338" y="86" width="140" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="352" y="110" class="cap">CLAUDE · SPEND</text>
+  <circle cx="464" cy="106" r="4.5" fill="#FF6B6B"/>
+  <text x="351" y="156" class="val">$42</text>
+  <text x="352" y="182" class="err">couldn't refresh</text>
+  <text x="352" y="212" class="state">error · has data</text>
+  <text x="352" y="227" class="statem">red dot · last value</text>
+
+  <!-- 4 error no data -->
+  <rect x="491" y="86" width="140" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <circle cx="617" cy="106" r="4.5" fill="#FF6B6B"/>
+  <text x="561" y="150" text-anchor="middle" class="prompt" fill="#9B9BA8">Couldn't load</text>
+  <text x="561" y="172" text-anchor="middle" class="acc">Retry</text>
+  <text x="505" y="212" class="state">error · no data</text>
+  <text x="505" y="227" class="statem">auto-retry on the wall</text>
+
+  <!-- 5 disconnected -->
+  <rect x="644" y="86" width="140" height="150" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <path d="M708,140 a7,7 0 0 1 10,0 l6,6 a7,7 0 0 1 -10,10 l-2,-2 M712,164 a7,7 0 0 1 -10,0 l-6,-6 a7,7 0 0 1 10,-10 l2,2" fill="none" stroke="#9B9BA8" stroke-width="1.5"/>
+  <text x="714" y="188" text-anchor="middle" class="prompt">Connect Claude</text>
+  <text x="658" y="212" class="state">disconnected</text>
+  <text x="658" y="227" class="statem">409 → owner reconnects</text>
+
+  <!-- ===== the three wall-scale rules ===== -->
+  <line x1="32" y1="264" x2="828" y2="264" stroke="#22222C"/>
+  <text x="32" y="290" class="cap" font-size="11" letter-spacing="1">HOW THE STATES READ ON A WALL</text>
+
+  <circle cx="52" cy="322" r="7" fill="#F2B84B"/>
+  <text x="72" y="320" class="rule">The dot is the glanceable mark</text>
+  <text x="72" y="338" class="rulem">A colored status dot (r 4.5) reads at 2 to 3 m; the caption is the</text>
+  <text x="72" y="352" class="rulem">detail up close. amber = stale, red = error.</text>
+
+  <rect x="46" y="374" width="12" height="12" rx="3" fill="#16161D" stroke="#2A2A36"/>
+  <text x="72" y="378" class="rule">The wall never blanks</text>
+  <text x="72" y="396" class="rulem">stale and error keep the last-known value on screen. A glanceable</text>
+  <text x="72" y="410" class="rulem">display shows the last good data, not an empty card.</text>
+
+  <path d="M46,436 l6,4 l6,-4 M46,442 l6,4 l6,-4" stroke="#6E8BFF" stroke-width="1.5" fill="none"/>
+  <text x="72" y="436" class="rule">Prompts are informational, not tapped</text>
+  <text x="72" y="454" class="rulem">the wall auto-refreshes (no manual refresh control); Retry is</text>
+  <text x="72" y="468" class="rulem">automatic and Connect is the owner's action, never a passer-by's.</text>
+
+  <line x1="452" y1="308" x2="452" y2="468" stroke="#22222C"/>
+  <text x="476" y="322" class="note" font-size="10.5"><tspan fill="#6E8BFF" font-weight="700">AOD-37 owns the state vocabulary.</tspan></text>
+  <text x="476" y="340" class="tok">the six lifecycle states, the dot,</text>
+  <text x="476" y="354" class="tok">the prompt layout, the captions.</text>
+  <text x="476" y="378" class="note" font-size="10.5">This design fixes only the wall</text>
+  <text x="476" y="394" class="note" font-size="10.5">reading: dot-first legibility, the</text>
+  <text x="476" y="410" class="note" font-size="10.5">no-blank rule, suppressed manual</text>
+  <text x="476" y="426" class="note" font-size="10.5">refresh, informational prompts.</text>
+  <text x="476" y="452" class="tok">disconnected surfaces AOD-9's</text>
+  <text x="476" y="466" class="tok">409 needs_reconnect, unchanged.</text>
+</svg>

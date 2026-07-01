@@ -1,0 +1,81 @@
+<svg width="100%" viewBox="0 0 860 556" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela kiosk wall layout: the dashboard drawn as a glanceable landscape wall of widget cards on a near-black field</title>
+  <desc>A landscape tablet frame shows the wall-mount presentation of a normal dashboard layout. The near-black field carries five widget cards at a larger type scale with no app chrome: a large clock hero reading 14:05 over a date, a weather card reading 18 degrees, a Linear My Issues list of three issue rows, and a Claude spend card reading 42 dollars month to date. A right-hand callout column names the wall-mount profile values: theme dark, typeScale times 1.4, minContrast AA, hideChrome true, plus notes that the layout geometry is untouched from AOD-8 and AOD-7 and the cards are the AOD-37 chrome only larger. A footer states this design owns the wall presentation while AOD-11 owns the runtime and AOD-8 owns the layout that is presented, not edited.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .capw{font-size:11px;font-weight:700;fill:#9B9BA8;letter-spacing:1.4px;}
+    .val{font-size:26px;font-weight:700;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .row{font-size:12px;font-weight:600;fill:#F4F4F8;}
+    .rowm{font-size:11px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .lead{stroke:#3A3A48;stroke-width:1.2;stroke-dasharray:3 3;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="555" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Kiosk wall layout</text>
+  <text x="32" y="60" class="sub">The same DashboardLayout, presented as a glanceable landscape wall. A profile over a layout, not a new layout.</text>
+
+  <!-- ===== device bezel (landscape tablet) ===== -->
+  <rect x="112" y="92" width="532" height="352" rx="18" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <!-- the wall screen: colors.background #0B0B0F -->
+  <rect x="126" y="106" width="504" height="324" rx="8" fill="#0B0B0F"/>
+  <text x="134" y="100" class="cap">FIRE HD 8 · LANDSCAPE · chrome hidden</text>
+
+  <!-- clock hero card -->
+  <rect x="140" y="120" width="228" height="146" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="156" y="148" class="cap">CLOCK</text>
+  <text x="155" y="205" font-size="48" font-weight="700" fill="#F4F4F8" letter-spacing="-1">14:05</text>
+  <text x="156" y="232" class="meta" font-size="13">Monday, June 30</text>
+
+  <!-- weather card -->
+  <rect x="140" y="278" width="228" height="140" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="156" y="306" class="cap">WEATHER · QUITO</text>
+  <circle cx="168" cy="352" r="11" fill="none" stroke="#F2B84B" stroke-width="2"/>
+  <text x="192" y="366" class="val" font-size="34">18&#176;</text>
+  <text x="156" y="398" class="meta">Partly cloudy · feels 17&#176;</text>
+
+  <!-- linear my issues card -->
+  <rect x="382" y="120" width="234" height="168" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="398" y="148" class="cap">LINEAR · MY ISSUES</text>
+  <circle cx="404" cy="172" r="3.5" fill="#6E8BFF"/><text x="416" y="176" class="row">AOD-39 wall presentation</text>
+  <circle cx="404" cy="198" r="3.5" fill="#F2B84B"/><text x="416" y="202" class="row">AOD-40 kiosk runtime build</text>
+  <circle cx="404" cy="224" r="3.5" fill="#9B9BA8"/><text x="416" y="228" class="rowm">AOD-42 store assets</text>
+  <text x="398" y="262" class="meta">3 in progress · 7 todo</text>
+
+  <!-- claude spend card -->
+  <rect x="382" y="300" width="234" height="118" rx="14" fill="#16161D" stroke="#2A2A36"/>
+  <text x="398" y="328" class="cap">CLAUDE · SPEND MTD</text>
+  <text x="397" y="380" class="val" font-size="40">$42</text>
+  <text x="398" y="404" class="meta">$1.40/day · 30 days</text>
+
+  <!-- ===== profile callout column ===== -->
+  <text x="668" y="112" class="sec">WALL-MOUNT PROFILE</text>
+  <text x="668" y="130" class="tok">AOD-11 §7.1 · fixed here</text>
+  <line x1="668" y1="140" x2="828" y2="140" stroke="#22222C"/>
+  <text x="668" y="162" class="meta">theme</text><text x="828" y="162" text-anchor="end" class="tokv">dark</text>
+  <text x="668" y="186" class="meta">typeScale</text><text x="828" y="186" text-anchor="end" class="tokv acc">&#215;1.4</text>
+  <text x="668" y="210" class="meta">minContrast</text><text x="828" y="210" text-anchor="end" class="tokv">AA</text>
+  <text x="668" y="234" class="meta">hideChrome</text><text x="828" y="234" text-anchor="end" class="tokv">true</text>
+  <line x1="668" y1="252" x2="828" y2="252" stroke="#22222C"/>
+  <text x="668" y="276" class="note" font-size="10.5">Geometry untouched:</text>
+  <text x="668" y="292" class="tok">free-form rects (AOD-7)</text>
+  <text x="668" y="306" class="tok">no registry/layout edit</text>
+  <text x="668" y="330" class="note" font-size="10.5">Cards = AOD-37 chrome,</text>
+  <text x="668" y="346" class="note" font-size="10.5">only larger. Body-only</text>
+  <text x="668" y="362" class="note" font-size="10.5">render contract holds.</text>
+  <path d="M660,200 C648,200 636,190 626,188" class="lead"/>
+  <path d="M660,300 C640,300 628,260 618,244" class="lead"/>
+
+  <text x="134" y="464" class="capw" font-size="10" fill="#8A8A97" letter-spacing="0.8">GLANCEABLE, NOT INTERACTED WITH · LARGER TYPE · HIGHER CONTRAST · DARK AMBIENT FIELD</text>
+
+  <line x1="32" y1="500" x2="828" y2="500" stroke="#22222C"/>
+  <text x="32" y="522" class="note"><tspan fill="#6E8BFF" font-weight="700">AOD-39 owns the wall presentation.</tspan> An ordinary free-form DashboardLayout (AOD-8/AOD-7), rendered under the profile, never edited.</text>
+  <text x="32" y="540" class="tok">AOD-11 owns the runtime (keep-awake, cadence, curve, exit) · AOD-37 owns the card chrome + states · this fixes how the wall looks, not how it runs</text>
+</svg>
