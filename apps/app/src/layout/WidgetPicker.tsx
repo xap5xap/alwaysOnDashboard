@@ -1,19 +1,25 @@
-// The add-widget picker (AOD-8 §9 invariant 2, §10). A generic affordance that offers exactly
-// registry.addableWidgets(connectedSet) -- widgets whose parent service is connected (authClass 'none'
-// like Clock is exempt inside addableWidgets) -- grouped by their publishing service. It names no
-// service: it reads the registry and the live connection map and renders whatever is addable, so adding
-// an integration grows this list by one group with zero edits here. Selecting a widget inserts it into
-// the current dashboard (useAddWidget) and closes. When nothing is addable it points to Settings ->
-// Connections. Visual design is DS-M1 (AOD-28); this is the functional surface, like AOD-49/AOD-50.
+// The add-widget picker (AOD-8 §9 invariant 2, §10; AOD-27 §6 interior). A generic affordance that offers
+// exactly registry.addableWidgets(connectedSet) -- widgets whose parent service is connected (authClass
+// 'none' like Clock is exempt inside addableWidgets) -- grouped by their publishing service. It names no
+// service: it reads the registry and the live connection map and renders whatever is addable, so adding an
+// integration grows this list by one group with zero edits here. Selecting a widget inserts it into the
+// current dashboard (useAddWidget) and closes.
+//
+// AOD-69 canonicalization (design-dashboard-editor §6, §11 drift 4): the presentation is now the AOD-21 §7
+// in-screen sheet, composed from the AOD-67 `Sheet` (scrim + elevation.overlay surfaceAlt + grabber),
+// replacing the hardcoded rgba(0,0,0,0.6) backdrop + `background` fill; each row is the AOD-20 §8 `ListRow`
+// (widget title + a trailing accent "Add"), replacing the ad-hoc rows. Configure-on-add still routes a
+// required-no-default widget through the config sheet first (AOD-10 §4); everything else adds with defaults.
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { connectedServiceIds } from '../connections/connectionsRepo';
 import { useConnections } from '../connections/useConnections';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { ServiceDefinition, ServiceId, WidgetDefinition } from '../registry/types';
 import { ResolvedConfigFormModal } from '../widgets/ResolvedConfigFormModal';
+import { Button, ListRow, Sheet } from '../ui';
 import { defaultConfig, requiresConfiguration } from './placement';
 import { useAddWidget } from './useAddWidget';
 
@@ -82,7 +88,7 @@ export function WidgetPicker({ onClose }: WidgetPickerProps) {
     router.push('/settings');
   };
 
-  // When configuring-on-add, the picker stays mounted behind the config form so a cancel returns to it.
+  // When configuring-on-add, the config sheet takes over; a cancel returns to the picker (setConfiguring null).
   if (configuring) {
     return (
       <ResolvedConfigFormModal
@@ -100,147 +106,103 @@ export function WidgetPicker({ onClose }: WidgetPickerProps) {
   }
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Add widget</Text>
-            <Pressable onPress={onClose} accessibilityRole="button" testID="widget-picker-close">
-              <Text style={styles.close}>Close</Text>
-            </Pressable>
-          </View>
-
-          {error && (
-            <Text style={styles.error} testID="widget-picker-error">
-              {error.message}
-            </Text>
-          )}
-
-          {isError ? (
-            <Text style={styles.muted} testID="widget-picker-connections-error">
-              Could not load your connections. Try again from Settings.
-            </Text>
-          ) : isLoading ? (
-            <Text style={styles.muted}>Checking connections...</Text>
-          ) : groups.length === 0 ? (
-            <View style={styles.empty} testID="widget-picker-empty">
-              <Text style={styles.muted}>
-                No widgets to add yet. Connect a service in Settings to add its widgets.
-              </Text>
-              <Pressable onPress={goToSettings} accessibilityRole="button" testID="widget-picker-go-settings">
-                <Text style={styles.action}>Open Settings</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <ScrollView style={styles.list}>
-              {groups.map((group) => (
-                <View key={group.service.id} style={styles.group}>
-                  <Text style={styles.groupLabel}>{group.service.displayName}</Text>
-                  {group.widgets.map((widget) => (
-                    <Pressable
-                      key={widget.type}
-                      onPress={() => onSelect(widget)}
-                      disabled={pending}
-                      accessibilityRole="button"
-                      testID={`widget-picker-add-${group.service.id}-${widget.type}`}
-                      style={styles.item}
-                    >
-                      <Text style={styles.itemTitle} numberOfLines={1}>
-                        {widget.title}
-                      </Text>
-                      <Text style={styles.itemAdd}>{pending ? '...' : 'Add'}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+    <Sheet visible onRequestClose={onClose} bottomInset={UnistylesRuntime.insets.bottom} testID="widget-picker">
+      <View style={styles.header}>
+        <Text style={styles.title}>Add widget</Text>
+        <Button label="Close" variant="ghost" size="sm" onPress={onClose} testID="widget-picker-close" />
       </View>
-    </Modal>
+
+      {error && (
+        <Text style={styles.error} testID="widget-picker-error">
+          {error.message}
+        </Text>
+      )}
+
+      {isError ? (
+        <Text style={styles.muted} testID="widget-picker-connections-error">
+          Could not load your connections. Try again from Settings.
+        </Text>
+      ) : isLoading ? (
+        <Text style={styles.muted}>Checking connections...</Text>
+      ) : groups.length === 0 ? (
+        <View style={styles.empty} testID="widget-picker-empty">
+          <Text style={styles.muted}>No widgets to add yet. Connect a service in Settings to add its widgets.</Text>
+          <Button label="Open Settings" variant="secondary" size="sm" onPress={goToSettings} testID="widget-picker-go-settings" />
+        </View>
+      ) : (
+        <ScrollView style={styles.list}>
+          {groups.map((group) => (
+            <View key={group.service.id} style={styles.group}>
+              <Text style={styles.groupLabel}>{group.service.displayName}</Text>
+              {group.widgets.map((widget, i) => (
+                <Pressable
+                  key={widget.type}
+                  onPress={() => onSelect(widget)}
+                  disabled={pending}
+                  accessibilityRole="button"
+                  testID={`widget-picker-add-${group.service.id}-${widget.type}`}
+                  style={[styles.row, i > 0 && styles.rowDivider]}
+                >
+                  <ListRow
+                    title={widget.title}
+                    trailing={<Text style={styles.add}>{pending ? '...' : 'Add'}</Text>}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </Sheet>
   );
 }
 
-const styles = StyleSheet.create((theme, rt) => ({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radius.lg,
-    borderTopRightRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing(5),
-    paddingTop: theme.spacing(4),
-    paddingBottom: rt.insets.bottom + theme.spacing(4),
-    gap: theme.spacing(3),
-    maxHeight: '80%',
-  },
+const styles = StyleSheet.create((theme) => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: theme.spacing(2),
   },
   title: {
+    ...theme.type.title,
     color: theme.colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  close: {
-    color: theme.colors.accent,
-    fontSize: 14,
-    fontWeight: '600',
   },
   error: {
+    ...theme.type.meta,
     color: theme.colors.error,
-    fontSize: 13,
+    marginBottom: theme.spacing(2),
   },
   muted: {
+    ...theme.type.meta,
     color: theme.colors.textMuted,
-    fontSize: 14,
   },
   empty: {
     gap: theme.spacing(3),
     paddingVertical: theme.spacing(3),
   },
-  action: {
-    color: theme.colors.accent,
-    fontSize: 15,
-    fontWeight: '700',
-  },
   list: {
     flexGrow: 0,
   },
   group: {
-    gap: theme.spacing(1),
-    paddingVertical: theme.spacing(2),
+    paddingTop: theme.spacing(3),
   },
+  // §6 the group label = type.caption / textMuted, uppercase (the publishing service name).
   groupLabel: {
+    ...theme.type.caption,
     color: theme.colors.textMuted,
-    fontSize: 12,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
+    paddingHorizontal: theme.spacing(3),
+    paddingBottom: theme.spacing(1),
   },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing(3),
-    borderTopColor: theme.colors.border,
+  // §6 each row = the AOD-20 §8 ListRow; a hairline splits rows within a group.
+  row: {},
+  rowDivider: {
     borderTopWidth: 1,
-    gap: theme.spacing(3),
+    borderTopColor: theme.colors.border,
   },
-  itemTitle: {
-    color: theme.colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  itemAdd: {
+  add: {
+    ...theme.type.label,
     color: theme.colors.accent,
-    fontSize: 15,
-    fontWeight: '700',
   },
 }));

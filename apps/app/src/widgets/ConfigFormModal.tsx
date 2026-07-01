@@ -1,42 +1,23 @@
-// A bottom-sheet Modal wrapping the pure ConfigForm, reused by both config entry points (the add
-// flow's configure-on-add and the dashboard's reconfigure) so the modal chrome is not duplicated. It
-// is presentational: it forwards every ConfigForm prop and adds no logic. Visual design is DS-M1
-// (AOD-28); this is the functional surface, like the AOD-51 picker sheet it mirrors.
+// A bottom-sheet wrapping the pure ConfigForm, reused by both config entry points (the add flow's
+// configure-on-add and the dashboard's reconfigure) so the sheet chrome is not duplicated. It is
+// presentational: it forwards every ConfigForm prop and adds no logic.
+//
+// AOD-69 canonicalization (design-dashboard-editor §7, §11 drift 5): the presentation is now the AOD-21 §7
+// in-screen sheet, composed from the AOD-67 `Sheet` component (scrim + elevation.overlay surfaceAlt +
+// grabber + safe-area bottom inset), replacing the local rgba/`background` reimplementation the AOD-67
+// build had already role-swapped. A single component now owns the sheet chrome for every widget's config.
 import React from 'react';
-import { Modal, ScrollView, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { ScrollView } from 'react-native';
+import { UnistylesRuntime } from 'react-native-unistyles';
+import { Sheet } from '../ui';
 import { ConfigForm, type ConfigFormProps } from './ConfigForm';
 
 export function ConfigFormModal(props: ConfigFormProps) {
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={props.onCancel}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <ConfigForm {...props} />
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    <Sheet visible onRequestClose={props.onCancel} bottomInset={UnistylesRuntime.insets.bottom} testID="config-sheet">
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <ConfigForm {...props} />
+      </ScrollView>
+    </Sheet>
   );
 }
-
-// AOD-20 §13 drift 4 (additive role-swap): the backdrop resolves to the `scrim` token and the sheet fills
-// at elevation.overlay (surfaceAlt), so a single token change reskins every sheet. The full adoption of the
-// AOD-20 §9 Sheet component (grabber, elevation helper) is AOD-27's config-sheet interior recompose.
-const styles = StyleSheet.create((theme, rt) => ({
-  backdrop: {
-    flex: 1,
-    backgroundColor: theme.colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: theme.colors.surfaceAlt,
-    borderTopLeftRadius: theme.radius.lg,
-    borderTopRightRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing(5),
-    paddingTop: theme.spacing(4),
-    paddingBottom: rt.insets.bottom + theme.spacing(4),
-    maxHeight: '85%',
-  },
-}));

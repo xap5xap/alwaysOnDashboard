@@ -33,6 +33,8 @@ function applyPatch(instance: WidgetInstance, patch: LayoutPatch): WidgetInstanc
 
 export interface UseDashboardResult {
   instances: WidgetInstance[];
+  /** The active dashboard's id (AOD-27 switcher active mark; app-ia §10). Null until the query resolves. */
+  dashboardId: string | null;
   dashboardName: string | null;
   isLoading: boolean;
   isError: boolean;
@@ -99,6 +101,9 @@ export function useDashboard(): UseDashboardResult {
 
   return {
     instances: query.data?.instances ?? [],
+    // AOD-27: exposed for the dashboards switcher's active-selection mark (additive; no existing consumer
+    // changes). The multi-dashboard list + active-selection persistence stay the build's seam (app-ia §10).
+    dashboardId: query.data?.dashboardId ?? null,
     dashboardName: query.data?.name ?? null,
     isLoading: query.isLoading,
     isError: query.isError,

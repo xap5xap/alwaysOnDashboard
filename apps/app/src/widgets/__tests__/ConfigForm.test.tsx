@@ -4,7 +4,7 @@
 // (field-level errors, no submit on failure), and on success hands back the NORMALIZED values (defaults
 // applied, number coerced from text). remote-options is out of scope and must render without crashing.
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
 import { ConfigForm } from '../ConfigForm';
 import type { ResolvedOptionsState } from '../useOptionSources';
 import type { Choice, WidgetConfigSchema } from '../../registry/types';
@@ -38,13 +38,14 @@ function setup(initial: Record<string, unknown> = {}) {
 }
 
 describe('ConfigForm renders one input per static field kind, generic over the schema', () => {
-  it('renders a string, number, boolean, and enum input from the schema', () => {
+  it('renders a string, number, boolean, and enum input from the schema (AOD-67 controls)', () => {
     setup();
-    expect(screen.getByTestId('config-field-name')).toBeTruthy();
-    expect(screen.getByTestId('config-field-count')).toBeTruthy();
-    expect(screen.getByTestId('config-switch-live')).toBeTruthy();
-    expect(screen.getByTestId('config-enum-density-comfortable')).toBeTruthy();
-    expect(screen.getByTestId('config-enum-density-compact')).toBeTruthy();
+    expect(screen.getByTestId('config-field-name')).toBeTruthy(); // Input (string)
+    expect(screen.getByTestId('config-field-count')).toBeTruthy(); // Input (number)
+    expect(screen.getByTestId('config-toggle-live')).toBeTruthy(); // Toggle (was the native Switch)
+    expect(screen.getByTestId('config-enum-density')).toBeTruthy(); // Segmented group
+    expect(screen.getByTestId('segmented-comfortable')).toBeTruthy();
+    expect(screen.getByTestId('segmented-compact')).toBeTruthy();
   });
 
   it('pre-fills inputs from the current config, falling back to schema defaults', () => {
@@ -94,19 +95,23 @@ describe('remote-options picker (AOD-10 §4.3), fed by the resolved Choice[]', (
     expect(screen.getByTestId('config-remote-loading-project')).toBeTruthy();
   });
 
-  it('renders the resolved choices as a single-select picker and stores the stable id', () => {
+  it('renders the resolved choices as AOD-67 Pills and stores the stable id (single-select)', () => {
     const { onSubmit } = renderRemote({ options: { project: ready, tags: ready } });
-    expect(screen.getByTestId('config-remote-project-alpha')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('config-remote-project-bravo'));
+    // Each remote field wraps its Pills in a `config-remote-<key>` View so the `pill-<value>` segments
+    // stay addressable per field (two remote fields share option values here).
+    const project = within(screen.getByTestId('config-remote-project'));
+    expect(project.getByTestId('pill-alpha')).toBeTruthy();
+    fireEvent.press(project.getByTestId('pill-bravo'));
     fireEvent.press(screen.getByTestId('config-submit'));
     expect(onSubmit).toHaveBeenCalledWith({ project: 'bravo', tags: [] });
   });
 
   it('multi-select toggles store an array of stable ids', () => {
     const { onSubmit } = renderRemote({ initial: { project: 'alpha' }, options: { project: ready, tags: ready } });
-    fireEvent.press(screen.getByTestId('config-remote-tags-alpha'));
-    fireEvent.press(screen.getByTestId('config-remote-tags-bravo'));
-    fireEvent.press(screen.getByTestId('config-remote-tags-alpha')); // toggle alpha back off
+    const tags = within(screen.getByTestId('config-remote-tags'));
+    fireEvent.press(tags.getByTestId('pill-alpha'));
+    fireEvent.press(tags.getByTestId('pill-bravo'));
+    fireEvent.press(tags.getByTestId('pill-alpha')); // toggle alpha back off
     fireEvent.press(screen.getByTestId('config-submit'));
     expect(onSubmit).toHaveBeenCalledWith({ project: 'alpha', tags: ['bravo'] });
   });
@@ -182,8 +187,8 @@ describe('a valid save returns the normalized values (defaults applied, types co
     const { onSubmit } = setup();
     fireEvent.changeText(screen.getByTestId('config-field-name'), 'Wall');
     fireEvent.changeText(screen.getByTestId('config-field-count'), '8');
-    fireEvent.press(screen.getByTestId('config-enum-density-compact'));
-    fireEvent(screen.getByTestId('config-switch-live'), 'valueChange', true);
+    fireEvent.press(screen.getByTestId('segmented-compact')); // enum -> Segmented
+    fireEvent.press(screen.getByTestId('config-toggle-live')); // boolean -> Toggle (Pressable; press flips false->true)
     fireEvent.press(screen.getByTestId('config-submit'));
     expect(onSubmit).toHaveBeenCalledWith({ name: 'Wall', count: 8, live: true, density: 'compact' });
   });

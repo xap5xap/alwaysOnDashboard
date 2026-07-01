@@ -18,22 +18,31 @@ export function LoadingState({ rows = 4, testID }: { rows?: number; testID?: str
   );
 }
 
-/** §8 empty: a calm CTA in the brand's voice (a muted line + a primary button), NEVER an error treatment. */
+/** §8 empty: a calm CTA in the brand's voice (a muted line + a primary button), NEVER an error treatment.
+ *  The optional `glyph` (above the line) and `subline` (a quieter line below) are the AOD-27 §5
+ *  empty-DASHBOARD composition inputs: the generic state stays a line + action, the dashboard supplies its
+ *  soft accent add glyph + get-started subline through these additive slots (design-dashboard-editor §5). */
 export function EmptyState({
   line,
+  subline,
   actionLabel,
   onAction,
+  glyph,
   testID,
 }: {
   line: string;
+  subline?: string;
   actionLabel?: string;
   onAction?: () => void;
+  glyph?: React.ReactNode;
   testID?: string;
 }) {
   const { theme } = useUnistyles();
   return (
     <View style={styles.center} testID={testID ?? 'screen-empty'}>
-      <Text style={[theme.type.body, styles.muted]}>{line}</Text>
+      {glyph ?? null}
+      <Text style={[theme.type.body, styles.centerText, styles.muted]}>{line}</Text>
+      {subline ? <Text style={[theme.type.meta, styles.centerText, styles.muted]}>{subline}</Text> : null}
       {actionLabel ? <Button label={actionLabel} variant="primary" onPress={onAction} testID="screen-empty-action" /> : null}
     </View>
   );
