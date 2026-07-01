@@ -19,6 +19,7 @@ import { useDashboard } from '../layout/useDashboard';
 import { wallProfile } from './profile';
 import { useKioskRuntime } from './runtime';
 import { ExitAffordance } from './ExitAffordance';
+import { PinSetup } from './PinSetup';
 
 const noop = () => {};
 
@@ -29,7 +30,7 @@ export function KioskWall() {
   // for the switcher, so the param is accepted + documented and the active dashboard is rendered. Not forked.
   useLocalSearchParams<{ dashboardId?: string }>();
   const { instances, isLoading, isError } = useDashboard();
-  const runtime = useKioskRuntime();
+  const { pinHash, ambient, needsPinSetup, setPin } = useKioskRuntime();
   const profile = wallProfile(theme.wall.typeScale);
   const insets = UnistylesRuntime.insets;
 
@@ -45,11 +46,11 @@ export function KioskWall() {
       {/* §8 no OS status bar: the wall is edge to edge (a native effect; a no-op on web). */}
       <StatusBar hidden />
 
-      {/* §6 the wall owns its day/night: an uncontrolled AmbientProvider (defaults to day, dev-settable via
-          __velaSetAmbient). The native runtime drives it with computeAmbient(now) (AOD-11 §8.4, the seam);
-          on web the day/night look is forced from the preview via __velaSetAmbient. Composes AOD-62; the
-          per-card overlay + the deep-red Clock opt-in are the AOD-37 §7 cards reacting, not rebuilt here. */}
-      <AmbientProvider>
+      {/* §8 the wall owns its day/night. On native the runtime drives computeAmbient(now) (§8.4) into this
+          provider as a CONTROLLED value; on web `ambient` is undefined so the provider stays uncontrolled and
+          the __velaSetAmbient dev seam forces the look from the preview. Composes AOD-62; the per-card overlay
+          + the deep-red Clock opt-in are the AOD-37 §7 cards reacting, not rebuilt here. */}
+      <AmbientProvider value={ambient}>
         <View
           style={[
             styles.content,
@@ -90,8 +91,13 @@ export function KioskWall() {
 
       {/* §7/§8 the exit affordance at the true screen edge (outside the safe-area padding), above the wall.
           The invisible corner + the "Hold to exit" hint + ring + the PIN pad; the app-level gesture + PIN is
-          the portable exit guard (§8). readPinHash is the runtime seam (dev default on web). */}
-      <ExitAffordance storedHash={runtime.readPinHash()} onExit={onExit} />
+          the portable exit guard (§9). pinHash is the runtime seam (secure-store on native, dev default on web). */}
+      <ExitAffordance storedHash={pinHash ?? ''} onExit={onExit} />
+
+      {/* §4.3 first-run exit-PIN setup: native with no stored PIN shows this before the wall is exitable, so a
+          wall is never left un-exitable and the AOD-72 dev PIN never ships. Never shown on web (needsPinSetup
+          is false there). Cancel leaves the wall via the same exit path. */}
+      {needsPinSetup ? <PinSetup onDone={setPin} onCancel={onExit} /> : null}
     </View>
   );
 }

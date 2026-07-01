@@ -11,13 +11,13 @@ import { Animated, Pressable, Text, View } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import Svg, { Circle } from 'react-native-svg';
 import { Button, Modal } from '../ui';
-import { PIN_LENGTH } from './pin';
+import { PinPad } from './PinPad';
 import { HOLD_MS, useExitFlow } from './exitFlow';
 
 const RING_STROKE = 4;
 
 export interface ExitAffordanceProps {
-  /** The stored PIN hash to verify against (kioskRuntime.readPinHash()). */
+  /** The stored PIN hash to verify against (the kiosk runtime's pinHash). */
   storedHash: string;
   /** Correct-PIN exit: the wall reverses enter + replaces back to the Dashboard. */
   onExit(): void;
@@ -74,45 +74,10 @@ function HoldRing({ size, holdMs }: { size: number; holdMs: number }) {
   );
 }
 
-/** One PIN-pad key: a wall.pinKey circle (digit) or the backspace, sized for a wall touch target. */
-function KeyButton({
-  label,
-  onPress,
-  size,
-  testID,
-}: {
-  label: string;
-  onPress: () => void;
-  size: number;
-  testID: string;
-}) {
-  const { theme } = useUnistyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      testID={testID}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.surfaceAlt,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-      }}
-    >
-      <Text style={{ ...theme.type.title, color: theme.colors.text }}>{label}</Text>
-    </Pressable>
-  );
-}
-
 export function ExitAffordance({ storedHash, onExit, holdMs = HOLD_MS }: ExitAffordanceProps) {
   const { theme } = useUnistyles();
   const flow = useExitFlow({ storedHash, onExit, holdMs });
   const corner = theme.wall.exitCorner;
-  const key = theme.wall.pinKey;
 
   // The wrong-PIN shake: re-run a short translateX wobble whenever wrongNonce increments (§7).
   const shakeX = useRef(new Animated.Value(0)).current;
@@ -125,12 +90,6 @@ export function ExitAffordance({ storedHash, onExit, holdMs = HOLD_MS }: ExitAff
       Animated.timing(shakeX, { toValue: 0, duration: 50, useNativeDriver: false }),
     ]).start();
   }, [flow.wrongNonce, shakeX]);
-
-  const rows = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-  ];
 
   return (
     // box-none so the wall behind stays glanceable/untouched except the corner and the PIN surface.
@@ -171,42 +130,7 @@ export function ExitAffordance({ storedHash, onExit, holdMs = HOLD_MS }: ExitAff
       {/* 3. The scrim + PIN pad (composes the AOD-67 §9 Modal). A correct PIN exits; wrong shakes + stays. */}
       <Modal visible={flow.phase === 'pin'} onRequestClose={flow.dismiss} title="Enter PIN" testID="kiosk-pin">
         <Animated.View style={{ transform: [{ translateX: shakeX }], gap: theme.spacing(4), alignItems: 'center' }}>
-          {/* the four dots (filled as digits are entered) */}
-          <View testID="kiosk-pin-dots" style={{ flexDirection: 'row', gap: theme.spacing(3), paddingVertical: theme.spacing(2) }}>
-            {Array.from({ length: PIN_LENGTH }).map((_, i) => {
-              const filled = i < flow.entered.length;
-              return (
-                <View
-                  key={i}
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 7,
-                    backgroundColor: filled ? theme.colors.accent : 'transparent',
-                    borderWidth: filled ? 0 : 1.5,
-                    borderColor: theme.colors.border,
-                  }}
-                />
-              );
-            })}
-          </View>
-
-          {/* the numeric keypad (wall.pinKey keys) */}
-          <View style={{ gap: theme.spacing(3) }}>
-            {rows.map((row) => (
-              <View key={row.join('')} style={{ flexDirection: 'row', gap: theme.spacing(3) }}>
-                {row.map((d) => (
-                  <KeyButton key={d} label={d} size={key} onPress={() => flow.pressKey(d)} testID={`kiosk-pin-key-${d}`} />
-                ))}
-              </View>
-            ))}
-            <View style={{ flexDirection: 'row', gap: theme.spacing(3) }}>
-              <View style={{ width: key, height: key }} />
-              <KeyButton label="0" size={key} onPress={() => flow.pressKey('0')} testID="kiosk-pin-key-0" />
-              <KeyButton label="⌫" size={key} onPress={flow.pressDelete} testID="kiosk-pin-delete" />
-            </View>
-          </View>
-
+          <PinPad filled={flow.entered.length} onKey={flow.pressKey} onDelete={flow.pressDelete} />
           <Button label="Cancel" variant="ghost" onPress={flow.dismiss} testID="kiosk-pin-cancel" />
         </Animated.View>
       </Modal>

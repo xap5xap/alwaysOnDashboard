@@ -1,7 +1,7 @@
 // The exit PIN logic (kiosk-mode.md §4.3, design-kiosk-wall.md §7). Pure helpers only: the PIN is verified
 // against a HASH (the plaintext is never stored or compared directly), the pad appends/deletes digits, and
 // the entry evaluates to correct / wrong / incomplete. The HASH STORAGE is a platform mechanic
-// (expo-secure-store on native) and lives behind the runtime seam (kioskRuntime.readPinHash), NOT here;
+// (expo-secure-store on native) and lives behind the runtime seam (the kiosk runtime's pinHash), NOT here;
 // this module is the pure, testable core the pad and the exit flow compose.
 //
 // The hash is a small non-cryptographic digest: a 4-digit PIN is brute-forceable regardless of the digest,
