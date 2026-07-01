@@ -3,12 +3,18 @@
 // platform_key integration reuses it as-is:
 //   - `key` (api_key/admin_key): a secret field, submitted as { apiKey } (AOD-9 §7.2). Unchanged.
 //   - `location` (platform_key, e.g. Weather): a keyless city geocoding search; picking a result submits
-//     the coordinate { location } the /v1/forecast API consumes (integration-weather.md §5.2/§5.3). This
-//     replaces the prior free-text { city } placeholder, because the forecast API cannot consume a bare
-//     city. A richer onboarding picker is AOD-26; this is the minimal capture the build owns (§10).
+//     the coordinate { location } the /v1/forecast API consumes (integration-weather.md §5.2/§5.3).
+//
+// AOD-70 recompose (design-settings-connections.md §6, §10 drift 2/3): this is the SHEET INTERIOR now,
+// composed from the AOD-67 controls instead of ad-hoc TextInput/Pressable. The `key` interior is one AOD-67
+// `Input` (secureTextEntry, surfaceAlt fill + placeholder -> textMuted owned by the component) with a ghost
+// Cancel + a primary Save Button; the `location` interior is the AOD-67 `SearchRow` (§6) whose results
+// render as an elevation.raised RowGroup of ListRows (§8), with a ghost Cancel. The sheet CHROME (scrim +
+// elevation.overlay + grabber) is CredentialSheet's; this stays the pure interior, unchanged in props.
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Button, Input, ListRow, RowGroup, SearchRow } from '../ui';
 import type { ConnectMechanism } from './affordance';
 import { geocodeLabel, type GeocodeResult, searchLocations, toWeatherLocation } from './geocoding';
 
@@ -24,9 +30,10 @@ export function CredentialForm(props: CredentialFormProps) {
   return props.mechanism === 'location' ? <LocationForm {...props} /> : <KeyForm {...props} />;
 }
 
-/** api_key / admin_key: a single secret field, submitted as { apiKey } (AOD-9 §7.2). */
+/** api_key / admin_key: a single AOD-67 secret Input, submitted as { apiKey } (AOD-9 §7.2). The key is
+ *  high-sensitivity (AOD-9 §4): never logged or returned, so the field serves both classes with one
+ *  interior and Settings shows only a masked hint after connect. */
 function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
-  const { theme } = useUnistyles();
   const [value, setValue] = useState('');
   const trimmed = value.trim();
   const canSubmit = trimmed.length > 0 && !pending;
@@ -37,32 +44,32 @@ function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
 
   return (
     <View style={styles.form} testID="credential-form">
-      <Text style={styles.label}>API key</Text>
-      <TextInput
-        style={styles.input}
+      <Input
+        label="API key"
         value={value}
         onChangeText={setValue}
         placeholder="Paste your key"
-        placeholderTextColor={theme.colors.textMuted} // §13 drift 3: was the hardcoded #6B7280
+        hint="Stored securely. Never shown again."
+        error={error}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
-        editable={!pending}
-        accessibilityLabel="API key"
+        disabled={pending}
+        returnKeyType="done"
         onSubmitEditing={submit}
+        accessibilityLabel="API key"
+        testID="credential-form-key"
       />
-      {error && (
-        <Text style={styles.error} testID="credential-form-error">
-          {error}
-        </Text>
-      )}
       <View style={styles.actions}>
-        <Pressable onPress={onCancel} accessibilityRole="button" disabled={pending}>
-          <Text style={styles.cancel}>Cancel</Text>
-        </Pressable>
-        <Pressable onPress={submit} accessibilityRole="button" disabled={!canSubmit} testID="credential-form-submit">
-          <Text style={[styles.submit, !canSubmit && styles.submitDisabled]}>{pending ? 'Saving...' : 'Save'}</Text>
-        </Pressable>
+        <Button label="Cancel" variant="ghost" onPress={onCancel} disabled={pending} testID="credential-form-cancel" />
+        <Button
+          label="Save"
+          variant="primary"
+          onPress={submit}
+          loading={pending}
+          disabled={trimmed.length === 0}
+          testID="credential-form-submit"
+        />
       </View>
     </View>
   );
@@ -72,10 +79,10 @@ function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
  * platform_key (Weather): type a city, search Open-Meteo's keyless geocoding API, then pick a result.
  * Picking submits { location: { latitude, longitude, timezone, name } } (integration-weather.md §5.2),
  * the coordinate shape the forecast API consumes. `pending` is the connect mutation (credentials-store);
- * `searching` is the geocoding lookup, kept separate so a failed search never blocks Cancel.
+ * `searching` is the geocoding lookup, kept separate so a failed search never blocks Cancel. The pick is
+ * the submit, so the only button is Cancel (design-settings-connections.md §6).
  */
 function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
-  const { theme } = useUnistyles();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeocodeResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -105,32 +112,20 @@ function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProp
 
   return (
     <View style={styles.form} testID="credential-form">
-      <Text style={styles.label}>Location</Text>
-      <View style={styles.searchRow}>
-        <TextInput
-          style={[styles.input, styles.searchInput]}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="City, e.g. Quito"
-          placeholderTextColor={theme.colors.textMuted} // §13 drift 3: was the hardcoded #6B7280
-          autoCapitalize="words"
-          autoCorrect={false}
-          editable={!pending}
-          accessibilityLabel="Location"
-          returnKeyType="search"
-          onSubmitEditing={search}
-        />
-        <Pressable onPress={search} accessibilityRole="button" disabled={!canSearch} testID="location-search-submit">
-          <Text style={[styles.submit, !canSearch && styles.submitDisabled]}>{searching ? '...' : 'Search'}</Text>
-        </Pressable>
-      </View>
+      <SearchRow
+        label="Location"
+        value={query}
+        onChangeText={setQuery}
+        placeholder="City, e.g. Quito"
+        autoCapitalize="words"
+        autoCorrect={false}
+        disabled={pending}
+        accessibilityLabel="Location"
+        searching={searching}
+        searchDisabled={!canSearch}
+        onSearch={search}
+      />
 
-      {searching && (
-        <View style={styles.searchHint}>
-          <ActivityIndicator />
-          <Text style={styles.hintText}>Searching...</Text>
-        </View>
-      )}
       {searchError && (
         <Text style={styles.error} testID="location-search-error">
           {searchError}
@@ -143,7 +138,7 @@ function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProp
       )}
 
       {results && results.length > 0 && (
-        <View style={styles.results} testID="location-results">
+        <RowGroup testID="location-results">
           {results.map((r, i) => (
             <Pressable
               key={`${r.id}-${i}`}
@@ -153,10 +148,10 @@ function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProp
               disabled={pending}
               testID={`location-result-${i}`}
             >
-              <Text style={styles.resultText}>{geocodeLabel(r)}</Text>
+              <ListRow title={geocodeLabel(r)} />
             </Pressable>
           ))}
-        </View>
+        </RowGroup>
       )}
 
       {error && (
@@ -166,9 +161,7 @@ function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProp
       )}
 
       <View style={styles.actions}>
-        <Pressable onPress={onCancel} accessibilityRole="button" disabled={pending}>
-          <Text style={styles.cancel}>Cancel</Text>
-        </Pressable>
+        <Button label="Cancel" variant="ghost" onPress={onCancel} disabled={pending} testID="credential-form-cancel" />
         {pending && <Text style={styles.hintText}>Saving...</Text>}
       </View>
     </View>
@@ -177,72 +170,20 @@ function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProp
 
 const styles = StyleSheet.create((theme) => ({
   form: {
-    gap: theme.spacing(2),
-    paddingTop: theme.spacing(2),
-  },
-  label: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  input: {
-    backgroundColor: theme.colors.surfaceAlt, // §13 drift 2: one input fill (was background)
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.sm,
-    color: theme.colors.text,
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(2),
-    fontSize: 15,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: theme.spacing(3),
   },
-  searchInput: {
-    flexGrow: 1,
-    flexShrink: 1,
-  },
-  searchHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing(2),
-  },
   hintText: {
+    ...theme.type.meta,
     color: theme.colors.textMuted,
-    fontSize: 13,
-  },
-  results: {
-    gap: theme.spacing(1),
-  },
-  resultText: {
-    color: theme.colors.text,
-    fontSize: 15,
-    paddingVertical: theme.spacing(2),
   },
   error: {
+    ...theme.type.meta,
     color: theme.colors.error,
-    fontSize: 12,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: theme.spacing(4),
+    gap: theme.spacing(3),
     alignItems: 'center',
-  },
-  cancel: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  submit: {
-    color: theme.colors.accent,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  submitDisabled: {
-    color: theme.colors.textMuted,
   },
 }));
