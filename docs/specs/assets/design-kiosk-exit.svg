@@ -1,0 +1,85 @@
+<svg width="100%" viewBox="0 0 860 476" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela kiosk wall: the exit affordance, an invisible long-press corner and a PIN surface</title>
+  <desc>Three landscape wall frames show the exit flow. First, the wall carries an invisible long-press exit corner in the bottom right, a faint dashed hit-target with no visible control, so a passer-by sees only content and never the exit. Second, a deliberate long-press for about two seconds fills a progress ring at that corner and reveals a Hold to exit hint. Third, completing the hold raises a PIN surface: the wall dims under a scrim and a centered card reads Enter PIN with four dots and a numeric keypad, verified against a hash in secure storage. A footer states AOD-11 owns the exit mechanic, the gesture, the hold duration, the PIN hash, and the back intercept, while this design fixes only the affordance visual: a wrong PIN shakes the card and the wall stays active, and a correct PIN releases pinning, restores brightness, and returns to the Dashboard, the only exit because the OS back is intercepted.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:8px;font-weight:700;fill:#8A8A97;letter-spacing:0.8px;}
+    .step{font-size:12px;font-weight:700;fill:#F4F4F8;}
+    .stepm{font-size:10px;fill:#9B9BA8;}
+    .hint{font-size:10px;font-weight:600;fill:#C9C9D4;}
+    .pin{font-size:11px;font-weight:600;fill:#F4F4F8;}
+    .key{font-size:13px;font-weight:600;fill:#F4F4F8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .faint{fill:#16161D;stroke:#20202A;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="475" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The exit affordance: long-press corner + PIN</text>
+  <text x="32" y="60" class="sub">A wall must not be dismissed by a stray tap, yet the owner must leave. Invisible to a passer-by, deliberate for the owner.</text>
+
+  <!-- ===== frame 1: invisible corner ===== -->
+  <rect x="40" y="90" width="236" height="164" rx="12" fill="#0B0B0F" stroke="#23232E" stroke-width="1.5"/>
+  <rect x="54" y="104" width="96" height="60" rx="8" class="faint"/>
+  <text x="64" y="120" class="cap" fill="#5A5A66">CLOCK</text><text x="63" y="146" font-size="16" font-weight="700" fill="#6A6A78">14:05</text>
+  <rect x="160" y="104" width="102" height="60" rx="8" class="faint"/>
+  <rect x="54" y="172" width="208" height="66" rx="8" class="faint"/>
+  <!-- invisible corner hit-target -->
+  <rect x="214" y="192" width="48" height="42" rx="10" fill="none" stroke="#3A3A48" stroke-width="1.2" stroke-dasharray="3 3"/>
+  <path d="M238,206 v14 M231,213 h14" stroke="#5A5A66" stroke-width="1.4" stroke-linecap="round"/>
+  <text x="158" y="284" text-anchor="middle" class="step">1 &#183; invisible corner</text>
+  <text x="158" y="300" text-anchor="middle" class="stepm">no visible control; only content</text>
+
+  <!-- ===== frame 2: hold ===== -->
+  <rect x="312" y="90" width="236" height="164" rx="12" fill="#0B0B0F" stroke="#23232E" stroke-width="1.5"/>
+  <rect x="326" y="104" width="96" height="60" rx="8" class="faint"/>
+  <text x="336" y="120" class="cap" fill="#5A5A66">CLOCK</text><text x="335" y="146" font-size="16" font-weight="700" fill="#6A6A78">14:05</text>
+  <rect x="432" y="104" width="102" height="60" rx="8" class="faint"/>
+  <rect x="326" y="172" width="208" height="66" rx="8" class="faint"/>
+  <!-- progress ring at corner -->
+  <circle cx="510" cy="212" r="17" fill="#101019" stroke="#2A2A36" stroke-width="3"/>
+  <circle cx="510" cy="212" r="17" fill="none" stroke="#6E8BFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="70 107" transform="rotate(-90 510 212)"/>
+  <circle cx="510" cy="212" r="6" fill="#6E8BFF" fill-opacity="0.5"/>
+  <!-- hint pill -->
+  <rect x="352" y="200" width="104" height="24" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="404" y="216" text-anchor="middle" class="hint">Hold to exit&#8230;</text>
+  <text x="430" y="284" text-anchor="middle" class="step">2 &#183; long-press 2s</text>
+  <text x="430" y="300" text-anchor="middle" class="stepm">a deliberate hold (holdMs), not a brush</text>
+
+  <!-- ===== frame 3: PIN ===== -->
+  <rect x="584" y="90" width="236" height="164" rx="12" fill="#0B0B0F" stroke="#23232E" stroke-width="1.5"/>
+  <rect x="598" y="104" width="96" height="60" rx="8" class="faint"/>
+  <rect x="704" y="104" width="102" height="60" rx="8" class="faint"/>
+  <rect x="598" y="172" width="208" height="66" rx="8" class="faint"/>
+  <!-- scrim -->
+  <rect x="584" y="90" width="236" height="164" rx="12" fill="#000000" opacity="0.6"/>
+  <!-- PIN card -->
+  <rect x="636" y="108" width="132" height="128" rx="12" fill="#16161D" stroke="#2A2A36"/>
+  <text x="702" y="128" text-anchor="middle" class="pin">Enter PIN</text>
+  <circle cx="678" cy="144" r="4.5" fill="#6E8BFF"/><circle cx="694" cy="144" r="4.5" fill="#6E8BFF"/>
+  <circle cx="710" cy="144" r="4.5" fill="none" stroke="#5A5A66" stroke-width="1.4"/><circle cx="726" cy="144" r="4.5" fill="none" stroke="#5A5A66" stroke-width="1.4"/>
+  <!-- keypad 3 cols x 2 rows shown compact -->
+  <g class="key" text-anchor="middle">
+    <circle cx="670" cy="172" r="11" fill="#101019" stroke="#23232E"/><text x="670" y="176">1</text>
+    <circle cx="702" cy="172" r="11" fill="#101019" stroke="#23232E"/><text x="702" y="176">2</text>
+    <circle cx="734" cy="172" r="11" fill="#101019" stroke="#23232E"/><text x="734" y="176">3</text>
+    <circle cx="670" cy="202" r="11" fill="#101019" stroke="#23232E"/><text x="670" y="206">4</text>
+    <circle cx="702" cy="202" r="11" fill="#101019" stroke="#23232E"/><text x="702" y="206">5</text>
+    <circle cx="734" cy="202" r="11" fill="#101019" stroke="#23232E"/><text x="734" y="206">6</text>
+  </g>
+  <text x="702" y="284" text-anchor="middle" class="step">3 &#183; PIN entry</text>
+  <text x="702" y="300" text-anchor="middle" class="stepm">verified vs a secure-store hash</text>
+
+  <!-- ===== outcomes strip ===== -->
+  <line x1="32" y1="326" x2="828" y2="326" stroke="#22222C"/>
+  <circle cx="44" cy="352" r="4.5" fill="#FF6B6B"/>
+  <text x="60" y="349" class="note" font-size="10.5"><tspan fill="#F4F4F8" font-weight="700">Wrong PIN</tspan> &#8594; the card shakes, the wall stays active. A wrong entry never leaves the wall.</text>
+  <circle cx="44" cy="378" r="4.5" fill="#4CB782"/>
+  <text x="60" y="375" class="note" font-size="10.5"><tspan fill="#F4F4F8" font-weight="700">Correct PIN</tspan> &#8594; release pinning, restore system brightness, unmount the profile, return to the Dashboard.</text>
+
+  <line x1="32" y1="404" x2="828" y2="404" stroke="#22222C"/>
+  <text x="32" y="426" class="note"><tspan fill="#6E8BFF" font-weight="700">AOD-11 owns the exit mechanic; AOD-39 fixes the affordance.</tspan> The gesture, holdMs, the PIN hash, and the back-intercept are AOD-11's.</text>
+  <text x="32" y="444" class="tok">the OS back is intercepted (gestureEnabled:false), so this gesture + PIN is the ONLY exit; the corner is invisible so a passer-by never finds it</text>
+  <text x="32" y="462" class="tok">design decision: reveal the 'Hold to exit' hint only on touch-down at the corner; the wall advertises nothing at rest, it is looked at not touched</text>
+</svg>

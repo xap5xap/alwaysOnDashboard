@@ -1,0 +1,125 @@
+<svg width="100%" viewBox="0 0 860 528" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela kiosk wall: the whole wall dimming through the day (the wall-level application of the AOD-11 curve)</title>
+  <desc>Three landscape mini-walls show the same wall at day, dusk, and night. At day, dimLevel zero, every card and the clock render light on the near-black field. At dusk, dimLevel about 0.35, the global overlay uniformly darkens the default cards. At night, dimLevel about 0.70, the overlay darkens the default cards further, the clock opts out and recolours itself to a deep red, and the device backlight drops to about 0.3, a badge notes the real light reduction. A slim curve strip beneath ties each wall to its point on the AOD-11 dim curve, easing dimLevel from zero in the day up to about 0.7 at night. A three-layer legend names the global overlay that darkens every dimsWithAmbient card with no widget code, the deep-red useAmbient opt-in that recolours the clock because the overlay can only darken, and the kiosk-only backlight reduction. A footer states AOD-11 owns the curve and schedule, AOD-37 owns the per-widget overlay and deep-red palette, and this design shows only the wall-level application.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:8px;font-weight:700;fill:#9B9BA8;letter-spacing:0.6px;}
+    .ncap{font-size:8px;font-weight:700;fill:#8A201B;letter-spacing:0.6px;}
+    .lbl{font-size:11px;font-weight:700;fill:#F4F4F8;}
+    .lblm{font-size:10px;fill:#9B9BA8;}
+    .tick{font-size:9.5px;fill:#8A8A97;}
+    .curve{fill:none;stroke:#6E8BFF;stroke-width:2;}
+    .axis{stroke:#2A2A36;stroke-width:1;}
+    .guide{stroke:#2A2A36;stroke-width:1;stroke-dasharray:3 3;}
+    .drop{stroke:#3A3A48;stroke-width:1;stroke-dasharray:2 3;}
+    .leg{font-size:11px;font-weight:600;fill:#F4F4F8;}
+    .legm{font-size:9.5px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="527" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Day / night on the wall: the dusk to dawn ramp</text>
+  <text x="32" y="60" class="sub">The whole wall dims through the day. Three layers compose: the overlay, the deep-red Clock opt-in, and the backlight.</text>
+
+  <!-- ===== mini-wall: DAY ===== -->
+  <g>
+    <rect x="40" y="86" width="240" height="150" rx="12" fill="#050507" stroke="#23232E" stroke-width="1.5"/>
+    <rect x="52" y="98" width="104" height="126" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="64" y="118" class="cap">CLOCK</text>
+    <text x="63" y="160" font-size="22" font-weight="700" fill="#F4F4F8">14:05</text>
+    <text x="64" y="180" class="lblm" font-size="8.5">Mon, Jun 30</text>
+    <rect x="164" y="98" width="104" height="60" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="176" y="116" class="cap">CLAUDE · SPEND</text>
+    <text x="175" y="146" font-size="18" font-weight="700" fill="#F4F4F8">$42</text>
+    <rect x="164" y="164" width="104" height="60" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="176" y="182" class="cap">WEATHER</text>
+    <text x="175" y="212" font-size="18" font-weight="700" fill="#F4F4F8">18&#176;</text>
+  </g>
+  <text x="160" y="258" text-anchor="middle" class="lbl">day &#183; dimLevel 0</text>
+  <text x="160" y="274" text-anchor="middle" class="lblm">full brightness</text>
+
+  <!-- ===== mini-wall: DUSK ===== -->
+  <g>
+    <rect x="300" y="86" width="240" height="150" rx="12" fill="#050507" stroke="#23232E" stroke-width="1.5"/>
+    <rect x="312" y="98" width="104" height="126" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="324" y="118" class="cap">CLOCK</text>
+    <text x="323" y="160" font-size="22" font-weight="700" fill="#F4F4F8">18:40</text>
+    <text x="324" y="180" class="lblm" font-size="8.5">Mon, Jun 30</text>
+    <rect x="424" y="98" width="104" height="60" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="436" y="116" class="cap">CLAUDE · SPEND</text>
+    <text x="435" y="146" font-size="18" font-weight="700" fill="#F4F4F8">$42</text>
+    <rect x="424" y="164" width="104" height="60" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="436" y="182" class="cap">WEATHER</text>
+    <text x="435" y="212" font-size="18" font-weight="700" fill="#F4F4F8">18&#176;</text>
+    <!-- overlay 0.35 on the default cards -->
+    <rect x="424" y="98" width="104" height="60" rx="9" fill="#000000" opacity="0.35"/>
+    <rect x="424" y="164" width="104" height="60" rx="9" fill="#000000" opacity="0.35"/>
+    <rect x="312" y="98" width="104" height="126" rx="9" fill="#000000" opacity="0.35"/>
+  </g>
+  <text x="420" y="258" text-anchor="middle" class="lbl">dusk &#183; dimLevel 0.35</text>
+  <text x="420" y="274" text-anchor="middle" class="lblm">overlay eases in</text>
+
+  <!-- ===== mini-wall: NIGHT ===== -->
+  <g>
+    <rect x="560" y="86" width="240" height="150" rx="12" fill="#050507" stroke="#23232E" stroke-width="1.5"/>
+    <!-- clock: deep-red opt-in (no overlay) -->
+    <rect x="572" y="98" width="104" height="126" rx="9" fill="#140709" stroke="#2E1214"/>
+    <text x="584" y="118" class="ncap">CLOCK</text>
+    <text x="583" y="160" font-size="22" font-weight="700" fill="#C2362B">21:48</text>
+    <text x="584" y="180" font-size="8.5" fill="#8A201B">Mon, Jun 30</text>
+    <!-- default cards + overlay 0.70 -->
+    <rect x="684" y="98" width="104" height="60" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="696" y="116" class="cap">CLAUDE · SPEND</text>
+    <text x="695" y="146" font-size="18" font-weight="700" fill="#F4F4F8">$42</text>
+    <rect x="684" y="164" width="104" height="60" rx="9" fill="#16161D" stroke="#2A2A36"/>
+    <text x="696" y="182" class="cap">WEATHER</text>
+    <text x="695" y="212" font-size="18" font-weight="700" fill="#F4F4F8">18&#176;</text>
+    <rect x="684" y="98" width="104" height="60" rx="9" fill="#000000" opacity="0.70"/>
+    <rect x="684" y="164" width="104" height="60" rx="9" fill="#000000" opacity="0.70"/>
+    <!-- backlight badge -->
+    <rect x="568" y="204" width="98" height="18" rx="9" fill="#0A0506" stroke="#2E1214"/>
+    <circle cx="580" cy="213" r="3.5" fill="none" stroke="#C2362B" stroke-width="1.3"/>
+    <text x="590" y="216" font-size="8.5" fill="#8A201B">backlight &#8595; 0.3</text>
+  </g>
+  <text x="680" y="258" text-anchor="middle" class="lbl">night &#183; dimLevel 0.70</text>
+  <text x="680" y="274" text-anchor="middle" class="lblm">overlay + deep red + backlight</text>
+
+  <!-- ===== curve strip ===== -->
+  <line x1="40" y1="352" x2="800" y2="352" class="axis"/>
+  <line x1="40" y1="312" x2="800" y2="312" class="guide"/>
+  <text x="44" y="308" class="tick">nightDim 0.70</text>
+  <text x="44" y="348" class="tick">dayDim 0</text>
+  <path d="M40 352 L210 352 C300 352 300 312 420 312 M420 312 C300 312 300 352 40 352" class="curve" opacity="0"/>
+  <path d="M40 352 L150 352 C250 352 300 312 420 312 L520 312 C640 312 690 352 800 352" class="curve"/>
+  <!-- markers -->
+  <line x1="160" y1="240" x2="160" y2="352" class="drop"/><circle cx="160" cy="352" r="4" fill="#6E8BFF"/>
+  <line x1="420" y1="240" x2="420" y2="312" class="drop"/><circle cx="420" cy="312" r="4" fill="#6E8BFF"/>
+  <line x1="680" y1="240" x2="680" y2="312" class="drop"/><circle cx="680" cy="312" r="4" fill="#6E8BFF"/>
+  <text x="150" y="372" class="tick">07:00 dayStart</text>
+  <text x="470" y="372" class="tick">21:00 nightStart</text>
+
+  <!-- ===== three-layer legend ===== -->
+  <line x1="32" y1="392" x2="828" y2="392" stroke="#22222C"/>
+  <text x="32" y="416" class="cap" font-size="11" letter-spacing="1">THREE LAYERS COMPOSE AT THE WALL</text>
+
+  <rect x="34" y="430" width="14" height="14" rx="3" fill="#16161D" stroke="#2A2A36"/><rect x="34" y="430" width="14" height="14" rx="3" fill="#000" opacity="0.55"/>
+  <text x="60" y="435" class="leg">Global overlay</text>
+  <text x="60" y="452" class="legm">every dimsWithAmbient card darkens</text>
+  <text x="60" y="465" class="legm">uniformly (overlay.maxDim 0.72). No code.</text>
+
+  <circle cx="312" cy="437" r="8" fill="#140709" stroke="#2E1214"/><circle cx="312" cy="437" r="3" fill="#C2362B"/>
+  <text x="330" y="435" class="leg">Deep-red opt-in</text>
+  <text x="330" y="452" class="legm">the Clock reads useAmbient() and recolours</text>
+  <text x="330" y="465" class="legm">to night.* (the overlay can only darken).</text>
+
+  <circle cx="586" cy="437" r="8" fill="none" stroke="#C2362B" stroke-width="1.5"/><path d="M586,432 v-3 M586,442 v3 M581,437 h-3 M591,437 h3" stroke="#C2362B" stroke-width="1.3"/>
+  <text x="606" y="435" class="leg">Backlight (kiosk-only)</text>
+  <text x="606" y="452" class="legm">expo-brightness drops the real backlight,</text>
+  <text x="606" y="465" class="legm">a light reduction the overlay cannot do.</text>
+
+  <line x1="32" y1="484" x2="828" y2="484" stroke="#22222C"/>
+  <text x="32" y="506" class="note"><tspan fill="#6E8BFF" font-weight="700">AOD-11 owns the curve + schedule; AOD-37 owns the per-widget overlay + deep-red.</tspan> This shows the wall-level application only.</text>
+  <text x="32" y="522" class="tok">computeAmbient(now) → { phase, dimLevel } feeds the overlay (§7.1), the deep-red Clock (§7.3), and the backlight (§7.4). Not rebuilt here.</text>
+</svg>
