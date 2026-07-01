@@ -8,7 +8,7 @@
 //     city. A richer onboarding picker is AOD-26; this is the minimal capture the build owns (§10).
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { ConnectMechanism } from './affordance';
 import { geocodeLabel, type GeocodeResult, searchLocations, toWeatherLocation } from './geocoding';
 
@@ -26,6 +26,7 @@ export function CredentialForm(props: CredentialFormProps) {
 
 /** api_key / admin_key: a single secret field, submitted as { apiKey } (AOD-9 §7.2). */
 function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
+  const { theme } = useUnistyles();
   const [value, setValue] = useState('');
   const trimmed = value.trim();
   const canSubmit = trimmed.length > 0 && !pending;
@@ -42,7 +43,7 @@ function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
         value={value}
         onChangeText={setValue}
         placeholder="Paste your key"
-        placeholderTextColor="#6B7280"
+        placeholderTextColor={theme.colors.textMuted} // §13 drift 3: was the hardcoded #6B7280
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
@@ -74,6 +75,7 @@ function KeyForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
  * `searching` is the geocoding lookup, kept separate so a failed search never blocks Cancel.
  */
 function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProps) {
+  const { theme } = useUnistyles();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeocodeResult[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -110,7 +112,7 @@ function LocationForm({ pending, error, onSubmit, onCancel }: CredentialFormProp
           value={query}
           onChangeText={setQuery}
           placeholder="City, e.g. Quito"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={theme.colors.textMuted} // §13 drift 3: was the hardcoded #6B7280
           autoCapitalize="words"
           autoCorrect={false}
           editable={!pending}
@@ -185,7 +187,7 @@ const styles = StyleSheet.create((theme) => ({
     letterSpacing: 1,
   },
   input: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surfaceAlt, // §13 drift 2: one input fill (was background)
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: theme.radius.sm,
