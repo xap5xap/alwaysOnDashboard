@@ -33,7 +33,7 @@ export interface ExitFlow {
 }
 
 export interface UseExitFlowArgs {
-  /** Verify the entered PIN against this stored hash (kioskRuntime.readPinHash()). */
+  /** Verify the entered PIN against this stored hash (the kiosk runtime's pinHash). */
   storedHash: string;
   /** Called once on a correct PIN: the caller reverses enter and replaces back to the Dashboard. */
   onExit(): void;
