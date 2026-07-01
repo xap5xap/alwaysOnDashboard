@@ -48,7 +48,12 @@ type TypeStep =
 
 // Only the text properties the scale carries (NOT the full TextStyle): keeping RN-style-shaped objects
 // out of the theme keeps Unistyles' deep-style typing from leaking into every StyleSheet.create return.
-type TypeToken = Pick<TextStyle, 'fontSize' | 'fontWeight' | 'letterSpacing' | 'fontVariant' | 'textTransform'>;
+// AOD-20 §3.4 adds `lineHeight` to the Pick (still narrow, so the aod-unistyles-style-token-gotcha
+// deep-style flood does not return); it is set only on the multi-line app-copy steps below.
+type TypeToken = Pick<
+  TextStyle,
+  'fontSize' | 'fontWeight' | 'letterSpacing' | 'fontVariant' | 'textTransform' | 'lineHeight'
+>;
 
 const type: Record<TypeStep, TypeToken> = {
   display: { fontSize: 96, fontWeight: '700', letterSpacing: -1, fontVariant: ['tabular-nums'] },
@@ -56,10 +61,10 @@ const type: Record<TypeStep, TypeToken> = {
   xl: { fontSize: 40, fontWeight: '700', fontVariant: ['tabular-nums'] },
   title: { fontSize: 18, fontWeight: '600' },
   heading: { fontSize: 15, fontWeight: '600' },
-  body: { fontSize: 14, fontWeight: '500' },
+  body: { fontSize: 14, fontWeight: '500', lineHeight: 20 }, // §3.4 onboarding paragraphs / paywall body
   label: { fontSize: 13, fontWeight: '600' },
-  meta: { fontSize: 13, fontWeight: '400' },
-  caption: { fontSize: 11, fontWeight: '500', letterSpacing: 1 },
+  meta: { fontSize: 13, fontWeight: '400', lineHeight: 18 }, // §3.4 input hint / dialog body / status line
+  caption: { fontSize: 11, fontWeight: '500', letterSpacing: 1, lineHeight: 16 }, // §3.4 multi-line captions
   badge: { fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
 };
 
@@ -150,6 +155,135 @@ const progress = {
   trackOpacity: 0.18, // the remaining-fraction track = colors.accent at this intensity
 } as const;
 
+// --- AOD-20 §12 component token groups (design-component-library.md) ---------------------------------
+// The app-chrome component library's tokens. Each group carries GEOMETRY (numbers) plus ROLE-NAME
+// ALIASES (semantic colour role / type-step / radius keys, as plain strings), never a raw hex, exactly
+// like the shipped `elevation` group ({ surface: 'surfaceAlt', border: true }). The consumer resolves
+// theme.colors[role] / theme.type[step] / theme.radius[key] at the call site, so a theme swap re-aliases
+// underneath (the §4 one layering rule). Theme-independent by design (the roles differ per theme, the
+// aliases do not). Unistyles-safe: plain data only, no embedded TextStyle (the aod-unistyles-style-token-
+// gotcha rule is about type.*, kept narrow above). `null` on a variant `bg` means "no fill" (a text or
+// bordered button), resolved to `undefined` at the call site the way `elevation.border: false` is read.
+
+// §5 buttons: four variants, three sizes, the shared pressed tint + disabled opacity.
+const button = {
+  radius: 'md', // a full-pill button overrides to radius.full at the call site
+  gap: 8, // spacing(2) icon -> label
+  disabledOpacity: 0.38, // §5 disabled
+  pressedTint: 'accentMuted', // §5 text buttons (secondary/ghost) pressed background
+  size: {
+    sm: { height: 32, paddingX: 12, type: 'label' }, // spacing(3)
+    md: { height: 40, paddingX: 16, type: 'body' }, // spacing(4), the default
+    lg: { height: 48, paddingX: 20, type: 'heading' }, // spacing(5)
+  },
+  variant: {
+    primary: { bg: 'accent', fg: 'onAccent', border: false }, // the one primary action per view
+    secondary: { bg: null, fg: 'accent', border: true }, // a paired alternative (e.g. Cancel)
+    ghost: { bg: null, fg: 'accent', border: false }, // a low-weight action / link
+    destructive: { bg: 'error', fg: 'onAccent', border: false }, // Disconnect / Remove
+  },
+} as const;
+
+// §6 inputs: one fill (surfaceAlt); the states recolour the BORDER only, so no semantic `border` fork.
+const input = {
+  height: 44,
+  paddingX: 12, // spacing(3)
+  radius: 'sm', // 8
+  fill: 'surfaceAlt', // the one fill (§13 drift 2)
+  fillDisabled: 'surface',
+  border: 'border', // input.border -> border
+  borderFocus: 'focusRing', // input.borderFocus -> focusRing (1.5px)
+  borderError: 'error', // input.borderError -> error
+  placeholder: 'textMuted', // §13 drift 3 (replaces the hardcoded #6B7280 / #7A7F8C)
+  borderWidth: 1,
+  borderWidthFocus: 1.5,
+  disabledOpacity: 0.4,
+} as const;
+
+// §7 toggle / switch: the track is a radius.full pill; states swap the track + knob roles.
+const toggle = {
+  trackWidth: 52,
+  trackHeight: 30,
+  knobRadius: 11,
+  padding: 2, // knob inset within the track
+  radius: 'full',
+  border: 'border', // the off-track hairline
+  disabledOpacity: 0.4,
+  on: { track: 'accent', knob: 'onAccent' },
+  off: { track: 'surfaceAlt', knob: 'textMuted' },
+} as const;
+
+// §7 segmented control (EXCLUSIVE choice, the strong selected state): a full-accent selected segment.
+const segmented = {
+  height: 36,
+  radius: 'sm',
+  paddingX: 12, // spacing(3) per segment
+  group: 'surfaceAlt', // the group track
+  border: 'border',
+  fg: 'text', // an unselected label
+  selectedBg: 'accent',
+  selectedFg: 'onAccent',
+} as const;
+
+// §7 selectable pills (MULTI-SELECT, the soft selected state): the accentMuted fill.
+const pill = {
+  radius: 'full',
+  paddingX: 12, // spacing(3)
+  paddingY: 8, // spacing(2)
+  fg: 'text', // an unselected label
+  border: 'border',
+  selectedBg: 'accentMuted',
+  selectedBorder: 'accent',
+  selectedFg: 'accent',
+} as const;
+
+// §8 surfaces (all at elevation.raised). The widget `card` is REUSED from design-widget-system §4 and
+// NOT redesigned; these mirror its geometry for the app-chrome row-group / list row / auth card.
+const card = { radius: 'md', padding: 12 }; // spacing(3), same as the widget card
+const rowGroup = { radius: 'md', divider: 'border' }; // rows split by rowGroup.divider -> border
+const listRow = { padding: 12, gap: 12 }; // spacing(3): leading / identity / trailing
+const authCard = { radius: 'lg', padding: 24 }; // spacing(6): the SignIn / paywall panel
+
+// §9 overlays: scrim + elevation.overlay, never a shadow. The sheet/modal fill at elevation.overlay
+// (surfaceAlt); the popover carries no scrim. Radii + paddings only (the scrim/elevation come from roles).
+const sheet = { radius: 'lg', paddingX: 20, paddingTop: 16, grabberWidth: 36, grabberHeight: 4 }; // spacing(5)/(4)
+const modal = { radius: 'lg', padding: 20 }; // spacing(5)
+const popover = { radius: 'md' };
+
+// §10 skeleton: bars in the `skeleton` colour role, a slow shimmer sweep (no spinner). Reuses the widget
+// loading-skeleton pattern (design-widget-system §5); numbers + the bar colour role. Named `skeletonToken`
+// so the module const does not shadow the `colors.skeleton` role; exposed as theme.skeleton in the theme.
+const skeletonToken = {
+  color: 'skeleton', // the bar fill role
+  barRadius: 'sm',
+  shimmerOpacity: 0.5, // the sweep band intensity over a bar
+} as const;
+
+// §10 badges (type.badge = 10/700/+1/uppercase). Per-kind role maps: the status dot reuses the widget
+// status mark; PRO/NEW = accentMuted fill + accent text; count = accent (primary) or surfaceAlt (neutral).
+const badge = {
+  radius: 'full',
+  paddingX: 8, // spacing(2)
+  paddingY: 2,
+  status: { warning: 'warning', error: 'error', success: 'success' }, // dot + uppercase label
+  accent: { bg: 'accentMuted', fg: 'accent' }, // PRO / NEW
+  count: {
+    primary: { bg: 'accent', fg: 'onAccent' },
+    neutral: { bg: 'surfaceAlt', fg: 'text', border: 'border' },
+  },
+} as const;
+
+// §11 lockRow: a listRow variant, the entitlements Gate fallback affordance (UX-only, server enforces).
+// The padlock glyph + dimmed title + a PRO badge (badge.accent) + a chevron -> paywall; the locked tile
+// darkens its preview with colors.scrim.
+const lockRow = {
+  padding: 12, // spacing(3), like listRow
+  gap: 12,
+  title: 'textMuted', // the dimmed row title
+  glyph: 'textMuted', // the padlock stroke
+  dimOpacity: 0.6, // the row reads dimmed vs an enabled control
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22, full: 9999 }, // §7.2: `full` (9999) added for pills / fully-rounded ends
@@ -164,6 +298,22 @@ const sharedTokens = {
   money,
   priorityIcon,
   progress,
+  // AOD-20 §12 component library groups
+  button,
+  input,
+  toggle,
+  segmented,
+  pill,
+  card,
+  rowGroup,
+  listRow,
+  authCard,
+  sheet,
+  modal,
+  popover,
+  skeleton: skeletonToken,
+  badge,
+  lockRow,
 } as const;
 
 // --- §3.1 colour: semantic roles as primitive aliases (AOD-66, §4.2 / §4.3) -------------------------
@@ -187,6 +337,10 @@ export const darkTheme = {
     onAccent: primitive.neutral[0], // #FFFFFF: legible foreground ON an accent fill (WCAG AA on blue.400)
     focusRing: primitive.blue[400], // aliases accent today; named so an a11y ring is one token, free to diverge later
     scrim: 'rgba(0, 0, 0, 0.6)', // neutral.950 (#000000) @ 0.60: backdrop behind a floating surface (§5.3); fixed, distinct from `overlay` (§8.3)
+    // AOD-20 §3.3 accentMuted: the ONE accent (blue.400 = #6E8BFF = rgb(110,139,255)) at a low fixed alpha.
+    // The shared chrome tint (pressed text buttons / selected multi-pills / accent+PRO badges / focus halo);
+    // distinct from the per-widget DATA alphas (progress 0.18, sparkline 0.5). rgba, so no new hue.
+    accentMuted: 'rgba(110, 139, 255, 0.14)',
   },
 } as const;
 
@@ -208,6 +362,9 @@ export const lightTheme = {
     onAccent: primitive.neutral[0], // #FFFFFF (WCAG AA on blue.600)
     focusRing: primitive.blue[600], // aliases accent
     scrim: 'rgba(0, 0, 0, 0.4)', // neutral.950 (#000000) @ 0.40: lighter scrim for the foreground theme (§4.4 / §8.3)
+    // AOD-20 §3.3 accentMuted: the ONE accent (blue.600 = #3F5BD6 = rgb(63,91,214)) at a low fixed alpha
+    // (a touch lower than dark, for daylight contrast). Same shared-chrome-tint role; rgba, so no new hue.
+    accentMuted: 'rgba(63, 91, 214, 0.12)',
   },
 } as const;
 

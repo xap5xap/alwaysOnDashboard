@@ -15,7 +15,7 @@
 // network lives in the hook at the entry points.
 import React, { useState } from 'react';
 import { Pressable, Switch, Text, TextInput, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { Choice, WidgetConfigField, WidgetConfigSchema } from '../registry/types';
 import { validateConfig } from './config';
 import type { ResolvedOptionsState } from './useOptionSources';
@@ -216,6 +216,7 @@ function Field({
   serviceName?: string;
   onReconnect?: () => void;
 }) {
+  const { theme } = useUnistyles();
   switch (field.kind) {
     case 'string':
     case 'number':
@@ -225,12 +226,15 @@ function Field({
           value={typeof value === 'string' ? value : value == null ? '' : String(value)}
           onChangeText={onChange}
           placeholder={field.kind === 'string' ? field.placeholder : undefined}
-          placeholderTextColor="#7A7F8C"
+          placeholderTextColor={theme.colors.textMuted} // §13 drift 3: was the hardcoded #7A7F8C
           keyboardType={field.kind === 'number' ? 'numeric' : 'default'}
           testID={`config-field-${field.key}`}
         />
       );
     case 'boolean':
+      // §13 drift 5 (FLAGGED, not applied): the native Switch -> the AOD-20 Toggle is a structural swap
+      // owned by AOD-27's config-sheet recompose (design-dashboard-editor §9 maps boolean -> toggle) and
+      // changes the ConfigForm test's `valueChange` contract; the Toggle component ships here for it.
       return (
         <Switch
           value={value === true}
@@ -390,7 +394,7 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.error,
   },
   input: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceAlt, // §13 drift 2: one input fill (was surface)
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: theme.radius.sm,
@@ -421,7 +425,7 @@ const styles = StyleSheet.create((theme) => ({
     fontWeight: '600',
   },
   pillTextSelected: {
-    color: theme.colors.background,
+    color: theme.colors.onAccent, // §13 drift 1: onAccent on the accent fill (was background)
   },
   muted: {
     color: theme.colors.textMuted,
@@ -461,7 +465,7 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.spacing(2.5),
   },
   submitText: {
-    color: theme.colors.background,
+    color: theme.colors.onAccent, // §13 drift 1: onAccent on the accent fill (was background)
     fontSize: 15,
     fontWeight: '700',
   },
