@@ -1,25 +1,39 @@
-// The client's view of RevenueCat CustomerInfo (AOD-12 §6.5), reduced to the active-entitlement ids
-// the tier math reads. The real Purchases SDK + paywall are out of scope for the app shell; this
-// context supplies the ids and defaults to Free. Tests inject a Pro set; later PS-M2 wires the SDK's
-// CustomerInfo updates into this provider. This value is UX only; the server is the line of trust.
-import React, { createContext, useContext } from 'react';
+// The client's view of RevenueCat CustomerInfo (AOD-12 §6.5), reduced to the active-entitlement ids the tier
+// math reads. AOD-29 makes it STATEFUL: a purchase / restore / SDK CustomerInfo update flips the ids through
+// the setter, so the Gate locks fall away without a restart. The `value` prop seeds the initial ids (tests
+// inject a Pro/Free set; the app seeds []); the live SDK wiring is the PurchasesBridge, which reads the
+// setter. This value is UX only; the server (AOD-45 webhook) is the line of trust.
+import React, { createContext, useContext, useMemo, useState } from 'react';
 
 export interface CustomerInfoLike {
   activeEntitlementIds: string[];
 }
 
 const CustomerInfoContext = createContext<CustomerInfoLike>({ activeEntitlementIds: [] });
+const SetCustomerInfoContext = createContext<(activeEntitlementIds: string[]) => void>(() => {});
 
 export function CustomerInfoProvider({
   value,
   children,
 }: {
-  value: CustomerInfoLike;
+  /** Optional initial ids. Tests inject a fixed set; the app seeds [] and lets the PurchasesBridge drive it. */
+  value?: CustomerInfoLike;
   children: React.ReactNode;
 }) {
-  return <CustomerInfoContext.Provider value={value}>{children}</CustomerInfoContext.Provider>;
+  const [activeEntitlementIds, setActiveEntitlementIds] = useState<string[]>(value?.activeEntitlementIds ?? []);
+  const info = useMemo<CustomerInfoLike>(() => ({ activeEntitlementIds }), [activeEntitlementIds]);
+  return (
+    <SetCustomerInfoContext.Provider value={setActiveEntitlementIds}>
+      <CustomerInfoContext.Provider value={info}>{children}</CustomerInfoContext.Provider>
+    </SetCustomerInfoContext.Provider>
+  );
 }
 
 export function useCustomerInfo(): CustomerInfoLike {
   return useContext(CustomerInfoContext);
+}
+
+/** The setter the PurchasesBridge (SDK listener) and the paywall purchase/restore push CustomerInfo through. */
+export function useSetCustomerInfo(): (activeEntitlementIds: string[]) => void {
+  return useContext(SetCustomerInfoContext);
 }
