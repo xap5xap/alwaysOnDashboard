@@ -20,7 +20,13 @@ import { ConnectionRow } from './ConnectionRow';
 import { useConnectionActions } from './useConnectionActions';
 import { useConnections } from './useConnections';
 
-export function ConnectionsList() {
+export interface ConnectionsListProps {
+  /** The section heading; pass null to suppress it (the AOD-29 onboarding connect step supplies its own
+   *  "Connect your first service." headline over the same rows). Defaults to the Settings "Connections". */
+  heading?: string | null;
+}
+
+export function ConnectionsList({ heading = 'Connections' }: ConnectionsListProps = {}) {
   const registry = useRegistry();
   const services = registry.connectableServices();
   const { connections, isLoading, isError, error } = useConnections();
@@ -37,7 +43,7 @@ export function ConnectionsList() {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.heading}>Connections</Text>
+      {heading != null ? <Text style={styles.heading}>{heading}</Text> : null}
       {isError ? (
         <Text style={styles.error} testID="connections-error">
           Could not load your connections. {error?.message ?? ''}

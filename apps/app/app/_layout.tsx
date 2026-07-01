@@ -1,7 +1,8 @@
 // The expo-router root layout: configure Unistyles (must run before any StyleSheet.create) and wrap
 // the app in its providers. The production WidgetDataSource is a ProxyDataSource over the supabase
-// client, so the host's fetches go to the AOD-44 proxy with the session JWT. CustomerInfo defaults
-// to Free (the RevenueCat SDK lands later); the registry and query client are app-wide singletons.
+// client, so the host's fetches go to the AOD-44 proxy with the session JWT. CustomerInfo is driven by
+// the RevenueCat SDK through the PurchasesBridge (AOD-29), defaulting to Free until a purchase resolves;
+// the registry and query client are app-wide singletons.
 // The query cache is persisted (AOD-25): MMKV on device, localStorage on web, so the last-known
 // dashboard layout (AOD-7) paints on cold start. GestureHandlerRootView is required by the AOD-25
 // gesture stack that the free-form layout engine uses for drag/resize.
@@ -16,6 +17,7 @@ import { AuthProvider } from '../src/auth/AuthProvider';
 import { AmbientProvider } from '../src/ambient/AmbientContext';
 import { RegistryProvider } from '../src/registry/RegistryProvider';
 import { CustomerInfoProvider } from '../src/entitlements/CustomerInfoContext';
+import { PurchasesBridge } from '../src/entitlements/PurchasesBridge';
 import { WidgetDataSourceProvider } from '../src/host/WidgetDataSource';
 import { ProxyDataSource } from '../src/host/ProxyDataSource';
 import { supabase } from '../src/supabase/client';
@@ -43,7 +45,10 @@ export default function RootLayout() {
         >
           <AuthProvider>
             <RegistryProvider>
-              <CustomerInfoProvider value={{ activeEntitlementIds: [] }}>
+              <CustomerInfoProvider>
+                {/* AOD-29: configures RevenueCat + logs the user in + pushes CustomerInfo updates into the
+                    provider, so a purchase / restore flips the Gate locks off without a restart (AOD-12 §6.5). */}
+                <PurchasesBridge />
                 <WidgetDataSourceProvider source={dataSource}>
                   {/* AOD-10 §8 ambient signal. Defaults to day; AOD-11's kiosk runtime drives it. */}
                   <AmbientProvider>

@@ -22,7 +22,8 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="dashboards" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+      {/* AOD-29: transparentModal so the AOD-67 Sheet's own scrim dims the caller behind it (design §6). */}
+      <Stack.Screen name="paywall" options={{ presentation: 'transparentModal', animation: 'fade' }} />
       <Stack.Screen name="kiosk" options={{ gestureEnabled: false, animation: 'fade' }} />
     </Stack>
   );

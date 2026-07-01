@@ -2,16 +2,14 @@
 // (app-ia §5 / design-core-navigation §13 seams). Each composes the shell (Screen + AppBar + a state) so
 // the route tree is real and navigable for verification, and is clearly tagged with the owning issue. The
 // per-screen builds REPLACE these bodies inside the same shell frame:
-//   Onboarding + Paywall  -> AOD-29        Kiosk wall          -> AOD-11 / AOD-39
-//   Themes                -> AOD-28
-// The Dashboards switcher (was here) is BUILT: src/dashboard/DashboardsSwitcher.tsx (AOD-27 / AOD-69).
+//   Themes                -> AOD-28        Kiosk wall          -> AOD-11 / AOD-39
+// BUILT + moved out of here: Onboarding + Paywall -> AOD-29 (src/onboarding/Onboarding + src/paywall/Paywall);
+// the Dashboards switcher -> src/dashboard/DashboardsSwitcher (AOD-27 / AOD-69).
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppBar, EmptyState, Screen, ScreenBody } from '../shell';
-import { AuthCard, Wordmark } from '../ui/Surfaces';
-import { Button } from '../ui/Button';
 
 /** Themes picker (pushed) — interior owned by AOD-28. */
 export function ThemesScreen() {
@@ -21,43 +19,6 @@ export function ThemesScreen() {
       <ScreenBody scroll={false}>
         <EmptyState line="Theme picker coming in AOD-28." />
       </ScreenBody>
-    </Screen>
-  );
-}
-
-/** Onboarding first-run (pushed, gated) — interior owned by AOD-29. Skippable into the dashboard so the
- *  scaffolded route is navigable; AOD-29 builds the guided stepper + connect-first-service flow. */
-export function OnboardingScreen() {
-  return (
-    <Screen>
-      <ScreenBody scroll={false}>
-        <EmptyState
-          line="Onboarding coming in AOD-29."
-          actionLabel="Continue to dashboard"
-          onAction={() => router.replace('/dashboard')}
-        />
-      </ScreenBody>
-    </Screen>
-  );
-}
-
-/** Paywall (modal route) — the full body is AOD-29; the shell fixes the modal presentation + the upgrade
- *  entry. Reads the `trigger` param so the real paywall can lead with the matching upsell angle (AOD-12 §9). */
-export function PaywallScreen() {
-  const { trigger } = useLocalSearchParams<{ trigger?: string }>();
-  const { theme } = useUnistyles();
-  return (
-    <Screen>
-      <View style={styles.paywall}>
-        <AuthCard testID="paywall-card">
-          <Wordmark />
-          <Text style={[theme.type.heading, { color: theme.colors.text }]}>Vela Pro</Text>
-          <Text style={[theme.type.meta, { color: theme.colors.textMuted }]}>
-            {trigger ? `Unlock this from ${trigger}. ` : ''}Full paywall coming in AOD-29.
-          </Text>
-          <Button label="Maybe later" variant="secondary" block onPress={() => router.back()} testID="paywall-close" />
-        </AuthCard>
-      </View>
     </Screen>
   );
 }
@@ -79,7 +40,6 @@ export function KioskScreen() {
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
-  paywall: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.screen.paddingX },
   kiosk: {
     flex: 1,
     backgroundColor: theme.colors.background,
