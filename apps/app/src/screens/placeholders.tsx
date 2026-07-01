@@ -2,8 +2,9 @@
 // (app-ia §5 / design-core-navigation §13 seams). Each composes the shell (Screen + AppBar + a state) so
 // the route tree is real and navigable for verification, and is clearly tagged with the owning issue. The
 // per-screen builds REPLACE these bodies inside the same shell frame:
-//   Onboarding + Paywall  -> AOD-29        Dashboards switcher -> AOD-27
-//   Themes                -> AOD-28        Kiosk wall          -> AOD-11 / AOD-39
+//   Onboarding + Paywall  -> AOD-29        Kiosk wall          -> AOD-11 / AOD-39
+//   Themes                -> AOD-28
+// The Dashboards switcher (was here) is BUILT: src/dashboard/DashboardsSwitcher.tsx (AOD-27 / AOD-69).
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -35,18 +36,6 @@ export function OnboardingScreen() {
           actionLabel="Continue to dashboard"
           onAction={() => router.replace('/dashboard')}
         />
-      </ScreenBody>
-    </Screen>
-  );
-}
-
-/** Dashboards switcher (modal route) — interior owned by AOD-27. */
-export function DashboardsScreen() {
-  return (
-    <Screen>
-      <AppBar variant="pushed" title="Dashboards" onBack={() => router.back()} />
-      <ScreenBody scroll={false}>
-        <EmptyState line="Dashboards switcher coming in AOD-27." />
       </ScreenBody>
     </Screen>
   );

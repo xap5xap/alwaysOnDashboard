@@ -9,7 +9,7 @@ import React, { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { WidgetHost } from '../host/WidgetHost';
 import { useRegistry } from '../registry/RegistryProvider';
 import { reconcileSize } from '../widgets/sizes';
@@ -39,6 +39,13 @@ export function PlacedInstance({
   const registry = useRegistry();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
   const supportedSizes = def?.supportedSizes ?? [instance.size];
+
+  // Resolve the AOD-27 §10 `arrange` role-name aliases at the call site (the AOD-67 pattern for token
+  // groups): the Unistyles babel plugin does not trace a computed `theme.colors[role]` through
+  // StyleSheet.create, so the arrange colours + geometry are applied inline here, not in the sheet below.
+  const { theme } = useUnistyles();
+  const a = theme.arrange;
+  const arrangeColor = (role: string) => (theme.colors as Record<string, string>)[role];
 
   // Live geometry (nominal units) owned by the UI thread.
   const x = useSharedValue(instance.rect.x);
@@ -128,7 +135,12 @@ export function PlacedInstance({
     <GestureDetector gesture={longPress}>
       <Animated.View style={[styles.positioned, animatedStyle]}>
         <GestureDetector gesture={drag}>
-          <View style={[styles.body, arranging && styles.bodyArranging]}>
+          <View
+            style={[
+              styles.body,
+              arranging && { borderColor: arrangeColor(a.selectBorder), backgroundColor: arrangeColor(a.selectFill) },
+            ]}
+          >
             {/* Wire the previously-unwired host onReconfigure seam to the dashboard's config form. */}
             <WidgetHost instance={instance} onReconfigure={() => onRequestConfigure(instance)} />
           </View>
@@ -139,16 +151,25 @@ export function PlacedInstance({
                 (AOD-52 cut). A sibling of the drag detector, so a tap never starts a drag. */}
             <Pressable
               onPress={() => onRequestConfigure(instance)}
-              style={styles.configurePill}
+              style={[styles.configurePill, { backgroundColor: arrangeColor(a.configurePill.bg) }]}
               accessibilityRole="button"
               accessibilityLabel="Configure widget"
               testID={`configure-${instance.instanceId}`}
             >
-              <Text style={styles.configureText}>Configure</Text>
+              <Text style={[styles.configureText, { color: arrangeColor(a.configurePill.label) }]}>Configure</Text>
             </Pressable>
             <GestureDetector gesture={resize}>
-              <View style={styles.handleHit} accessibilityLabel="Resize widget" accessibilityRole="adjustable">
-                <View style={styles.handleDot} />
+              <View
+                style={[styles.handleHit, { width: a.handle.hit, height: a.handle.hit }]}
+                accessibilityLabel="Resize widget"
+                accessibilityRole="adjustable"
+              >
+                <View
+                  style={[
+                    styles.handleDot,
+                    { width: a.handle.dot, height: a.handle.dot, borderRadius: a.handle.dot / 2, borderColor: arrangeColor(a.handle.ring) },
+                  ]}
+                />
               </View>
             </GestureDetector>
           </>
@@ -158,6 +179,11 @@ export function PlacedInstance({
   );
 }
 
+// AOD-27 §4 / §10: the STATIC arrange-mode layout. The `arrange` token group's colours + geometry (dot 24 /
+// hit 44 / the selection + configurePill roles) are applied INLINE in the component above, resolved from the
+// theme at the call site (§11 drift 3 lands there: the pill label themes against onAccent, not
+// colors.background) -- the Unistyles babel plugin cannot trace a computed `theme.colors[role]` through
+// StyleSheet.create, so only static values live here.
 const styles = StyleSheet.create((theme) => ({
   positioned: {
     position: 'absolute',
@@ -168,41 +194,29 @@ const styles = StyleSheet.create((theme) => ({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  bodyArranging: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  // The arrange-mode configure affordance, top-left so it never overlaps the bottom-right resize dot.
+  // §4 the Configure affordance, top-left so it never overlaps the bottom-right resize dot (bg is inline).
   configurePill: {
     position: 'absolute',
     top: -12,
     left: -8,
-    backgroundColor: theme.colors.accent,
     borderRadius: theme.radius.sm,
     paddingHorizontal: theme.spacing(2.5),
     paddingVertical: theme.spacing(1),
   },
   configureText: {
-    color: theme.colors.background,
     fontSize: 12,
     fontWeight: '700',
   },
-  // A 44pt touch target (the dot is 24pt, centered): comfortable on touch and reliably hittable.
+  // §4 the resize handle: an accent dot ringed in `background`, centered in the hit target (sizes inline).
   handleHit: {
     position: 'absolute',
     right: -16,
     bottom: -16,
-    width: 44,
-    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   handleDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
     backgroundColor: theme.colors.accent,
     borderWidth: 2,
-    borderColor: theme.colors.background,
   },
 }));

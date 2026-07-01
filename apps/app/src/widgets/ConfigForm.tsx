@@ -4,9 +4,15 @@
 // boolean / enum) from a WidgetConfigSchema, pre-filled from the instance's current config, validates
 // on save with the EXISTING validateConfig (never a second validator; save-time field validators like
 // Clock's Intl time-zone check are run by passing runFieldValidators, not a parallel validator), surfaces
-// field-level errors, and hands the caller the normalized values. It names no service and reads no registry beyond the schema
-// it is given, so it works for every widget. Persistence and the entry-point wiring live elsewhere
-// (dashboardRepo / the picker / the dashboard); this component only collects and validates.
+// field-level errors, and hands the caller the normalized values. It names no service and reads no registry
+// beyond the schema it is given, so it works for every widget. Persistence and the entry-point wiring live
+// elsewhere (dashboardRepo / the picker / the dashboard); this component only collects and validates.
+//
+// AOD-69 recompose (design-dashboard-editor §7, §11 drift 6): each field kind now maps onto ONE AOD-67
+// control instead of an ad-hoc one -- string/number -> Input (§6), boolean -> Toggle (§7, the flagged
+// native Switch swap lands here), enum -> Segmented (§7, exclusive full-accent), remote-options -> Pills
+// (§7, multi-select accentMuted). Cancel is an AOD-67 ghost Button, Save the primary. The validate/coerce
+// logic is UNCHANGED (validateConfig stays the one truth); only the presentation is canonicalized.
 //
 // remote-options (AOD-10 §4.3) is resolved by the caller (useOptionSources) and passed in via
 // `options`: a real picker fed by the resolved Choice[] (single or multiple per field.multiple),
@@ -14,9 +20,10 @@
 // enforced when available and unverified when not (§4.2 rule 2). This component stays pure: the
 // network lives in the hook at the entry points.
 import React, { useState } from 'react';
-import { Pressable, Switch, Text, TextInput, View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import type { Choice, WidgetConfigField, WidgetConfigSchema } from '../registry/types';
+import { Button, Input, Pills, Segmented, Toggle } from '../ui';
 import { validateConfig } from './config';
 import type { ResolvedOptionsState } from './useOptionSources';
 
@@ -183,24 +190,15 @@ export function ConfigForm({
       )}
 
       <View style={styles.actions}>
-        <Pressable onPress={onCancel} accessibilityRole="button" testID="config-cancel">
-          <Text style={styles.cancel}>Cancel</Text>
-        </Pressable>
-        <Pressable
-          onPress={onSave}
-          disabled={pending}
-          accessibilityRole="button"
-          testID="config-submit"
-          style={styles.submit}
-        >
-          <Text style={styles.submitText}>{pending ? '...' : submitLabel}</Text>
-        </Pressable>
+        <Button label="Cancel" variant="ghost" onPress={onCancel} testID="config-cancel" />
+        <Button label={submitLabel} variant="primary" loading={pending} onPress={onSave} testID="config-submit" />
       </View>
     </View>
   );
 }
 
-/** One input, switched on the field kind. Generic: it never names a service or a specific field. */
+/** One input, switched on the field kind, each an AOD-67 control (design-dashboard-editor §7). Generic:
+ *  it never names a service or a specific field. */
 function Field({
   field,
   value,
@@ -216,51 +214,39 @@ function Field({
   serviceName?: string;
   onReconnect?: () => void;
 }) {
-  const { theme } = useUnistyles();
   switch (field.kind) {
     case 'string':
     case 'number':
+      // §6 input: one surfaceAlt fill, placeholder -> textMuted, both owned by the AOD-67 Input.
       return (
-        <TextInput
-          style={styles.input}
+        <Input
           value={typeof value === 'string' ? value : value == null ? '' : String(value)}
           onChangeText={onChange}
           placeholder={field.kind === 'string' ? field.placeholder : undefined}
-          placeholderTextColor={theme.colors.textMuted} // §13 drift 3: was the hardcoded #7A7F8C
           keyboardType={field.kind === 'number' ? 'numeric' : 'default'}
+          accessibilityLabel={field.label}
           testID={`config-field-${field.key}`}
         />
       );
     case 'boolean':
-      // §13 drift 5 (FLAGGED, not applied): the native Switch -> the AOD-20 Toggle is a structural swap
-      // owned by AOD-27's config-sheet recompose (design-dashboard-editor §9 maps boolean -> toggle) and
-      // changes the ConfigForm test's `valueChange` contract; the Toggle component ships here for it.
+      // §7 toggle: the AOD-67 Toggle replaces the native Switch (§11 drift 6 / the AOD-67-shipped swap).
       return (
-        <Switch
+        <Toggle
           value={value === true}
           onValueChange={onChange}
-          testID={`config-switch-${field.key}`}
+          accessibilityLabel={field.label}
+          testID={`config-toggle-${field.key}`}
         />
       );
     case 'enum':
+      // §7 segmented: the exclusive static choice, full-accent selected (distinct from the multi pills).
       return (
-        <View style={styles.options}>
-          {field.options.map((opt) => {
-            const selected = value === opt.value;
-            return (
-              <Pressable
-                key={opt.value}
-                onPress={() => onChange(opt.value)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                testID={`config-enum-${field.key}-${opt.value}`}
-                style={[styles.pill, selected && styles.pillSelected]}
-              >
-                <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{opt.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Segmented
+          options={field.options}
+          value={typeof value === 'string' ? value : undefined}
+          onChange={onChange}
+          testID={`config-enum-${field.key}`}
+        />
       );
     case 'remote-options':
       return (
@@ -279,7 +265,9 @@ function Field({
 }
 
 /** The remote-options picker (AOD-10 §4.3): fed by the resolved Choice[]; renders loading / error
- *  (retry) / needs_reconnect (reconnect) / ready (pills). Stores the stable id(s), never the label. */
+ *  (retry) / needs_reconnect (reconnect) / ready (AOD-67 Pills). Stores the stable id(s), never the label.
+ *  The ready state wraps the Pills in a per-field testID View so a schema with two remote fields keeps its
+ *  options addressable (the AOD-67 Pills namespaces segments as `pill-<value>`). */
 function RemoteOptions({
   field,
   value,
@@ -337,8 +325,9 @@ function RemoteOptions({
 
   const multiple = field.multiple === true;
   const selectedArray = Array.isArray(value) ? (value as string[]) : [];
+  const selected = multiple ? selectedArray : value != null && value !== '' ? [value as string] : [];
 
-  const toggle = (optValue: string) => {
+  const onToggle = (optValue: string) => {
     if (multiple) {
       onChange(
         selectedArray.includes(optValue)
@@ -351,22 +340,8 @@ function RemoteOptions({
   };
 
   return (
-    <View style={styles.options}>
-      {state.choices.map((opt: Choice) => {
-        const selected = multiple ? selectedArray.includes(opt.value) : value === opt.value;
-        return (
-          <Pressable
-            key={opt.value}
-            onPress={() => toggle(opt.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            testID={`config-remote-${field.key}-${opt.value}`}
-            style={[styles.pill, selected && styles.pillSelected]}
-          >
-            <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{opt.label}</Text>
-          </Pressable>
-        );
-      })}
+    <View testID={`config-remote-${field.key}`}>
+      <Pills options={state.choices} selected={selected} onToggle={onToggle} testID={`config-remote-pills-${field.key}`} />
     </View>
   );
 }
@@ -376,60 +351,24 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.spacing(3),
   },
   title: {
+    ...theme.type.title,
     color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
   },
   field: {
     gap: theme.spacing(1.5),
   },
+  // §7 the field label: the AOD-67 input-label convention (type.caption / textMuted, uppercase).
   label: {
+    ...theme.type.caption,
     color: theme.colors.textMuted,
-    fontSize: 12,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
   },
   req: {
     color: theme.colors.error,
   },
-  input: {
-    backgroundColor: theme.colors.surfaceAlt, // §13 drift 2: one input fill (was surface)
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(2.5),
-    color: theme.colors.text,
-    fontSize: 15,
-  },
-  options: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing(2),
-  },
-  pill: {
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing(3),
-    paddingVertical: theme.spacing(2),
-  },
-  pillSelected: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
-  },
-  pillText: {
-    color: theme.colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  pillTextSelected: {
-    color: theme.colors.onAccent, // §13 drift 1: onAccent on the accent fill (was background)
-  },
   muted: {
+    ...theme.type.meta,
     color: theme.colors.textMuted,
-    fontSize: 13,
   },
   prompt: {
     flexDirection: 'row',
@@ -438,35 +377,20 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.spacing(2),
   },
   actionLink: {
-    color: theme.colors.accent,
-    fontSize: 14,
+    ...theme.type.meta,
     fontWeight: '600',
+    color: theme.colors.accent,
   },
+  // §7 inline field errors: type.meta / error.
   error: {
+    ...theme.type.meta,
     color: theme.colors.error,
-    fontSize: 13,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: theme.spacing(4),
+    gap: theme.spacing(3),
     paddingTop: theme.spacing(2),
-  },
-  cancel: {
-    color: theme.colors.textMuted,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  submit: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing(5),
-    paddingVertical: theme.spacing(2.5),
-  },
-  submitText: {
-    color: theme.colors.onAccent, // §13 drift 1: onAccent on the accent fill (was background)
-    fontSize: 15,
-    fontWeight: '700',
   },
 }));

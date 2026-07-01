@@ -310,6 +310,22 @@ const screen = {
   gap: 16, // spacing(4)
 } as const;
 
+// --- AOD-27 §10 editor-scoped token group (design-dashboard-editor.md §10) --------------------------
+// The dashboard EDITOR (arrange mode) geometry + role aliases: the AOD-20 §12 / AOD-68 §11 analog for the
+// free-form editor. GEOMETRY (numbers) plus ROLE-NAME ALIASES (a semantic colour role, as plain strings),
+// never a raw hex — the consumer (PlacedInstance) resolves theme.colors[role] at the draw site, so a theme
+// swap re-aliases underneath. Theme-independent by design. Unistyles-safe: plain data only, no embedded
+// TextStyle (it does not touch type.*, so the aod-unistyles-style-token-gotcha deep-style flood stays away).
+// NOTE the canvas unit is deliberately NOT here: UNIT_PX lives in geometry.ts because it is layout math,
+// not a style token (§10 row 2). The two sheets + the switcher compose the AOD-68/AOD-20 sheet/modal
+// groups + scrim + elevation.overlay, so they add no token either (§10 rows 3-4).
+const arrange = {
+  selectBorder: 'accent', // bodyArranging: the selected card's accent border
+  selectFill: 'surfaceAlt', // bodyArranging: the selected card's fill (one step up from the resting card)
+  handle: { dot: 24, hit: 44, ring: 'background' }, // resize handle: a 24pt accent dot ringed in `background`, inside a 44pt hit target
+  configurePill: { bg: 'accent', label: 'onAccent' }, // the top-left Configure pill (§11 drift 3: label -> onAccent, was colors.background)
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22, full: 9999 }, // §7.2: `full` (9999) added for pills / fully-rounded ends
@@ -343,6 +359,8 @@ const sharedTokens = {
   // AOD-68 §11 screen-scoped groups
   appBar,
   screen,
+  // AOD-27 §10 editor-scoped group
+  arrange,
 } as const;
 
 // --- §3.1 colour: semantic roles as primitive aliases (AOD-66, §4.2 / §4.3) -------------------------
