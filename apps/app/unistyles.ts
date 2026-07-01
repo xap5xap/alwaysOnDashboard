@@ -326,6 +326,21 @@ const arrange = {
   configurePill: { bg: 'accent', label: 'onAccent' }, // the top-left Configure pill (§11 drift 3: label -> onAccent, was colors.background)
 } as const;
 
+// --- AOD-39 §10 kiosk-wall-scoped token group (design-kiosk-wall.md §10) ----------------------------
+// The kiosk wall's geometry, the AOD-20 §12 / AOD-68 §11 / AOD-27 §10 analog for the wall-mount profile.
+// NUMBERS ONLY (a multiplier + two pixel sizes), no role alias and no embedded TextStyle: the wall composes
+// EXISTING colour tokens (colors.background field, night.*/overlay dim, scrim + the §9 sheet vocab for the
+// PIN), so it adds no colour. `typeScale` is the load-bearing value: the AOD-11 §7.1 WallMountProfile
+// multiplier the wall applies over the AOD-37 §3.3 type ramp (the cards, only larger), NOT a fork of the
+// ramp. `exitCorner`/`pinKey` size the exit affordance (§7). Unistyles-safe (plain numbers), test-locked
+// byte-identical the AOD-66/67/68/69 way ([[aod-unistyles-style-token-gotcha]]: the pitfall is TextStyle in
+// the theme, not plain data).
+const wall = {
+  typeScale: 1.4, // the WallMountProfile.typeScale multiplier on type.* (across-the-room legibility)
+  exitCorner: 56, // spacing(14): the invisible long-press exit hit-target (trailing-bottom corner)
+  pinKey: 64, // spacing(16): the PIN-pad key diameter on the exit surface
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22, full: 9999 }, // §7.2: `full` (9999) added for pills / fully-rounded ends
@@ -361,6 +376,8 @@ const sharedTokens = {
   screen,
   // AOD-27 §10 editor-scoped group
   arrange,
+  // AOD-39 §10 kiosk-wall-scoped group
+  wall,
 } as const;
 
 // --- §3.1 colour: semantic roles as primitive aliases (AOD-66, §4.2 / §4.3) -------------------------
