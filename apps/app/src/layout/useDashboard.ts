@@ -37,6 +37,8 @@ export interface UseDashboardResult {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
+  /** Re-run the dashboard query (AOD-68: the shell screen-level ErrorState "Retry"). */
+  refetch(): void;
   /** Commit a geometry/size change for one instance: optimistic cache update + debounced RLS write. */
   commit(instanceId: string, patch: LayoutPatch): void;
 }
@@ -101,6 +103,9 @@ export function useDashboard(): UseDashboardResult {
     isLoading: query.isLoading,
     isError: query.isError,
     error: (query.error as Error | null) ?? null,
+    // AOD-68: exposed for the shell screen-level ErrorState "Retry" (design-core-navigation §8). Additive;
+    // no existing consumer changes. The editor / switcher wiring stays AOD-27's.
+    refetch: query.refetch,
     commit,
   };
 }

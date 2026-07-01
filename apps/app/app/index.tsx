@@ -1,22 +1,18 @@
-// The index route: the auth gate. While the session loads, show a splash; signed-out shows the
-// minimal sign-in; signed-in shows the dashboard. (Route files stay thin and delegate to src/
-// screens so the Unistyles babel plugin's `root: 'src'` covers all styled components.)
+// The index route: the auth GATE (app-ia.md §4.2, design-core-navigation.md §4). It owns `/`. While the
+// session resolves it renders the shell Splash; then it routes by (session, onboarded) with <Redirect>
+// (replace semantics, so the OS back never returns into a stale auth state). The signed-in/out zones are
+// the (auth) / (app) route groups; the Dashboard home lives at /dashboard because the gate owns `/` and a
+// transparent group index cannot also claim it. Route files stay thin and delegate to src/ so the Unistyles
+// babel plugin's `root: 'src'` covers all styled components; the gate predicate lives in src/shell/gate.ts.
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { Redirect } from 'expo-router';
 import { useAuth } from '../src/auth/AuthProvider';
-import { SignIn } from '../src/screens/SignIn';
-import { Dashboard } from '../src/dashboard/Dashboard';
+import { GATE_HREF, Splash, resolveGateTarget, useOnboarded } from '../src/shell';
 
 export default function Index() {
   const { session, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0B0B0F' }}>
-        <ActivityIndicator color="#6E8BFF" />
-      </View>
-    );
-  }
-
-  return session ? <Dashboard /> : <SignIn />;
+  const onboarded = useOnboarded();
+  const target = resolveGateTarget({ loading, hasSession: !!session, onboarded });
+  if (target === 'splash') return <Splash />;
+  return <Redirect href={GATE_HREF[target]} />;
 }

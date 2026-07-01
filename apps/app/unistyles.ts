@@ -284,6 +284,32 @@ const lockRow = {
   dimOpacity: 0.6, // the row reads dimmed vs an enabled control
 } as const;
 
+// --- AOD-68 §11 screen-scoped token groups (design-core-navigation.md §11) -------------------------
+// The nav-shell geometry, the appBar/screen analog of the AOD-20 §12 component groups: GEOMETRY
+// (numbers) plus ROLE-NAME ALIASES (a semantic colour role / a type step, as plain strings), never a
+// raw hex. The consumer resolves theme.colors[role] / theme.type[step] at the call site, so a theme
+// swap re-aliases underneath. Theme-independent by design. Unistyles-safe: plain data only, NO embedded
+// TextStyle — the appBar title aliases the `title` step by NAME, so the aod-unistyles-style-token-gotcha
+// deep-style flood does not return (§11 typing note). paddingTop composes rt.insets.top at runtime (not
+// a token), so it is absent here.
+
+// §3 the app bar: height (above the top safe-area), the pushed-header title step, and the fill + the
+// hub variant's 1px bottom border (the pushed variant draws no border).
+const appBar = {
+  height: 56, // spacing(14)
+  paddingX: 16, // spacing(4)
+  title: 'title', // aliases type.title (the pushed-header screen title)
+  background: 'background', // the bar fills the ambient field
+  border: 'border', // the hub variant's 1px bottom border
+} as const;
+
+// §3 the shared content region: side padding + the inter-section vertical rhythm (frame is
+// spacing(4..5); the content column uses spacing(5), matching the shipped Settings / SignIn).
+const screen = {
+  paddingX: 20, // spacing(5)
+  gap: 16, // spacing(4)
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22, full: 9999 }, // §7.2: `full` (9999) added for pills / fully-rounded ends
@@ -314,6 +340,9 @@ const sharedTokens = {
   skeleton: skeletonToken,
   badge,
   lockRow,
+  // AOD-68 §11 screen-scoped groups
+  appBar,
+  screen,
 } as const;
 
 // --- §3.1 colour: semantic roles as primitive aliases (AOD-66, §4.2 / §4.3) -------------------------
