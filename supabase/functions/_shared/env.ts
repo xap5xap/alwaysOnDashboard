@@ -31,7 +31,12 @@ export function loadEnv(): BrokerEnv {
     supabaseUrl,
     anonKey: requireEnv("SUPABASE_ANON_KEY"),
     serviceRoleKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-    dbUrl: requireEnv("SUPABASE_DB_URL"),
+    // EDGE_DB_URL is a LOCAL-ONLY escape hatch (AOD-78): the local edge runtime's node-DNS cannot
+    // resolve the db container hostname inside SUPABASE_DB_URL (supabase/postgres#1447), which kills
+    // the raw-postgres paths (Vault, the refresh lock) while supabase-js still works. The gitignored
+    // functions .env points it at the docker-network gateway IP literal (bypasses DNS); the var is
+    // never set on hosted Supabase, where the CLI-injected SUPABASE_DB_URL keeps winning.
+    dbUrl: optionalEnv("EDGE_DB_URL", "") || requireEnv("SUPABASE_DB_URL"),
     callbackBaseUrl: optionalEnv("OAUTH_CALLBACK_BASE_URL", `${supabaseUrl}/functions/v1`),
     deepLinkScheme: optionalEnv("APP_DEEP_LINK_SCHEME", "alwaysondashboard"),
   };

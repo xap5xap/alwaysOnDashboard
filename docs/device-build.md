@@ -55,6 +55,14 @@ python3 -m http.server 8888 -d ~/Downloads
 
 Silk needs "Apps from Unknown Sources" enabled once (Settings > Security & Privacy).
 
+## Dogfood backend state (local Supabase)
+
+The tablet talks to the Mac's local Supabase stack (the baked LAN URL), so keep it running (`npm run db:start`). If every widget errors at once, check the functions container: `docker ps -a | grep edge_runtime`; a `docker start supabase_edge_runtime_alwaysOnDashboard` brings the Edge Functions back (it also must be restarted to pick up `supabase/functions/.env` changes).
+
+- **Server-side Pro for the dev user** (first setup, and after every `npm run db:reset` + re-sign-up): `npm run db:grant-pro` upserts `tier=pro` for `dev@vela.test` (`supabase/dev/seed-dev-pro.sql`). The AOD-75 client grant alone leaves the SERVER Free-shaped: 2-service connect cap + 900s fetch-trigger floor. Local-only convenience; production entitlements are written exclusively by the RevenueCat webhook.
+- **Service connects run on Expo web from the Mac** (same `dev@vela.test` account): connections are per-user server state, so the tablet picks them up with no OAuth dance on-device and no rebuild. Before an OAuth connect, set `OAUTH_CALLBACK_BASE_URL=http://127.0.0.1:54321/functions/v1` in `supabase/functions/.env` (providers accept loopback redirect URIs, not private LAN IPs) and restart the stack (env is baked at container creation; `docker restart` is NOT enough, use `npm run db:stop && npm run db:start`). The web dev client also needs `EXPO_PUBLIC_DEV_ENTITLEMENTS=pro` in `apps/app/.env` (the same grant the preview APK bakes) or the connect rows render as PRO locks.
+- **EDGE_DB_URL (required locally, AOD-78)**: the local edge runtime's node-DNS cannot resolve the db container hostname inside the CLI-injected `SUPABASE_DB_URL` (upstream supabase/postgres#1447), which breaks every Vault write/read and the refresh lock: OAuth callbacks die at `createSecret` and oauth2 proxy fetches fail. `_shared/env.ts` prefers `EDGE_DB_URL` when set; keep this line in `supabase/functions/.env`: `EDGE_DB_URL=postgresql://postgres:postgres@172.18.0.1:54322/postgres` (the project docker network's gateway IP + the db's published port; an IP literal bypasses DNS and survives container recreation). Never set it on hosted Supabase.
+
 ## Cloud fallback
 
 ```bash
