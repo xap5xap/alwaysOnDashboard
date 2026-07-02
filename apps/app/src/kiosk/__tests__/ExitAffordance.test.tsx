@@ -1,8 +1,14 @@
 // The exit affordance (design-kiosk-wall.md §7): the invisible corner, the reveal-on-touch hint + ring,
 // the deliberate hold, and the PIN pad where a wrong PIN keeps the wall active and a correct PIN exits.
-// Exercises the component + useExitFlow + pin.ts together.
+// Exercises the component + useExitFlow + pin.ts together. The AOD-79 block covers the OS-bar-safe
+// anchoring: the corner + reveal sit INSIDE rt.insets (the unistyles mock exposes the same mutable
+// UnistylesRuntime.insets object useUnistyles returns as rt.insets, so tests can set a Fire-OS-shaped
+// inset and assert the anchors move with it).
 import React from 'react';
+import { StyleSheet } from 'react-native';
+import { UnistylesRuntime } from 'react-native-unistyles';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { darkTheme } from '../../../unistyles';
 import { ExitAffordance } from '../ExitAffordance';
 import { hashPin } from '../pin';
 
@@ -76,5 +82,37 @@ describe('ExitAffordance §7', () => {
     fireEvent.press(screen.getByTestId('kiosk-pin-cancel'));
     expect(screen.queryByTestId('kiosk-pin-dots')).toBeNull(); // dismissed back to the wall
     expect(onExit).not.toHaveBeenCalled();
+  });
+
+  describe('the OS-bar-safe anchoring (AOD-79)', () => {
+    const flatten = (testID: string) => StyleSheet.flatten(screen.getByTestId(testID).props.style);
+
+    afterEach(() => {
+      Object.assign(UnistylesRuntime.insets, { top: 0, left: 0, right: 0, bottom: 0 });
+    });
+
+    it('zero insets (web / no OS bars): the corner sits at the true screen edge', () => {
+      render(<ExitAffordance storedHash={stored} onExit={jest.fn()} holdMs={2000} />);
+      const corner = flatten('kiosk-exit-corner');
+      expect(corner.right).toBe(0);
+      expect(corner.bottom).toBe(0);
+      expect(corner.width).toBe(darkTheme.wall.exitCorner); // the token, not resized (test-locked in wall-tokens)
+      expect(corner.height).toBe(darkTheme.wall.exitCorner);
+    });
+
+    it('OS-bar insets (the Fire OS nav bar): the corner AND the reveal anchor inside them', () => {
+      Object.assign(UnistylesRuntime.insets, { bottom: 64, right: 8 });
+      render(<ExitAffordance storedHash={stored} onExit={jest.fn()} holdMs={2000} />);
+
+      const corner = flatten('kiosk-exit-corner');
+      expect(corner.bottom).toBe(64); // fully above the nav bar, the whole 56dp square holdable
+      expect(corner.right).toBe(8);
+
+      fireEvent(screen.getByTestId('kiosk-exit-corner'), 'pressIn');
+      const reveal = flatten('kiosk-hold-reveal');
+      expect(reveal.bottom).toBe(darkTheme.spacing(4) + 64); // the §7 spacing(4) offset, inset-shifted
+      expect(reveal.right).toBe(darkTheme.spacing(4) + 8);
+      expect(screen.getByTestId('kiosk-hold-hint')).toBeTruthy(); // the hint still reveals on touch-down
+    });
   });
 });

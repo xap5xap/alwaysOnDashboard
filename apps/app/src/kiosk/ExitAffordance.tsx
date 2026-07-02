@@ -6,6 +6,11 @@
 // machine is useExitFlow; the ring/shake motion + the surfaces are here. Colours are read direct off the
 // theme (useUnistyles + inline styles) so the sizes come from the `wall` token (theme.wall.exitCorner /
 // pinKey) without tripping the computed-role-in-StyleSheet.create pitfall ([[aod-unistyles-style-token-gotcha]]).
+// The corner + the reveal anchor INSIDE the safe-area insets (AOD-79): on Fire OS the edge-to-edge window
+// puts the OS nav bar over the bottom 64px, so a right:0/bottom:0 corner is clipped to an unholdable strip.
+// Insets come from the same useUnistyles hook (rt.insets), whose proxy SUBSCRIBES this component to inset
+// changes: when bars hide/show (transient bars once AOD-76 lands) the anchors follow live. Web insets are 0,
+// so there the corner stays at the true screen edge.
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, Text, View } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
@@ -75,9 +80,12 @@ function HoldRing({ size, holdMs }: { size: number; holdMs: number }) {
 }
 
 export function ExitAffordance({ storedHash, onExit, holdMs = HOLD_MS }: ExitAffordanceProps) {
-  const { theme } = useUnistyles();
+  const { theme, rt } = useUnistyles();
   const flow = useExitFlow({ storedHash, onExit, holdMs });
   const corner = theme.wall.exitCorner;
+  // The OS-bar-safe anchor (AOD-79). Reading rt.insets registers the Insets dependency, so a bar
+  // hide/show re-renders this layer and the corner stays reachable in every bar state.
+  const insets = rt.insets;
 
   // The wrong-PIN shake: re-run a short translateX wobble whenever wrongNonce increments (§7).
   const shakeX = useRef(new Animated.Value(0)).current;
@@ -94,21 +102,30 @@ export function ExitAffordance({ storedHash, onExit, holdMs = HOLD_MS }: ExitAff
   return (
     // box-none so the wall behind stays glanceable/untouched except the corner and the PIN surface.
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
-      {/* 1. The invisible long-press corner (trailing-bottom). No visible control at rest (§7). */}
+      {/* 1. The invisible long-press corner (trailing-bottom, inside the OS-bar insets). No visible
+          control at rest (§7). */}
       <Pressable
         onPressIn={flow.beginHold}
         onPressOut={flow.cancelHold}
         accessibilityRole="button"
         accessibilityLabel="Hold to exit kiosk"
         testID="kiosk-exit-corner"
-        style={{ position: 'absolute', right: 0, bottom: 0, width: corner, height: corner }}
+        style={{ position: 'absolute', right: insets.right, bottom: insets.bottom, width: corner, height: corner }}
       />
 
-      {/* 2. The reveal-on-touch hint + progress ring, shown ONLY while holding (§7). */}
+      {/* 2. The reveal-on-touch hint + progress ring, shown ONLY while holding (§7); offset by the same
+          insets as the corner so the reveal is never under an OS bar. */}
       {flow.phase === 'holding' ? (
         <View
+          testID="kiosk-hold-reveal"
           pointerEvents="none"
-          style={{ position: 'absolute', right: theme.spacing(4), bottom: theme.spacing(4), alignItems: 'center', gap: theme.spacing(2) }}
+          style={{
+            position: 'absolute',
+            right: theme.spacing(4) + insets.right,
+            bottom: theme.spacing(4) + insets.bottom,
+            alignItems: 'center',
+            gap: theme.spacing(2),
+          }}
         >
           <View
             testID="kiosk-hold-hint"
