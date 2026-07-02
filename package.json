@@ -11,6 +11,7 @@
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
+    "db:grant-pro": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -v ON_ERROR_STOP=1 -f supabase/dev/seed-dev-pro.sql",
     "gen:types": "supabase gen types typescript --local > packages/shared/src/database.types.ts",
     "test": "npm run test --workspace=@vela/app",
     "test:app": "npm run test --workspace=@vela/app",
@@ -19,6 +20,6 @@
     "test:unit": "deno check packages/shared/src test/fixtures supabase/tests"
   },
   "devDependencies": {
-    "supabase": "^2.0.0"
+    "supabase": "^2.109.0"
   }
 }
