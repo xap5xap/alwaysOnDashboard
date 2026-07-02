@@ -26,8 +26,10 @@ jobs:
       - name: deno check
         run: deno check packages/shared/src test/fixtures supabase/tests supabase/functions
       # The broker's pure functions (crypto, entitlements) need no stack, so they run on every push.
+      # --allow-env: the AOD-78 env.test.ts suite snapshots + sets Deno.env in its beforeEach (no
+      # network, no fs); without the flag deno hard-fails NotCapable in CI where nothing can prompt.
       - name: deno test (pure functions, no stack)
-        run: deno test supabase/functions/_shared
+        run: deno test --allow-env supabase/functions/_shared
       # App (Expo/Metro): typecheck + jest (jest-expo) pure-function, component, and lifecycle suites,
       # including the @vela/shared Metro-half cross-runtime smoke (testing-strategy.md §3.2 / §9).
       - name: app typecheck (tsc)
