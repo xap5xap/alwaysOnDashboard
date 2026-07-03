@@ -20,6 +20,7 @@ import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { WidgetPicker } from '../layout/WidgetPicker';
 import { useDashboard } from '../layout/useDashboard';
+import { WallPreview } from '../kiosk/WallPreview';
 import type { WidgetInstance } from '../registry/types';
 import { AppBar, EmptyState, ErrorState, LoadingState, Screen } from '../shell';
 import { Button } from '../ui/Button';
@@ -31,14 +32,21 @@ export function Dashboard() {
   const { theme } = useUnistyles();
   const [arranging, setArranging] = useState(false);
   const [picking, setPicking] = useState(false);
+  // AOD-81 §6: the wall preview peek. Owned here like `picking`/`arranging` (the app-ia locked fact: a
+  // surface carrying a live object stays in-screen, never a router route), mounted as an overlay below.
+  const [previewing, setPreviewing] = useState(false);
   // The instance whose config form is open (AOD-10 §4). Owned here like `picking`/`arranging` so both
   // reconfigure entries (arrange-mode "Configure" and the host's needs_config prompt) route through it.
   const [configuring, setConfiguring] = useState<WidgetInstance | null>(null);
 
   const headerRight = arranging ? (
-    // AOD-27 §4 / §11 drift 1: while arranging the hub header shows only a single accent Done pill
-    // (primary = accent fill + onAccent label), the pushed-header trailing-action pattern on the hub.
-    <Button label="Done" variant="primary" size="sm" pill onPress={() => setArranging(false)} testID="dashboard-done" />
+    // AOD-27 §4 / §11 drift 1 + AOD-81 §6: while arranging the hub header shows the trailing PAIR —
+    // Preview (ghost; opens the true wall peek at 1.4x) then Done (primary = accent fill + onAccent label).
+    // Done keeps the one accent; Preview is the low-weight sibling. The pushed-header trailing pattern on the hub.
+    <>
+      <Button label="Preview" variant="ghost" size="sm" pill onPress={() => setPreviewing(true)} testID="dashboard-preview" />
+      <Button label="Done" variant="primary" size="sm" pill onPress={() => setArranging(false)} testID="dashboard-done" />
+    </>
   ) : (
     <>
       {!isLoading && !isError ? (
@@ -58,45 +66,51 @@ export function Dashboard() {
   );
 
   return (
-    <Screen>
-      <AppBar variant="hub" right={headerRight} testID="dashboard-header" />
+    <>
+      <Screen>
+        <AppBar variant="hub" right={headerRight} testID="dashboard-header" />
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState line="Could not load your dashboard." detail={error?.message} onRetry={() => void refetch()} />
-      ) : !arranging && instances.length === 0 ? (
-        // AOD-27 §5: the calm empty-dashboard CTA (a soft accent add glyph + line + a quieter subline + one
-        // primary "Add widget"), composing the shell EmptyState. Never an error treatment; the board is new.
-        <EmptyState
-          glyph={<AddGlyph color={theme.colors.accent} />}
-          line="Your dashboard is empty."
-          subline="Add a widget to get started."
-          actionLabel="Add widget"
-          onAction={() => setPicking(true)}
-          testID="dashboard-empty"
-        />
-      ) : (
-        <View style={styles.body}>
-          <Text style={styles.hint}>
-            {arranging
-              ? 'Drag to move. Drag the corner handle to resize. Tap empty space or Done to finish.'
-              : 'Long-press a widget to arrange.'}
-          </Text>
-          <LayoutCanvas
-            instances={instances}
-            arranging={arranging}
-            onEnterArrange={() => setArranging(true)}
-            onExitArrange={() => setArranging(false)}
-            onCommit={commit}
-            onRequestConfigure={setConfiguring}
+        {isLoading ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState line="Could not load your dashboard." detail={error?.message} onRetry={() => void refetch()} />
+        ) : !arranging && instances.length === 0 ? (
+          // AOD-27 §5: the calm empty-dashboard CTA (a soft accent add glyph + line + a quieter subline + one
+          // primary "Add widget"), composing the shell EmptyState. Never an error treatment; the board is new.
+          <EmptyState
+            glyph={<AddGlyph color={theme.colors.accent} />}
+            line="Your dashboard is empty."
+            subline="Add a widget to get started."
+            actionLabel="Add widget"
+            onAction={() => setPicking(true)}
+            testID="dashboard-empty"
           />
-        </View>
-      )}
+        ) : (
+          <View style={styles.body}>
+            <Text style={styles.hint}>
+              {arranging
+                ? 'Drag to move. Drag the corner handle to resize. Tap empty space or Done to finish.'
+                : 'Long-press a widget to arrange.'}
+            </Text>
+            <LayoutCanvas
+              instances={instances}
+              arranging={arranging}
+              onEnterArrange={() => setArranging(true)}
+              onExitArrange={() => setArranging(false)}
+              onCommit={commit}
+              onRequestConfigure={setConfiguring}
+            />
+          </View>
+        )}
 
-      {picking && <WidgetPicker onClose={() => setPicking(false)} />}
-      {configuring && <ConfigureInstanceModal instance={configuring} onClose={() => setConfiguring(null)} />}
-    </Screen>
+        {picking && <WidgetPicker onClose={() => setPicking(false)} />}
+        {configuring && <ConfigureInstanceModal instance={configuring} onClose={() => setConfiguring(null)} />}
+      </Screen>
+      {/* AOD-81 §6: the wall preview, mounted OVER the whole route container (a sibling of Screen, above the
+          shell chrome) so the peek is edge to edge like the wall. Only reachable from arranging (which needs a
+          card to long-press), so it always previews a non-empty draft. Tap anywhere / OS back returns. */}
+      {previewing ? <WallPreview instances={instances} onClose={() => setPreviewing(false)} /> : null}
+    </>
   );
 }
 

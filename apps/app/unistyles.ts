@@ -328,15 +328,15 @@ const arrange = {
 
 // --- AOD-39 §10 kiosk-wall-scoped token group (design-kiosk-wall.md §10) ----------------------------
 // The kiosk wall's geometry, the AOD-20 §12 / AOD-68 §11 / AOD-27 §10 analog for the wall-mount profile.
-// NUMBERS ONLY (a multiplier + two pixel sizes), no role alias and no embedded TextStyle: the wall composes
-// EXISTING colour tokens (colors.background field, night.*/overlay dim, scrim + the §9 sheet vocab for the
-// PIN), so it adds no colour. `typeScale` is the load-bearing value: the AOD-11 §7.1 WallMountProfile
-// multiplier the wall applies over the AOD-37 §3.3 type ramp (the cards, only larger), NOT a fork of the
-// ramp. `exitCorner`/`pinKey` size the exit affordance (§7). Unistyles-safe (plain numbers), test-locked
-// byte-identical the AOD-66/67/68/69 way ([[aod-unistyles-style-token-gotcha]]: the pitfall is TextStyle in
-// the theme, not plain data).
+// NUMBERS ONLY (three pixel sizes), no role alias and no embedded TextStyle: the wall composes EXISTING colour
+// tokens (colors.background field, night.*/overlay dim, scrim + the §9 sheet vocab for the PIN), so it adds
+// no colour. `exitCorner`/`pinKey` size the exit affordance (§7). `padding` is the uniform margin the
+// auto-fit content sits inside, so nothing is flush against the screen edge (dogfood polish). Unistyles-safe
+// (plain numbers), test-locked. (AOD-81 removed the former fixed `typeScale: 1.4`: the wall now AUTO-FITS the
+// layout to the screen minus this padding via the pure viewport.wallFitScale — a fixed scale clipped wide
+// layouts on the real, density-scaled device screen. See src/kiosk/viewport.ts.)
 const wall = {
-  typeScale: 1.4, // the WallMountProfile.typeScale multiplier on type.* (across-the-room legibility)
+  padding: 24, // spacing(6): the uniform wall margin the auto-fit content is inset by
   exitCorner: 56, // spacing(14): the invisible long-press exit hit-target (trailing-bottom corner)
   pinKey: 64, // spacing(16): the PIN-pad key diameter on the exit surface
 } as const;
