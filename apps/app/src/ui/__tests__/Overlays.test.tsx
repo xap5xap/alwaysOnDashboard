@@ -30,6 +30,30 @@ describe('Modal §9', () => {
     expect(screen.getByText('Remove widget?')).toBeTruthy();
     expect(screen.getByText('This cannot be undone.')).toBeTruthy();
   });
+
+  describe('inline mode (AOD-76: no RN Modal window, so the kiosk immersive state holds)', () => {
+    it('visible: renders the same title/body surface in the caller\'s tree, not an RN Modal host', () => {
+      render(
+        <Modal visible inline title="Enter PIN" testID="inline-modal">
+          <Text>Pad</Text>
+        </Modal>,
+      );
+      expect(screen.getByText('Enter PIN')).toBeTruthy();
+      expect(screen.getByText('Pad')).toBeTruthy();
+      expect(screen.getByTestId('inline-modal')).toBeTruthy();
+      expect(screen.UNSAFE_queryByType(require('react-native').Modal)).toBeNull();
+    });
+
+    it('not visible: renders nothing', () => {
+      render(
+        <Modal visible={false} inline title="Enter PIN" testID="inline-modal">
+          <Text>Pad</Text>
+        </Modal>,
+      );
+      expect(screen.queryByTestId('inline-modal')).toBeNull();
+      expect(screen.queryByText('Enter PIN')).toBeNull();
+    });
+  });
 });
 
 describe('Popover / MenuItem §9', () => {

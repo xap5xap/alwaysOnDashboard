@@ -144,8 +144,12 @@ export function ExitAffordance({ storedHash, onExit, holdMs = HOLD_MS }: ExitAff
         </View>
       ) : null}
 
-      {/* 3. The scrim + PIN pad (composes the AOD-67 §9 Modal). A correct PIN exits; wrong shakes + stays. */}
-      <Modal visible={flow.phase === 'pin'} onRequestClose={flow.dismiss} title="Enter PIN" testID="kiosk-pin">
+      {/* 3. The scrim + PIN pad (composes the AOD-67 §9 Modal). A correct PIN exits; wrong shakes + stays.
+          INLINE (AOD-76): an RN Modal is a separate Android window that re-shows the OS status bar over the
+          §8 immersive wall on Fire OS 8 (API 30), so the pad renders in the wall's own window, where the
+          runtime's immersive state keeps holding. Hardware back is already the runtime's intercept (§4.3);
+          the pad's dismissal is the Cancel button. */}
+      <Modal visible={flow.phase === 'pin'} inline title="Enter PIN" testID="kiosk-pin">
         <Animated.View style={{ transform: [{ translateX: shakeX }], gap: theme.spacing(4), alignItems: 'center' }}>
           <PinPad filled={flow.entered.length} onKey={flow.pressKey} onDelete={flow.pressDelete} />
           <Button label="Cancel" variant="ghost" onPress={flow.dismiss} testID="kiosk-pin-cancel" />
