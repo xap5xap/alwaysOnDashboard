@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { WidgetInstance } from '../registry/types';
 import type { LayoutPatch } from './mapper';
 import { PlacedInstance } from './PlacedInstance';
+import { WallBoundaryBox } from './WallBoundaryBox';
 
 export interface LayoutCanvasProps {
   instances: WidgetInstance[];
@@ -34,6 +35,11 @@ export function LayoutCanvas({
       {arranging ? (
         <Pressable style={styles.exitCatcher} onPress={onExitArrange} accessibilityLabel="Done arranging" />
       ) : null}
+      {/* AOD-81 §5: the wall boundary box, arrange-only, drawn from the origin UNDER the cards (above the
+          catcher, below every instance), pointerEvents none. It reads only the theme + the wallViewportUnits
+          helper — no service, so the AOD-8 §10 no-service seam holds. The wall itself renders this canvas
+          with arranging=false, so the box never shows on the wall or in the preview. */}
+      {arranging ? <WallBoundaryBox /> : null}
       {instances.map((instance) => (
         <PlacedInstance
           key={instance.instanceId}

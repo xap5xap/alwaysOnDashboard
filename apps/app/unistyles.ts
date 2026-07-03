@@ -324,6 +324,21 @@ const arrange = {
   selectFill: 'surfaceAlt', // bodyArranging: the selected card's fill (one step up from the resting card)
   handle: { dot: 24, hit: 44, ring: 'background' }, // resize handle: a 24pt accent dot ringed in `background`, inside a 44pt hit target
   configurePill: { bg: 'accent', label: 'onAccent' }, // the top-left Configure pill (§11 drift 3: label -> onAccent, was colors.background)
+  // AOD-81 §5/§9 (design-wall-viewport-contract): the arrange-mode wall boundary box, extending this coded
+  // `arrange` group additively (design §9 addition 1). NUMBERS + ROLE-NAME ALIASES only — no raw hex, no
+  // embedded TextStyle: the stroke/tag colours name real semantic roles resolved at the draw site
+  // (WallBoundaryBox), so a theme swap re-aliases underneath. `dash` is a plain number pair (an SVG
+  // strokeDasharray, since a View borderStyle cannot carry a 6/4 dash); `tagText` draws at type.caption. The
+  // box reads the theme + the wallViewportUnits helper, nothing else (LayoutCanvas keeps the AOD-8 no-service
+  // seam). Test-locked byte-identical in arrange-tokens.test.ts, the AOD-66/67/68/69 way.
+  wallGuide: {
+    stroke: 'border', // the dashed frame stroke (quiet; heavier than the 1px card border so it reads as a frame)
+    strokeWidth: 2,
+    dash: [6, 4], // SVG stroke-dasharray (px on / px off)
+    tagBg: 'surface', // the "WALL · 11.4 x 7.1" chip fill
+    tagBorder: 'border', // the chip's 1px border
+    tagText: 'textMuted', // the chip label, drawn at type.caption
+  },
 } as const;
 
 // --- AOD-39 §10 kiosk-wall-scoped token group (design-kiosk-wall.md §10) ----------------------------
