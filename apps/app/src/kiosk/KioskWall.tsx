@@ -51,7 +51,15 @@ export function KioskWall() {
           the __velaSetAmbient dev seam forces the look from the preview. Composes AOD-62; the per-card overlay
           + the deep-red Clock opt-in are the AOD-37 §7 cards reacting, not rebuilt here. */}
       <AmbientProvider value={ambient}>
+        {/* pointerEvents none: the wall shows content, not controls (§8; the §7 corner is the ONLY wall
+            affordance), so the content subtree takes no part in touch. This is also LOAD-BEARING for the
+            exit guard on-device (AOD-79): with the cards' RNGH detectors inside the 1.4x-scaled layer
+            participating in hit-testing, Fire OS delivered NO touches to the corner Pressable even where
+            it was fully visible (an injected hold at the corner's exact uiautomator bounds never fired
+            onPressIn, while the same injection long-pressed a dashboard card fine); excluding the
+            display-only subtree restores §7 "the gesture + PIN is the only exit". */}
         <View
+          pointerEvents="none"
           style={[
             styles.content,
             { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right },
