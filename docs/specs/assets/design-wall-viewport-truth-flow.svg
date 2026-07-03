@@ -1,0 +1,65 @@
+<svg width="100%" viewBox="0 0 860 430" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Single source of truth: one viewport relationship feeds the boundary box, the wall preview, and matches the shipped wall</title>
+  <desc>A flow diagram. Three sources on top: the wall typeScale token in unistyles, UNIT_PX in geometry, and the device screen with steady-state insets. All three feed one pure wallViewportUnits helper, added by the build. The helper feeds the arrange-mode boundary box and the wall preview with solid arrows. A dashed arrow to the shipped KioskWall scale layer notes the transform already implies the same window, so the wall is not required to adopt the helper. A footer states that tuning the token moves all three surfaces together.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:11px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .mono{font-size:12px;fill:#F4F4F8;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .arrow{stroke:#6E8BFF;stroke-width:1.5;fill:none;}
+    .dashed{stroke:#3A3A48;stroke-width:1.5;stroke-dasharray:4 4;fill:none;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="429" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">One relationship, three surfaces</text>
+  <text x="32" y="60" class="sub">The token is the lever; the helper is the law. The box, the preview, and the wall can never disagree.</text>
+
+  <!-- ===== sources ===== -->
+  <rect x="48" y="84" width="240" height="58" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="106" class="tokv acc">wall.typeScale = 1.4</text>
+  <text x="62" y="124" class="tok">unistyles.ts &#183; test-locked</text>
+  <rect x="316" y="84" width="200" height="58" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="330" y="106" class="tokv">UNIT_PX = 80</text>
+  <text x="330" y="124" class="tok">geometry.ts (AOD-7)</text>
+  <rect x="544" y="84" width="264" height="58" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="558" y="106" class="tokv">screen dp + steady insets</text>
+  <text x="558" y="124" class="tok">device &#183; insets 0 under immersive (AOD-76)</text>
+
+  <!-- arrows into the helper -->
+  <path d="M168,142 L168,164 L360,164 L400,182" class="arrow"/>
+  <path d="M416,142 L420,180" class="arrow"/>
+  <path d="M676,142 L676,164 L480,164 L444,182" class="arrow"/>
+  <path d="M414,176 L421,186 L428,175" class="arrow"/>
+
+  <!-- ===== the helper ===== -->
+  <rect x="180" y="188" width="480" height="58" rx="10" fill="#0E0E13" stroke="#6E8BFF"/>
+  <text x="196" y="212" class="mono">wallViewportUnits(screen, insets, typeScale)</text>
+  <text x="196" y="230" class="tok">pure helper &#183; src/kiosk/viewport.ts &#183; AOD-81 &#183; unit-tested vs the &#167;3 table</text>
+
+  <!-- arrows out -->
+  <path d="M300,246 L176,296" class="arrow"/><path d="M184,290 L172,298 L188,300" class="arrow"/>
+  <path d="M420,246 L420,296" class="arrow"/><path d="M414,288 L420,298 L426,288" class="arrow"/>
+  <path d="M540,246 L680,296" class="dashed"/>
+  <text x="620" y="266" class="tok">implied by the shipped</text>
+  <text x="620" y="278" class="tok">transform (no adoption required)</text>
+
+  <!-- ===== consumers ===== -->
+  <rect x="48" y="302" width="244" height="58" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="324" class="note" font-weight="700" fill="#F4F4F8">the arrange boundary box</text>
+  <text x="62" y="342" class="tok">&#167;5 &#183; AOD-81 &#183; drawn on the canvas</text>
+  <rect x="316" y="302" width="208" height="58" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="330" y="324" class="note" font-weight="700" fill="#F4F4F8">Preview wall</text>
+  <text x="330" y="342" class="tok">&#167;6 &#183; BUILD (AOD-81) &#183; pixel-honest</text>
+  <rect x="548" y="302" width="260" height="58" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="562" y="324" class="note" font-weight="700" fill="#F4F4F8">KioskWall scale layer</text>
+  <text x="562" y="342" class="tok">SHIPPED (AOD-72/76) &#183; implies the window</text>
+
+  <line x1="32" y1="384" x2="828" y2="384" stroke="#22222C"/>
+  <text x="32" y="402" class="note"><tspan class="acc">Tuning is safe by construction:</tspan> change wall.typeScale (one token line) and all three surfaces move together.</text>
+  <text x="32" y="418" class="tok">if the preview and the wall can disagree, the build is wrong (&#167;6)</text>
+</svg>

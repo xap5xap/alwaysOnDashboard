@@ -1,0 +1,82 @@
+<svg width="100%" viewBox="0 0 860 540" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The insets contract: steady-state insets are zero under immersive so the viewport is the full screen; transient overlays are not insets and self-heal</title>
+  <desc>Two panels. On the left, the steady state: a full-bleed 1280 by 800 wall with insets zero under the AOD-76 immersive mode, the exit corner at the true screen edge, and a note that unistyles dispatches zeroed insets on hide. On the right, a three-step transient timeline: a swipe reveals the system bars which float over the content for about four seconds with no inset dispatch, the exit corner sits under the bottom bar with its touches eaten, then the bars auto-hide and the wall self-heals. A non-goal band states that dodging transient overlays would need a non-inset mechanism. A tooling band records that uiautomator clips node bounds at the stale app bounds and that window manager frames, screencaps, and injected touches are the trustworthy measurements.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .warn{fill:#F2B84B;}
+    .arrow{stroke:#6E8BFF;stroke-width:1.5;fill:none;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="539" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Insets: what the usable region IS</text>
+  <text x="32" y="60" class="sub">Absorbs the AOD-76 findings. Steady state defines the window; transient overlays are not insets. Measured on Fire OS 8 (API 30).</text>
+
+  <!-- ===== left: steady state ===== -->
+  <text x="48" y="98" class="sec">STEADY STATE (THE CONTRACT INPUT)</text>
+  <rect x="48" y="110" width="320" height="212" rx="12" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <rect x="56" y="118" width="304" height="196" rx="4" fill="#0B0B0F"/>
+  <rect x="64" y="126" width="170" height="110" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="74" y="144" class="cap">LINEAR &#183; MY ISSUES</text>
+  <circle cx="80" cy="162" r="3" fill="#6E8BFF"/><text x="90" y="166" font-size="10" font-weight="600" fill="#F4F4F8">AOD-80 contract</text>
+  <rect x="242" y="150" width="110" height="86" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="252" y="168" class="cap">WEATHER</text>
+  <text x="252" y="194" font-size="15" font-weight="600" fill="#F4F4F8">18&#176;</text>
+  <circle cx="350" cy="304" r="5" fill="none" stroke="#6E8BFF" stroke-width="1.5"/>
+  <text x="64" y="306" class="tok">exit corner at the TRUE screen edge (AOD-79)</text>
+  <text x="48" y="344" class="note"><tspan class="acc">insets 0 &#183; immersive &#183; viewport = the full 1280 &#215; 800.</tspan></text>
+  <text x="48" y="362" class="meta">unistyles dispatches ZEROED insets on hide; KioskWall pads by the</text>
+  <text x="48" y="378" class="meta">live rt.insets (the accessor, done). This contract fixes the MEANING:</text>
+  <text x="48" y="394" class="meta">the usable region = the content box after steady-state inset padding.</text>
+  <text x="48" y="414" class="tok">platforms whose wall steady state keeps nonzero insets (iOS home indicator, web preview) subtract them; the helper takes insets</text>
+
+  <!-- ===== right: transient timeline ===== -->
+  <text x="470" y="98" class="sec">TRANSIENT OVERLAYS ARE NOT INSETS</text>
+  <!-- t0 -->
+  <rect x="470" y="110" width="106" height="72" rx="6" fill="#050507" stroke="#23232E"/>
+  <rect x="474" y="114" width="98" height="64" rx="3" fill="#0B0B0F"/>
+  <rect x="478" y="118" width="52" height="34" rx="4" fill="#16161D" stroke="#2A2A36"/>
+  <text x="470" y="196" class="tok">t0 &#183; full-bleed</text>
+  <path d="M582,146 L606,146" class="arrow"/><path d="M600,142 L608,146 L600,150" class="arrow"/>
+  <text x="578" y="136" class="tok">swipe</text>
+  <!-- t1: bars OVER content -->
+  <rect x="612" y="110" width="106" height="72" rx="6" fill="#050507" stroke="#23232E"/>
+  <rect x="616" y="114" width="98" height="64" rx="3" fill="#0B0B0F"/>
+  <rect x="620" y="118" width="52" height="34" rx="4" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="616" y="114" width="98" height="9" fill="#1C1C25" opacity="0.92"/>
+  <rect x="616" y="166" width="98" height="12" fill="#1C1C25" opacity="0.92"/>
+  <circle cx="708" cy="172" r="4" fill="none" stroke="#F2B84B" stroke-width="1.5"/>
+  <text x="612" y="196" class="tok">t1 &#183; bars OVER (~4s)</text>
+  <text x="612" y="208" class="tok">NO inset dispatch</text>
+  <path d="M724,146 L748,146" class="arrow"/><path d="M742,142 L750,146 L742,150" class="arrow"/>
+  <text x="726" y="136" class="tok">~4s</text>
+  <!-- t2 -->
+  <rect x="754" y="110" width="74" height="72" rx="6" fill="#050507" stroke="#23232E"/>
+  <rect x="758" y="114" width="66" height="64" rx="3" fill="#0B0B0F"/>
+  <rect x="762" y="118" width="36" height="34" rx="4" fill="#16161D" stroke="#2A2A36"/>
+  <text x="754" y="196" class="tok">t2 &#183; self-heals</text>
+  <text x="470" y="238" class="note"><tspan class="warn">Consequence, stated:</tspan> the &#167;7 exit corner sits</text>
+  <text x="470" y="254" class="note">UNDER the overlay for those seconds (the overlay eats its</text>
+  <text x="470" y="270" class="note">touches), then self-heals when the bars auto-hide.</text>
+  <text x="470" y="286" class="note">Content must NEVER reserve space for a transient:</text>
+  <text x="470" y="302" class="note">there is no signal to react to (nothing is dispatched).</text>
+  <text x="470" y="324" class="tok">the editor box + the preview compute with the WALL's steady state</text>
+  <text x="470" y="336" class="tok">(insets 0), never their own live editor insets (&#167;7)</text>
+
+  <!-- ===== non-goal ===== -->
+  <rect x="48" y="436" width="780" height="52" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="64" y="456" class="note"><tspan class="sec">NON-GOAL &#183;</tspan> dodging transient overlays needs a non-inset mechanism (WindowInsetsAnimation / visibility listeners);</text>
+  <text x="64" y="474" class="note">revisit only on real dogfood pain.</text>
+
+  <!-- ===== tooling ===== -->
+  <line x1="32" y1="494" x2="828" y2="494" stroke="#22222C"/>
+  <text x="32" y="512" class="tok">MEASUREMENT CAVEAT: uiautomator / accessibility clips node bounds at the stale mAppBounds (1280 &#215; 736) even edge to edge;</text>
+  <text x="32" y="526" class="tok">trust `dumpsys window` Frames content/visible + screencaps + injected touches. Applies to this doc's numbers and to the AOD-81 device verify.</text>
+</svg>

@@ -1,0 +1,92 @@
+<svg width="100%" viewBox="0 0 860 520" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The wall preview: arrange, peek at the true 1.4x wall render, tap to return; presentation without the runtime guard</title>
+  <desc>A three-frame flow. Frame one shows arrange mode with the Preview and Done pills and the boundary box. Tapping Preview leads to frame two: the full-bleed true wall render at 1.4x with no bars, a card clipping at the window edge exactly as the wall would show it, and a transient tap-to-return hint. Tapping anywhere or pressing OS back leads to frame three, back to arranging. A panel lists what the preview is not: no PIN, no keep-awake, no pinning, no cadence change, no backlight seize. A footer notes the preview is an editor surface, so taking a dismiss tap does not contradict the AOD-79 rule that the kiosk wall takes no touch.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .row{font-size:12px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .arrow{stroke:#6E8BFF;stroke-width:1.5;fill:none;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="519" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The wall preview (a peek, not a mode)</text>
+  <text x="32" y="60" class="sub">Mounts the AOD-39 presentation of the draft layout; deliberately skips the AOD-11 runtime guard.</text>
+
+  <!-- ===== frame 1: arranging ===== -->
+  <text x="48" y="98" class="cap">1 &#183; ARRANGING</text>
+  <rect x="48" y="106" width="200" height="136" rx="10" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <rect x="56" y="114" width="184" height="120" rx="4" fill="#0B0B0F"/>
+  <line x1="56" y1="134" x2="240" y2="134" stroke="#22222C"/>
+  <rect x="152" y="119" width="42" height="11" rx="5.5" fill="none" stroke="#2A2A36"/>
+  <text x="173" y="127" text-anchor="middle" font-size="7" fill="#C9C9D4">Preview</text>
+  <rect x="200" y="119" width="32" height="11" rx="5.5" fill="#6E8BFF"/>
+  <text x="216" y="127" text-anchor="middle" font-size="7" font-weight="700" fill="#0B0B0F">Done</text>
+  <rect x="62" y="140" width="128" height="80" fill="none" stroke="#2A2A36" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect x="68" y="146" width="72" height="44" rx="5" fill="#1C1C25" stroke="#6E8BFF"/>
+  <rect x="146" y="170" width="60" height="36" rx="5" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="230" class="tok">the box marks the window</text>
+
+  <path d="M258,172 L302,172" class="arrow"/><path d="M296,168 L304,172 L296,176" class="arrow"/>
+  <text x="252" y="162" class="tok">tap Preview</text>
+
+  <!-- ===== frame 2: the true wall render ===== -->
+  <text x="314" y="98" class="cap">2 &#183; THE TRUE WALL RENDER (1.4x, IMMERSIVE)</text>
+  <rect x="314" y="106" width="256" height="160" rx="10" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <rect x="320" y="112" width="244" height="148" rx="4" fill="#0B0B0F"/>
+  <!-- cards at wall scale; one clips at the right edge exactly as the wall would -->
+  <rect x="326" y="120" width="132" height="84" rx="7" fill="#16161D" stroke="#2A2A36"/>
+  <text x="336" y="138" class="cap" font-size="8">LINEAR &#183; MY ISSUES</text>
+  <circle cx="342" cy="154" r="3" fill="#6E8BFF"/><text x="352" y="158" class="row" font-size="10">AOD-80 contract</text>
+  <circle cx="342" cy="172" r="3" fill="#F2B84B"/><text x="352" y="176" class="row" font-size="10">AOD-81 box build</text>
+  <rect x="470" y="152" width="94" height="66" rx="7" fill="#16161D" stroke="#2A2A36"/>
+  <text x="480" y="170" class="cap" font-size="8">WEATHER</text>
+  <text x="480" y="196" class="row" font-size="15">18&#176;</text>
+  <!-- the clipped edge: content ends AT the screen edge -->
+  <line x1="564" y1="112" x2="564" y2="260" stroke="#F2B84B" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <!-- transient hint -->
+  <rect x="392" y="234" width="100" height="18" rx="9" fill="#16161D" stroke="#2A2A36"/>
+  <text x="442" y="246" text-anchor="middle" class="tok">Tap to return</text>
+  <text x="314" y="284" class="tok">no bars, no header &#183; the &#167;3 window exactly &#183; current ambient phase</text>
+  <text x="314" y="296" class="tok">the "Tap to return" hint is transient (build refinement)</text>
+
+  <path d="M580,172 L624,172" class="arrow"/><path d="M618,168 L626,172 L618,176" class="arrow"/>
+  <text x="572" y="192" class="tok">tap anywhere</text>
+  <text x="572" y="204" class="tok">/ OS back</text>
+
+  <!-- ===== frame 3: back ===== -->
+  <text x="636" y="98" class="cap">3 &#183; BACK TO ARRANGING</text>
+  <rect x="636" y="106" width="176" height="120" rx="10" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <rect x="643" y="113" width="162" height="106" rx="4" fill="#0B0B0F"/>
+  <line x1="643" y1="131" x2="805" y2="131" stroke="#22222C"/>
+  <rect x="729" y="117" width="37" height="10" rx="5" fill="none" stroke="#2A2A36"/>
+  <text x="747" y="124" text-anchor="middle" font-size="6.5" fill="#C9C9D4">Preview</text>
+  <rect x="771" y="117" width="28" height="10" rx="5" fill="#6E8BFF"/>
+  <text x="785" y="124" text-anchor="middle" font-size="6.5" font-weight="700" fill="#0B0B0F">Done</text>
+  <rect x="649" y="137" width="112" height="70" fill="none" stroke="#2A2A36" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect x="654" y="142" width="64" height="38" rx="5" fill="#1C1C25" stroke="#6E8BFF"/>
+  <rect x="722" y="164" width="52" height="32" rx="5" fill="#16161D" stroke="#2A2A36"/>
+  <text x="636" y="242" class="tok">no state survives the peek;</text>
+  <text x="636" y="254" class="tok">the draft layout is what rendered</text>
+
+  <!-- ===== what it is not ===== -->
+  <rect x="48" y="310" width="764" height="112" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="64" y="334" class="sec">WHAT THE PREVIEW IS NOT (THE AOD-72 PRESENTATION / RUNTIME SPLIT, REUSED AS A BOUNDARY)</text>
+  <rect x="64" y="348" width="76" height="22" rx="11" fill="#16161D" stroke="#2A2A36"/><text x="102" y="363" text-anchor="middle" class="meta">no PIN</text>
+  <rect x="148" y="348" width="110" height="22" rx="11" fill="#16161D" stroke="#2A2A36"/><text x="203" y="363" text-anchor="middle" class="meta">no keep-awake</text>
+  <rect x="266" y="348" width="94" height="22" rx="11" fill="#16161D" stroke="#2A2A36"/><text x="313" y="363" text-anchor="middle" class="meta">no pinning</text>
+  <rect x="368" y="348" width="136" height="22" rx="11" fill="#16161D" stroke="#2A2A36"/><text x="436" y="363" text-anchor="middle" class="meta">no cadence change</text>
+  <rect x="512" y="348" width="136" height="22" rx="11" fill="#16161D" stroke="#2A2A36"/><text x="580" y="363" text-anchor="middle" class="meta">no backlight seize</text>
+  <text x="64" y="394" class="note">Those guards exist for an UNATTENDED wall against a passer-by (kiosk-mode &#167;4.3); a preview is attended by definition.</text>
+  <text x="64" y="410" class="tok">whether the preview borrows the runtime's immersive / orientation helpers is a build detail behind the same platform-split seam (&#167;10)</text>
+
+  <line x1="32" y1="446" x2="828" y2="446" stroke="#22222C"/>
+  <text x="32" y="468" class="note"><tspan class="acc">An editor surface, owner-attended:</tspan> taking a dismiss tap does not contradict AOD-79. The kiosk wall itself still takes no touch;</text>
+  <text x="32" y="484" class="note">the corner + PIN remain the wall's only exit. Pixel-honest by construction: the preview derives from the same helper as the box (&#167;3).</text>
+</svg>

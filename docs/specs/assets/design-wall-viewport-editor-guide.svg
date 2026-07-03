@@ -1,0 +1,83 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The arrange-mode boundary box: a quiet dashed wall frame with a device-computed tag, composing the AOD-27 arrange surface</title>
+  <desc>A landscape tablet editor in arrange mode. The header carries a ghost Preview pill and an accent Done pill. The canvas shows a dashed boundary box anchored at the canvas origin with a small WALL 11.4 by 7.1 tag chip at its inside bottom-right. One selected card sits inside the boundary with the accent border, a Configure pill, and a resize handle; a second card straddles the boundary with normal chrome and no error treatment. A right-hand column lists the box rules: drawn under the cards, border-role dashed stroke, no touch, arrange mode only and always, derived from the wall's landscape steady state, outside remains valid. A token block names the arrange.wallGuide values. A footer states the design composes AOD-27 section 4 additively.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .row{font-size:12px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .lead{stroke:#3A3A48;stroke-width:1.2;stroke-dasharray:3 3;fill:none;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="555" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The arrange-mode boundary box</text>
+  <text x="32" y="60" class="sub">Always-on while arranging (decided 2026-07-03), every dashboard, every device. Composes AOD-27 &#167;4; nothing existing is redrawn.</text>
+
+  <!-- ===== device frame ===== -->
+  <rect x="32" y="96" width="470" height="330" rx="16" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <rect x="44" y="108" width="446" height="306" rx="6" fill="#0B0B0F"/>
+  <text x="52" y="92" class="cap">TABLET EDITOR &#183; LANDSCAPE &#183; ARRANGE MODE</text>
+  <!-- app bar -->
+  <line x1="44" y1="148" x2="490" y2="148" stroke="#22222C"/>
+  <text x="58" y="133" class="cap">ARRANGING</text>
+  <rect x="330" y="116" width="64" height="24" rx="12" fill="none" stroke="#2A2A36"/>
+  <text x="362" y="132" text-anchor="middle" font-size="11" fill="#C9C9D4">Preview</text>
+  <rect x="402" y="116" width="52" height="24" rx="12" fill="#6E8BFF"/>
+  <text x="428" y="132" text-anchor="middle" font-size="11" font-weight="700" fill="#0B0B0F">Done</text>
+  <!-- the boundary box (under the cards) -->
+  <rect x="56" y="160" width="318" height="199" fill="none" stroke="#2A2A36" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="256" y="332" width="110" height="19" rx="9.5" fill="#16161D" stroke="#2A2A36"/>
+  <text x="311" y="345" text-anchor="middle" class="tok">WALL &#183; 11.4 &#215; 7.1</text>
+  <!-- selected card (AOD-27 treatment, unchanged) -->
+  <rect x="68" y="176" width="150" height="96" rx="10" fill="#1C1C25" stroke="#6E8BFF" stroke-width="1.5"/>
+  <rect x="76" y="168" width="66" height="18" rx="9" fill="#6E8BFF"/>
+  <text x="109" y="180" text-anchor="middle" font-size="8" font-weight="700" fill="#0B0B0F">CONFIGURE</text>
+  <text x="80" y="204" class="cap">LINEAR &#183; MY ISSUES</text>
+  <circle cx="86" cy="222" r="3" fill="#6E8BFF"/><text x="96" y="226" class="row" font-size="10">AOD-80 contract</text>
+  <circle cx="86" cy="240" r="3" fill="#F2B84B"/><text x="96" y="244" class="row" font-size="10">AOD-81 box build</text>
+  <circle cx="218" cy="272" r="7" fill="#6E8BFF" stroke="#0B0B0F" stroke-width="2"/>
+  <!-- straddling card: full chrome, NO error treatment -->
+  <rect x="300" y="220" width="140" height="80" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="312" y="240" class="cap">WEATHER</text>
+  <text x="312" y="266" class="row" font-size="16">18&#176;</text>
+  <text x="312" y="284" class="meta" font-size="10">partly cloudy</text>
+  <!-- annotation leads -->
+  <path d="M374,240 C400,236 410,224 424,220" class="lead"/>
+  <path d="M311,352 C311,368 330,378 350,380" class="lead"/>
+  <text x="60" y="392" class="tok">the box renders UNDER every card &#183; origin-anchored</text>
+  <text x="60" y="404" class="tok">318 &#215; 199 px in this frame = 914 &#215; 571 canvas px on the device</text>
+  <text x="374" y="380" class="tok">device-computed tag</text>
+
+  <!-- ===== rules column ===== -->
+  <text x="522" y="110" class="sec">THE BOX</text>
+  <line x1="522" y1="120" x2="828" y2="120" stroke="#22222C"/>
+  <text x="522" y="140" class="note">&#8226; a dashed <tspan class="tokv">border</tspan>-role stroke, 2px: quieter than accent;</text>
+  <text x="532" y="154" class="note">one accent stays with the selection and Done</text>
+  <text x="522" y="174" class="note">&#8226; drawn UNDER the cards, above the field; takes NO</text>
+  <text x="532" y="188" class="note">touch (pointerEvents none); zero geometry</text>
+  <text x="522" y="208" class="note">&#8226; arrange mode ONLY, always: the resting dashboard</text>
+  <text x="532" y="222" class="note">and the wall never show it</text>
+  <text x="522" y="242" class="note">&#8226; derived from the WALL's landscape steady state</text>
+  <text x="532" y="256" class="note">(insets 0, &#167;7), NOT the editor's live insets</text>
+  <text x="522" y="276" class="note">&#8226; outside the box = valid dashboard space: the box</text>
+  <text x="532" y="290" class="note">informs, it never polices (no error treatment)</text>
+  <text x="522" y="310" class="note">&#8226; the straddling card clips on the wall AT the line;</text>
+  <text x="532" y="324" class="note">the preview (&#167;6) proves it before the tablet does</text>
+
+  <rect x="522" y="342" width="306" height="84" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="536" y="362" class="tok">arrange.wallGuide (flagged &#167;9 &#183; coded by AOD-81):</text>
+  <text x="536" y="378" class="tokv">stroke -&gt; border &#183; strokeWidth 2 &#183; dash [6, 4]</text>
+  <text x="536" y="394" class="tokv">tagBg -&gt; surface &#183; tagBorder -&gt; border</text>
+  <text x="536" y="410" class="tokv">tagText -&gt; textMuted @ type.caption</text>
+
+  <line x1="32" y1="472" x2="828" y2="472" stroke="#22222C"/>
+  <text x="32" y="494" class="note"><tspan class="acc">Composes design-dashboard-editor &#167;4.</tspan> Long-press entry, selection treatment, Configure pill, 24/44 handle, drag/resize math: all UNCHANGED.</text>
+  <text x="32" y="512" class="note">The box (underlay) and the Preview pill (header) are the two ADDITIVE extensions, flagged back to AOD-27.</text>
+  <text x="32" y="532" class="tok">arranging header = trailing pair: Preview (AOD-20 ghost) + Done (primary) &#183; on a phone the box shows the PHONE's window (device-derived, &#167;5)</text>
+</svg>
