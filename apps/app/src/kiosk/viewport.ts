@@ -1,67 +1,43 @@
-// The wall viewport contract, as ONE pure helper (AOD-81; design-wall-viewport-contract.md §3, §9 add. 2).
-// The kiosk wall mounts the canvas, pads it by the live insets, scales it uniformly by wall.typeScale from
-// the top-left, and clips at the field edge (KioskWall.tsx). That shipped render path IMPLIES a fixed,
-// computable window of the canvas; this module states it once so the arrange-mode boundary box (§5) and the
-// wall preview (§6) can derive the IDENTICAL window the wall shows. Pure + I/O-free (it takes the screen +
-// steady insets + the type-scale token as inputs), so the §3 table is unit-testable without a device. It is
-// engine-adjacent constant math, NOT a style token (design §9: `UNIT_PX` lives in geometry.ts for the same
-// reason). The shipped wall transform already implies this window, so the wall is not required to call it.
+// The wall AUTO-FIT scale (AOD-81, revised 2026-07-03 from dogfood). The wall no longer renders at a fixed
+// 1.4x (which clipped any layout wider than the device's real usable width — and that width is much smaller
+// than the AOD-80 contract assumed, because rt.screen is in DENSITY-INDEPENDENT PIXELS: the Fire HD 8 is
+// 1280x800 physical at density 1.33, so the app sees 962x601 DP, and 1.4x showed only ~8.6u wide, clipping
+// an 11.25u card). Instead the wall computes the largest uniform scale that fits the WHOLE arranged layout
+// inside the device screen, so the dashboard fills the screen and nothing is clipped, on ANY device or
+// resolution. Because rt.screen and UNIT_PX are both in DP, this is density-correct by construction.
+//
+// Pure + I/O-free (screen + content are inputs), so the fit is unit-tested without a device. The wall and
+// the wall preview both derive their scale from this ONE helper, so the preview stays pixel-honest.
+import type { LayoutRect } from '../registry/types';
 import { UNIT_PX } from '../layout/geometry';
 
-export interface ScreenSize {
+export interface Size {
   width: number;
   height: number;
 }
 
-export interface Insets {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
+/** The arranged layout's content extent in nominal units: the smallest box anchored at the canvas origin
+ *  (0,0) that covers every instance, i.e. { max(x+w), max(y+h) }. An empty layout is {w:0,h:0}. Pure. */
+export function layoutBounds(rects: LayoutRect[]): { w: number; h: number } {
+  let w = 0;
+  let h = 0;
+  for (const r of rects) {
+    w = Math.max(w, r.x + r.w);
+    h = Math.max(h, r.y + r.h);
+  }
+  return { w, h };
 }
-
-/** The wall-visible region of the canvas, in nominal layout units (§3). */
-export interface ViewportUnits {
-  w: number;
-  h: number;
-}
-
-/** No insets: the Android/Fire wall steady state under immersive chrome (§7 — unistyles dispatches zeroed
- *  insets on hide, so the usable region is the full physical screen). The boundary box computes the wall
- *  window from THIS, never the editor's live insets (§5). A non-immersive wall steady state (an iOS home
- *  indicator, the web preview) would pass its own nonzero insets to the same helper (§7, a named seam). */
-export const WALL_STEADY_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /**
- * §3 the viewport formula: visibleUnits = (screen dp - steady insets) / (typeScale x UNIT_PX), per axis.
- * The single source of truth the boundary box and the wall preview both derive from. Anchored at the canvas
- * origin (0,0); the clip at the boundary is the wall's overflow:hidden (§3). Returns the RAW floats (no
- * rounding); the tag chip rounds to one decimal for display (`wallTagLabel`).
+ * The wall's fit-to-bounds scale: the largest uniform scale at which the content (in nominal units) fits
+ * inside the screen (in DP) on BOTH axes, so the whole dashboard shows and nothing is clipped. Anchored at
+ * the canvas origin (top-left). `screen` is rt.screen (DP), so the result is density-independent — the same
+ * layout fills a Fire HD 8, a Fire HD 10, or a phone, each at its own scale. Empty content -> 1 (nothing to
+ * fit). Pure; the wall and the preview both call it so their scale is identical.
  */
-export function wallViewportUnits(
-  screen: ScreenSize,
-  steadyInsets: Insets,
-  typeScale: number,
-): ViewportUnits {
-  const denom = typeScale * UNIT_PX;
-  return {
-    w: (screen.width - steadyInsets.left - steadyInsets.right) / denom,
-    h: (screen.height - steadyInsets.top - steadyInsets.bottom) / denom,
-  };
-}
-
-/** Normalize a device screen to the wall's LANDSCAPE orientation (§5): the wall is landscape-locked
- *  (kiosk-mode §7), so the long edge is always the width. The boundary box passes the editor device's screen
- *  through this so the window always reflects the wall's landscape steady state, wherever the editor is turned. */
-export function landscapeScreen(screen: ScreenSize): ScreenSize {
-  return {
-    width: Math.max(screen.width, screen.height),
-    height: Math.min(screen.width, screen.height),
-  };
-}
-
-/** The boundary-box tag label, one decimal (§5): "WALL · 11.4 x 7.1". The single place the display rounding
- *  lives, so the tag is the §3 window rounded consistently. */
-export function wallTagLabel(units: ViewportUnits): string {
-  return `WALL · ${units.w.toFixed(1)} x ${units.h.toFixed(1)}`;
+export function wallFitScale(content: { w: number; h: number }, screen: Size): number {
+  const contentW = content.w * UNIT_PX;
+  const contentH = content.h * UNIT_PX;
+  if (contentW <= 0 || contentH <= 0) return 1;
+  return Math.min(screen.width / contentW, screen.height / contentH);
 }

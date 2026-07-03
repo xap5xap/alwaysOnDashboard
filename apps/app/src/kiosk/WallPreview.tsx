@@ -3,13 +3,11 @@
 // tap anywhere (or OS back) returns to arranging. It is a PEEK, not a mode — no state survives it, and the
 // draft layout is what renders (including uncommitted, optimistic gesture-end positions).
 //
-// Pixel-honest to the wall by REPLICATING the shipped KioskWall construction rather than re-deriving it: the
-// same near-black field with overflow hidden, the same wallProfile scale layer (transform scale
-// wall.typeScale, transformOrigin left top), the same immersive full-bleed frame, the same current ambient
-// phase. Because field + scale + overflow shows exactly screen / typeScale, and the boundary box draws
-// wallViewportUnits(screen, 0, typeScale) = screen / typeScale, the box and this preview show the IDENTICAL
-// window — both trace to the one wall.typeScale token (§3). Replicating KioskWall's construction (not calling
-// the helper here) is the guard against the preview and the wall ever disagreeing.
+// Pixel-honest to the wall by REPLICATING the shipped KioskWall construction: the same near-black field with
+// overflow hidden, the same auto-fit scale layer (transform scale = wallFitScale(layout, screen),
+// transformOrigin left top), the same immersive full-bleed frame, the same current ambient phase. The scale
+// is derived from the ONE viewport.wallFitScale helper the wall uses, so the preview shows exactly what the
+// wall shows on this device.
 //
 // It DELIBERATELY skips the AOD-11 runtime guard (design §6): NO keep-awake, NO pinning, NO exit PIN, NO
 // PinSetup, NO CadenceProfile change, NO backlight seize. It borrows only the immersive chrome, behind the
@@ -24,7 +22,7 @@ import { AmbientProvider } from '../ambient/AmbientContext';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import type { WidgetInstance } from '../registry/types';
 import { computeAmbient, DEFAULT_CURVE, DEFAULT_SCHEDULE } from './ambient';
-import { wallProfile } from './profile';
+import { layoutBounds, wallFitScale } from './viewport';
 import { useWallPreviewChrome } from './previewChrome';
 
 const noop = () => {};
@@ -37,8 +35,10 @@ export interface WallPreviewProps {
 }
 
 export function WallPreview({ instances, onClose }: WallPreviewProps) {
-  const { theme } = useUnistyles();
-  const profile = wallProfile(theme.wall.typeScale);
+  const { rt } = useUnistyles();
+  // The preview derives the SAME auto-fit scale as the wall (one viewport.wallFitScale), so it is
+  // pixel-honest: it shows exactly what the wall shows on this device.
+  const scale = wallFitScale(layoutBounds(instances.map((i) => i.rect)), rt.screen);
 
   // §6 the two native-only chrome concerns, behind the platform seam (a web no-op): immersive full-bleed for
   // the peek (both OS bars hidden), and the hardware-back intercept that returns to arranging. Never the
@@ -57,7 +57,7 @@ export function WallPreview({ instances, onClose }: WallPreviewProps) {
             transparent layer below, so a tap anywhere returns without the cards intercepting it. */}
         <View pointerEvents="none" style={styles.content}>
           <View
-            style={[styles.scaleLayer, { transform: [{ scale: profile.typeScale }] }]}
+            style={[styles.scaleLayer, { transform: [{ scale }] }]}
             testID="wall-preview-scale-layer"
           >
             <LayoutCanvas

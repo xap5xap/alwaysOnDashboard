@@ -16,7 +16,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AmbientProvider } from '../ambient/AmbientContext';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboard } from '../layout/useDashboard';
-import { wallProfile } from './profile';
+import { layoutBounds, wallFitScale } from './viewport';
 import { useKioskRuntime } from './runtime';
 import { ExitAffordance } from './ExitAffordance';
 import { PinSetup } from './PinSetup';
@@ -31,7 +31,14 @@ export function KioskWall() {
   useLocalSearchParams<{ dashboardId?: string }>();
   const { instances, isLoading, isError } = useDashboard();
   const { pinHash, ambient, needsPinSetup, setPin } = useKioskRuntime();
-  const profile = wallProfile(theme.wall.typeScale);
+  // AOD-81 (revised 2026-07-03, dogfood): the wall AUTO-FITS the arranged layout to the device screen, so the
+  // whole dashboard shows and nothing is clipped — on any device/resolution. This REPLACES the AOD-39 fixed
+  // 1.4x, which clipped any layout wider than the device's real usable width (and that width is smaller than
+  // the AOD-80 contract assumed: rt.screen is in DENSITY-INDEPENDENT PIXELS, so the 1280x800-physical /
+  // density-1.33 Fire HD 8 is 962x601 DP, and 1.4x showed only ~8.6u wide, clipping an 11.25u card). Because
+  // rt.screen and UNIT_PX are both DP, the fit is density-correct. The stored geometry (rects) is UNTOUCHED
+  // (kiosk-mode §7.2 seam): a pure visual transform, no rect rewritten. The preview derives the same scale.
+  const scale = wallFitScale(layoutBounds(instances.map((i) => i.rect)), rt.screen);
   // rt.insets (not the imperative UnistylesRuntime.insets snapshot): the useUnistyles proxy SUBSCRIBES this
   // component to inset changes, so when the AOD-76 runtime hides the OS bars the padding collapses to 0 and
   // the content reclaims the full screen — and re-pads live if a swipe transiently reveals the bars. Same
@@ -87,11 +94,11 @@ export function KioskWall() {
               <Text style={styles.calm}>No widgets on this dashboard.</Text>
             </View>
           ) : (
-            // §3/§4 the wall type scale: a uniform up-scale of the composed cards ("the cards, only larger").
-            // The stored geometry (rects) is UNTOUCHED (kiosk-mode §7.2 seam); this is a pure visual
-            // transform, no rect rewritten and no layout/card internal edited. A pure font-only scale would
-            // need a derived wall theme applied via UnistylesRuntime; flagged as a refinement, not built.
-            <View style={[styles.scaleLayer, { transform: [{ scale: profile.typeScale }] }]} testID="kiosk-scale-layer">
+            // The auto-fit transform: a uniform scale of the composed cards so the whole layout fills the
+            // screen without clipping (computed above). Grows from the top-left (transformOrigin), so what is
+            // arranged at the canvas origin maps to the wall's top-left. No rect rewritten, no card internal
+            // edited — the geometry seam holds; only the visual scale changed.
+            <View style={[styles.scaleLayer, { transform: [{ scale }] }]} testID="kiosk-scale-layer">
               <LayoutCanvas
                 instances={instances}
                 arranging={false}

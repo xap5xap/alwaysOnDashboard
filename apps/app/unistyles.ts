@@ -324,34 +324,17 @@ const arrange = {
   selectFill: 'surfaceAlt', // bodyArranging: the selected card's fill (one step up from the resting card)
   handle: { dot: 24, hit: 44, ring: 'background' }, // resize handle: a 24pt accent dot ringed in `background`, inside a 44pt hit target
   configurePill: { bg: 'accent', label: 'onAccent' }, // the top-left Configure pill (§11 drift 3: label -> onAccent, was colors.background)
-  // AOD-81 §5/§9 (design-wall-viewport-contract): the arrange-mode wall boundary box, extending this coded
-  // `arrange` group additively (design §9 addition 1). NUMBERS + ROLE-NAME ALIASES only — no raw hex, no
-  // embedded TextStyle: the stroke/tag colours name real semantic roles resolved at the draw site
-  // (WallBoundaryBox), so a theme swap re-aliases underneath. `dash` is a plain number pair (an SVG
-  // strokeDasharray, since a View borderStyle cannot carry a 6/4 dash); `tagText` draws at type.caption. The
-  // box reads the theme + the wallViewportUnits helper, nothing else (LayoutCanvas keeps the AOD-8 no-service
-  // seam). Test-locked byte-identical in arrange-tokens.test.ts, the AOD-66/67/68/69 way.
-  wallGuide: {
-    stroke: 'border', // the dashed frame stroke (quiet; heavier than the 1px card border so it reads as a frame)
-    strokeWidth: 2,
-    dash: [6, 4], // SVG stroke-dasharray (px on / px off)
-    tagBg: 'surface', // the "WALL · 11.4 x 7.1" chip fill
-    tagBorder: 'border', // the chip's 1px border
-    tagText: 'textMuted', // the chip label, drawn at type.caption
-  },
 } as const;
 
 // --- AOD-39 §10 kiosk-wall-scoped token group (design-kiosk-wall.md §10) ----------------------------
 // The kiosk wall's geometry, the AOD-20 §12 / AOD-68 §11 / AOD-27 §10 analog for the wall-mount profile.
-// NUMBERS ONLY (a multiplier + two pixel sizes), no role alias and no embedded TextStyle: the wall composes
-// EXISTING colour tokens (colors.background field, night.*/overlay dim, scrim + the §9 sheet vocab for the
-// PIN), so it adds no colour. `typeScale` is the load-bearing value: the AOD-11 §7.1 WallMountProfile
-// multiplier the wall applies over the AOD-37 §3.3 type ramp (the cards, only larger), NOT a fork of the
-// ramp. `exitCorner`/`pinKey` size the exit affordance (§7). Unistyles-safe (plain numbers), test-locked
-// byte-identical the AOD-66/67/68/69 way ([[aod-unistyles-style-token-gotcha]]: the pitfall is TextStyle in
-// the theme, not plain data).
+// NUMBERS ONLY (two pixel sizes), no role alias and no embedded TextStyle: the wall composes EXISTING colour
+// tokens (colors.background field, night.*/overlay dim, scrim + the §9 sheet vocab for the PIN), so it adds
+// no colour. `exitCorner`/`pinKey` size the exit affordance (§7). Unistyles-safe (plain numbers), test-locked.
+// (AOD-81 removed the former fixed `typeScale: 1.4`: the wall now AUTO-FITS the layout to the screen via the
+// pure viewport.wallFitScale, so there is no fixed scale token — a fixed scale clipped wide layouts on the
+// real, density-scaled device screen. See src/kiosk/viewport.ts.)
 const wall = {
-  typeScale: 1.4, // the WallMountProfile.typeScale multiplier on type.* (across-the-room legibility)
   exitCorner: 56, // spacing(14): the invisible long-press exit hit-target (trailing-bottom corner)
   pinKey: 64, // spacing(16): the PIN-pad key diameter on the exit surface
 } as const;
