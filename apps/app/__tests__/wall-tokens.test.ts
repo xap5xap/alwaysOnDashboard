@@ -9,6 +9,7 @@ import { darkTheme, lightTheme } from '../unistyles';
 describe('§10 kiosk-wall-scoped token group: pinned byte-identical (numbers only, no role alias)', () => {
   it('wall', () => {
     expect(darkTheme.wall).toEqual({
+      padding: 24, // spacing(6): the uniform auto-fit margin
       exitCorner: 56, // spacing(14): the invisible long-press exit hit-target
       pinKey: 64, // spacing(16): the PIN-pad key diameter
     });
@@ -19,11 +20,13 @@ describe('§10 kiosk-wall-scoped token group: pinned byte-identical (numbers onl
   });
 
   it('every value is a plain number (no embedded TextStyle, no role alias) — Unistyles-safe', () => {
+    expect(typeof darkTheme.wall.padding).toBe('number');
     expect(typeof darkTheme.wall.exitCorner).toBe('number');
     expect(typeof darkTheme.wall.pinKey).toBe('number');
   });
 
-  it('the geometry values match spacing(14)/spacing(16) (56/64)', () => {
+  it('the geometry values match spacing(6)/spacing(14)/spacing(16) (24/56/64)', () => {
+    expect(darkTheme.wall.padding).toBe(darkTheme.spacing(6));
     expect(darkTheme.wall.exitCorner).toBe(darkTheme.spacing(14));
     expect(darkTheme.wall.pinKey).toBe(darkTheme.spacing(16));
   });

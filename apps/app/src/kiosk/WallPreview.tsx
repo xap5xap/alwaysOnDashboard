@@ -35,10 +35,12 @@ export interface WallPreviewProps {
 }
 
 export function WallPreview({ instances, onClose }: WallPreviewProps) {
-  const { rt } = useUnistyles();
-  // The preview derives the SAME auto-fit scale as the wall (one viewport.wallFitScale), so it is
-  // pixel-honest: it shows exactly what the wall shows on this device.
-  const scale = wallFitScale(layoutBounds(instances.map((i) => i.rect)), rt.screen);
+  const { theme, rt } = useUnistyles();
+  const pad = theme.wall.padding;
+  // The preview derives the SAME auto-fit scale + margin as the wall (viewport.wallFitScale against the
+  // screen minus the wall padding), so it is pixel-honest: it shows exactly what the wall shows on this device.
+  const available = { width: rt.screen.width - 2 * pad, height: rt.screen.height - 2 * pad };
+  const scale = wallFitScale(layoutBounds(instances.map((i) => i.rect)), available);
 
   // §6 the two native-only chrome concerns, behind the platform seam (a web no-op): immersive full-bleed for
   // the peek (both OS bars hidden), and the hardware-back intercept that returns to arranging. Never the
@@ -55,7 +57,7 @@ export function WallPreview({ instances, onClose }: WallPreviewProps) {
       <AmbientProvider value={ambient}>
         {/* pointerEvents none, like the wall: the content is shown, not touched. The dismiss target is the
             transparent layer below, so a tap anywhere returns without the cards intercepting it. */}
-        <View pointerEvents="none" style={styles.content}>
+        <View pointerEvents="none" style={[styles.content, { padding: pad }]}>
           <View
             style={[styles.scaleLayer, { transform: [{ scale }] }]}
             testID="wall-preview-scale-layer"

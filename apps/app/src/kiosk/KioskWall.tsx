@@ -31,20 +31,25 @@ export function KioskWall() {
   useLocalSearchParams<{ dashboardId?: string }>();
   const { instances, isLoading, isError } = useDashboard();
   const { pinHash, ambient, needsPinSetup, setPin } = useKioskRuntime();
-  // AOD-81 (revised 2026-07-03, dogfood): the wall AUTO-FITS the arranged layout to the device screen, so the
-  // whole dashboard shows and nothing is clipped — on any device/resolution. This REPLACES the AOD-39 fixed
-  // 1.4x, which clipped any layout wider than the device's real usable width (and that width is smaller than
-  // the AOD-80 contract assumed: rt.screen is in DENSITY-INDEPENDENT PIXELS, so the 1280x800-physical /
-  // density-1.33 Fire HD 8 is 962x601 DP, and 1.4x showed only ~8.6u wide, clipping an 11.25u card). Because
-  // rt.screen and UNIT_PX are both DP, the fit is density-correct. The stored geometry (rects) is UNTOUCHED
-  // (kiosk-mode §7.2 seam): a pure visual transform, no rect rewritten. The preview derives the same scale.
-  const scale = wallFitScale(layoutBounds(instances.map((i) => i.rect)), rt.screen);
   // rt.insets (not the imperative UnistylesRuntime.insets snapshot): the useUnistyles proxy SUBSCRIBES this
   // component to inset changes, so when the AOD-76 runtime hides the OS bars the padding collapses to 0 and
   // the content reclaims the full screen — and re-pads live if a swipe transiently reveals the bars. Same
-  // source of truth as the ExitAffordance anchors (AOD-79). What the wall's usable viewport MEANS for the
-  // layout math at scale stays the AOD-80 viewport-contract design; this is only the live accessor.
+  // source of truth as the ExitAffordance anchors (AOD-79).
   const insets = rt.insets;
+  // A uniform wall margin so the content is not flush against the screen edge (dogfood polish, 2026-07-03).
+  const pad = theme.wall.padding;
+  // AOD-81 (revised 2026-07-03, dogfood): the wall AUTO-FITS the arranged layout to the AVAILABLE area — the
+  // screen minus the OS-bar insets minus the wall margin — so the whole dashboard shows, nothing is clipped,
+  // and it sits inside a uniform margin, on any device/resolution. This REPLACES the AOD-39 fixed 1.4x, which
+  // clipped any layout wider than the device's real usable width (rt.screen is in DENSITY-INDEPENDENT PIXELS,
+  // so the 1280x800-physical / density-1.33 Fire HD 8 is 962x601 DP, and 1.4x showed only ~8.6u wide, clipping
+  // an 11.25u card). Because rt.screen and UNIT_PX are both DP, the fit is density-correct. The stored geometry
+  // (rects) is UNTOUCHED (kiosk-mode §7.2 seam). The preview derives the same scale + margin.
+  const available = {
+    width: rt.screen.width - insets.left - insets.right - 2 * pad,
+    height: rt.screen.height - insets.top - insets.bottom - 2 * pad,
+  };
+  const scale = wallFitScale(layoutBounds(instances.map((i) => i.rect)), available);
 
   const onExit = () => {
     // The gesture + PIN is the ONLY exit (the OS back is intercepted by the native seam; gestureEnabled is
@@ -77,7 +82,7 @@ export function KioskWall() {
           pointerEvents="none"
           style={[
             styles.content,
-            { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right },
+            { paddingTop: insets.top + pad, paddingBottom: insets.bottom + pad, paddingLeft: insets.left + pad, paddingRight: insets.right + pad },
           ]}
         >
           {isLoading ? (
