@@ -1,0 +1,78 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The wall viewport math: screen over typeScale over UNIT_PX yields the wall window, worked for the Fire HD 8</title>
+  <desc>A formula band states that the visible units equal the screen minus steady-state insets divided by the wall type scale times the unit size. A worked chain shows the Fire HD 8 steady state: 1280 by 800 device pixels with zero insets, divided by 1.4 giving 914.3 by 571.4 canvas pixels, divided by 80 giving 11.43 by 7.14 layout units. A drawing shows the window anchored at the canvas origin with a card clipping at the boundary, marked as defined behavior. The fits predicate is given in monospace. A device table lists the Fire HD 8 steady state, the superseded pre-AOD-76 barred frame, and a 412dp-class phone. A footer notes the contract freezes the relationship, not the number.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .val{font-size:20px;font-weight:700;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .mono{font-size:13px;fill:#F4F4F8;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .lead{stroke:#3A3A48;stroke-width:1.2;stroke-dasharray:3 3;fill:none;}
+    .arrow{stroke:#6E8BFF;stroke-width:1.5;fill:none;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="555" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The wall viewport contract (the math)</text>
+  <text x="32" y="60" class="sub">One formula, three surfaces. Steady state = the AOD-76 immersive full screen (insets 0 on Android / Fire).</text>
+
+  <!-- ===== formula band ===== -->
+  <rect x="32" y="80" width="796" height="52" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="52" y="112" class="mono" font-size="14">visibleUnits = (screen dp &#8722; steady-state insets) &#247; (wall.typeScale &#215; UNIT_PX)</text>
+
+  <!-- ===== worked chain ===== -->
+  <rect x="48" y="158" width="200" height="66" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="62" y="178" class="cap">FIRE HD 8 &#183; STEADY STATE</text>
+  <text x="62" y="200" class="val">1280 &#215; 800</text>
+  <text x="62" y="216" class="tok">dp &#183; insets 0 (immersive)</text>
+  <path d="M252,191 L306,191" class="arrow"/><path d="M300,187 L308,191 L300,195" class="arrow"/>
+  <text x="256" y="182" class="tok">&#247; 1.4</text>
+  <rect x="312" y="158" width="212" height="66" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="326" y="178" class="cap">CANVAS VISIBLE</text>
+  <text x="326" y="200" class="val">914.3 &#215; 571.4</text>
+  <text x="326" y="216" class="tok">canvas px (unscaled)</text>
+  <path d="M528,191 L582,191" class="arrow"/><path d="M576,187 L584,191 L576,195" class="arrow"/>
+  <text x="532" y="182" class="tok">&#247; 80</text>
+  <rect x="588" y="158" width="220" height="66" rx="10" fill="#16161D" stroke="#6E8BFF"/>
+  <text x="602" y="178" class="cap">THE WALL WINDOW</text>
+  <text x="602" y="200" class="val acc">11.43 &#215; 7.14 u</text>
+  <text x="602" y="216" class="tok">layout units (UNIT_PX = 80)</text>
+
+  <!-- ===== anchor + clip drawing (left) ===== -->
+  <text x="48" y="262" class="sec">ANCHOR &amp; CLIP</text>
+  <rect x="48" y="274" width="300" height="150" fill="#0E0E13" stroke="#22222C"/>
+  <rect x="48" y="274" width="176" height="110" fill="none" stroke="#6E8BFF" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <circle cx="48" cy="274" r="4" fill="#6E8BFF"/>
+  <text x="60" y="292" class="tokv">origin (0,0) &#183; no pan</text>
+  <text x="60" y="306" class="tokv">transformOrigin 'left top'</text>
+  <!-- a card clipping at the right boundary -->
+  <rect x="164" y="318" width="60" height="44" rx="6" fill="#16161D" stroke="#2A2A36"/>
+  <rect x="224" y="318" width="34" height="44" rx="6" fill="#16161D" stroke="#2A2A36" opacity="0.35"/>
+  <line x1="224" y1="300" x2="224" y2="370" stroke="#F2B84B" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <text x="60" y="390" class="meta">clips AT the boundary: defined, not a bug</text>
+  <text x="60" y="403" class="tok">beyond the window: never rendered &#183;</text>
+  <text x="60" y="414" class="tok">smaller layouts leave the near-black field</text>
+
+  <!-- ===== predicate (right) ===== -->
+  <text x="400" y="262" class="sec">THE FITS PREDICATE</text>
+  <rect x="400" y="274" width="408" height="88" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="416" y="300" class="mono">fits(rect) : rect.x + rect.w &#8804; 11.43</text>
+  <text x="416" y="320" class="mono">         AND rect.y + rect.h &#8804; 7.14</text>
+  <text x="416" y="348" class="tok">the build's unit-test surface (wallViewportUnits helper, &#167;9)</text>
+  <text x="400" y="386" class="note">AOD-78 worked example: the 11.25 &#215; 6.8u card fits with</text>
+  <text x="400" y="402" class="note">0.18u to spare on the right and 0.34u below (the observed strip).</text>
+
+  <!-- ===== device table ===== -->
+  <text x="48" y="446" class="sec">REFERENCE WINDOWS (STEADY STATE)</text>
+  <line x1="48" y1="456" x2="808" y2="456" stroke="#22222C"/>
+  <text x="48" y="474" class="meta">Fire HD 8 &#183; immersive (insets 0)</text><text x="420" y="474" class="tokv">1280 &#215; 800</text><text x="580" y="474" class="tokv acc">11.43 &#215; 7.14 u</text>
+  <text x="48" y="494" class="meta">Fire HD 8 &#183; pre-AOD-76 (nav bar 64)</text><text x="420" y="494" class="tokv">1280 &#215; 736</text><text x="580" y="494" class="tokv">11.43 &#215; 6.57 u &#183; superseded</text>
+  <text x="48" y="514" class="meta">412dp-class phone &#183; landscape</text><text x="420" y="514" class="tokv">915 &#215; 412</text><text x="580" y="514" class="tokv">8.17 &#215; 3.68 u</text>
+  <line x1="48" y1="524" x2="808" y2="524" stroke="#22222C"/>
+  <text x="48" y="542" class="tok">device-derived, never a hardcoded aspect &#183; the contract freezes the RELATIONSHIP: tune wall.typeScale and all three surfaces move together</text>
+</svg>

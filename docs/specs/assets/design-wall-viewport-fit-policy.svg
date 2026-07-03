@@ -1,0 +1,71 @@
+<svg width="100%" viewBox="0 0 860 580" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The fit policy decision record: fixed 1.4x with the boundary box and preview decided; overflow mark, fit-to-bounds, and width-fit plus scroll declined; auto-cycling deferred</title>
+  <desc>Four option panels. Option A, fixed 1.4x plus the editor boundary box plus the wall preview, carries a decided badge: the type guarantee and determinism hold and the wall render stays untouched. Option B, a wall-side overflow mark, declined as standing chrome on a zero-interaction ambient surface. Option C, fit-to-bounds with a clamp, declined because type shrinks as layouts grow and editing changes the wall's scale. Option D, width-fit plus vertical scroll, surfaced by Xavier and declined because it re-opens the kiosk zero-interaction rule and re-enters the AOD-79 Fire OS touch bug. A strip defers auto-cycling pages as a named seam. A decision band records Xavier's call on 2026-07-03.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="579" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The fit policy: the AOD-39 re-open, recorded</text>
+  <text x="32" y="60" class="sub">Five options surfaced with a recommendation before the doc froze (the AOD-71 / AOD-73 pattern); decided by Xavier, 2026-07-03.</text>
+
+  <!-- ===== A: decided ===== -->
+  <rect x="32" y="84" width="396" height="148" rx="12" fill="#0E0E13" stroke="#6E8BFF"/>
+  <rect x="346" y="98" width="68" height="20" rx="10" fill="#6E8BFF"/>
+  <text x="380" y="112" text-anchor="middle" font-size="9" font-weight="700" fill="#0B0B0F">DECIDED</text>
+  <text x="48" y="112" class="sec">A &#183; FIXED 1.4x + BOX + PREVIEW</text>
+  <text x="48" y="138" class="note">The type guarantee (across-the-room legibility) and</text>
+  <text x="48" y="154" class="note">determinism hold; the wall render stays UNTOUCHED.</text>
+  <text x="48" y="170" class="note">The box (&#167;5) + the preview (&#167;6) fix the authoring</text>
+  <text x="48" y="186" class="note">blindness where the failure actually happened.</text>
+  <text x="48" y="210" class="tok">overflow = DEFINED clip, shown while arranging &#183; the wall never warns</text>
+
+  <!-- ===== B: declined ===== -->
+  <rect x="444" y="84" width="384" height="148" rx="12" fill="#0E0E13" stroke="#2A2A36"/>
+  <text x="460" y="112" class="sec">B &#183; WALL-SIDE OVERFLOW MARK &#8226; declined</text>
+  <text x="460" y="138" class="meta">Fixed 1.4x + an edge fade whenever cards sit beyond</text>
+  <text x="460" y="154" class="meta">the fold. Honest on-wall, but it is STANDING CHROME</text>
+  <text x="460" y="170" class="meta">on an ambient surface kiosk-mode &#167;5 makes zero-</text>
+  <text x="460" y="186" class="meta">interaction: never actionable where it appears.</text>
+  <text x="460" y="210" class="tok">the wall never nags; the editor is where the information belongs</text>
+
+  <!-- ===== C: declined ===== -->
+  <rect x="32" y="248" width="396" height="148" rx="12" fill="#0E0E13" stroke="#2A2A36"/>
+  <text x="48" y="276" class="sec">C &#183; FIT-TO-BOUNDS (CLAMPED) &#8226; declined</text>
+  <text x="48" y="302" class="meta">scale = clamp(fit(bbox), floor..1.4): layouts adapt, but</text>
+  <text x="48" y="318" class="meta">type SHRINKS as the wall gets busy (the guarantee dies</text>
+  <text x="48" y="334" class="meta">exactly when readability matters) and editing changes</text>
+  <text x="48" y="350" class="meta">the wall's scale (determinism dies).</text>
+  <text x="48" y="374" class="tok">clips past the clamp &#183; "the cards, only larger" stops being true</text>
+
+  <!-- ===== D: declined ===== -->
+  <rect x="444" y="248" width="384" height="148" rx="12" fill="#0E0E13" stroke="#2A2A36"/>
+  <text x="460" y="276" class="sec">D &#183; WIDTH-FIT + VERTICAL SCROLL &#8226; declined</text>
+  <text x="460" y="302" class="meta">Surfaced by Xavier, engaged, declined: re-opens</text>
+  <text x="460" y="318" class="meta">kiosk-mode &#167;5 (a scrolled-away wall holds its position;</text>
+  <text x="460" y="334" class="meta">the glance stops being trustworthy) AND re-enters the</text>
+  <text x="460" y="350" class="meta">AOD-79 Fire OS touch bug (wall content takes no touch</text>
+  <text x="460" y="366" class="meta">precisely so the exit corner works).</text>
+  <text x="460" y="386" class="tok">corner scrolls fight the hold-to-exit &#183; type varies with width</text>
+
+  <!-- ===== E: deferred ===== -->
+  <rect x="32" y="412" width="796" height="60" rx="10" fill="#0E0E13" stroke="#22222C"/>
+  <text x="48" y="434" class="sec">E &#183; AUTO-CYCLING PAGES &#8226; DEFERRED (THE NAMED SEAM, &#167;11)</text>
+  <text x="48" y="452" class="meta">The zero-interaction way to show everything: viewport-sized pages on a slow dwell (the signage pattern).</text>
+  <text x="48" y="466" class="meta">Opened only on dogfood evidence that one frame is too small; pages = exact &#167;3 window multiples.</text>
+
+  <!-- ===== decision band ===== -->
+  <rect x="32" y="484" width="796" height="48" rx="10" fill="#16161D" stroke="#6E8BFF"/>
+  <text x="48" y="504" class="note"><tspan class="acc">Decision (Xavier, 2026-07-03): keep the fixed 1.4x; reaffirm AOD-39; fix authoring (the box + the preview).</tspan></text>
+  <text x="48" y="522" class="note">The build must not touch the wall render path.</text>
+
+  <text x="32" y="552" class="tok">kept for the record: "why 1.4x" = read at ~40cm in hand vs 2-3m on the wall &#183; "why not arrange at 1.4x" = the editor is the workbench:</text>
+  <text x="32" y="564" class="tok">at 1x the whole frame fits with workspace around it; zoomed in you would see less than the frame; the preview is the honest wall-scale check</text>
+</svg>

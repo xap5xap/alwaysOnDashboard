@@ -1,0 +1,83 @@
+<svg width="100%" viewBox="0 0 860 560" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The observed problem: the editor draws no wall boundary while the wall shows only a 1.4x top-left window of the canvas</title>
+  <desc>Two panels. On the left, the shipped editor renders the full canvas at one to one: the hand-fit My Issues card sits inside an invisible wall window of 11.43 by 7.14 layout units, and a weather card and a clock card are stacked below the fold with a mark stating they are never on the wall. On the right, the shipped wall renders the same canvas at 1.4x from the top left with overflow hidden: the My Issues card nearly fills the screen with a small reclaimed strip below it, and the below-fold cards do not appear. A footer records the AOD-78 dogfood observation and that the fix is the AOD-80 contract, not a wall render change.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .sec{font-size:11px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .row{font-size:12px;font-weight:600;fill:#F4F4F8;}
+    .meta{font-size:11px;fill:#9B9BA8;}
+    .tok{font-size:9px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .tokv{font-size:10px;fill:#C9C9D4;font-family:ui-monospace,Menlo,monospace;}
+    .note{font-size:11px;fill:#C9C9D4;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .err{fill:#FF6B6B;}
+    .lead{stroke:#3A3A48;stroke-width:1.2;stroke-dasharray:3 3;fill:none;}
+  </style>
+  <rect x="0.5" y="0.5" width="859" height="555" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The problem: authored blind, clipped on the wall</text>
+  <text x="32" y="60" class="sub">The editor renders the canvas at 1x with no wall boundary; the wall shows only the top-left window at 1.4x, overflow hidden, non-scrolling.</text>
+
+  <!-- ===== left: the editor ===== -->
+  <text x="60" y="102" class="sec">THE EDITOR (1x, SHIPPED)</text>
+  <rect x="60" y="118" width="256" height="272" fill="#0E0E13" stroke="#22222C"/>
+  <!-- the invisible wall window, annotated -->
+  <rect x="60" y="118" width="229" height="143" fill="none" stroke="#6E8BFF" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.9"/>
+  <!-- card A: the hand-fit My Issues -->
+  <rect x="63" y="121" width="222" height="136" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="73" y="139" class="cap">LINEAR &#183; MY ISSUES</text>
+  <circle cx="79" cy="158" r="3" fill="#6E8BFF"/><text x="89" y="162" class="row">AOD-80 viewport contract</text>
+  <circle cx="79" cy="178" r="3" fill="#F2B84B"/><text x="89" y="182" class="row">AOD-81 boundary box build</text>
+  <circle cx="79" cy="198" r="3" fill="#9B9BA8"/><text x="89" y="202" class="meta">AOD-42 store assets</text>
+  <text x="73" y="240" class="tok">hand-fit to 11.25 x 6.8u (AOD-78)</text>
+  <!-- below the fold -->
+  <rect x="63" y="270" width="100" height="52" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="73" y="288" class="cap">WEATHER</text>
+  <text x="73" y="308" class="row">18&#176;</text>
+  <rect x="171" y="270" width="114" height="52" rx="8" fill="#16161D" stroke="#2A2A36"/>
+  <text x="181" y="288" class="cap">CLOCK</text>
+  <text x="181" y="310" class="row" font-size="16">14:05</text>
+  <text x="63" y="344" class="err" font-size="11" font-weight="700">&#10005; below the fold: never on the wall</text>
+  <text x="60" y="376" class="meta">non-scrolling by design (kiosk-mode &#167;5):</text>
+  <text x="60" y="390" class="meta">a glanceable wall takes zero interaction</text>
+  <text x="60" y="412" class="tok">canvas renders at UNIT_PX = 80 px/u &#183; NO boundary drawn while arranging</text>
+
+  <!-- ===== middle annotations ===== -->
+  <path d="M291,146 C306,146 316,140 330,138" class="lead"/>
+  <text x="334" y="134" class="acc" font-size="11">the wall's window</text>
+  <text x="334" y="148" class="tokv">11.43 x 7.14 u</text>
+  <text x="334" y="162" class="tok">INVISIBLE in the</text>
+  <text x="334" y="174" class="tok">shipped editor</text>
+  <path d="M289,261 C310,261 320,252 332,250" class="lead"/>
+  <text x="334" y="242" class="note" font-size="10.5">the fold: y = 7.14u</text>
+  <text x="334" y="256" class="tok">(6.57u at filing time,</text>
+  <text x="334" y="268" class="tok">nav bar still shown)</text>
+  <path d="M287,296 C312,296 322,300 332,302" class="lead"/>
+  <text x="334" y="298" class="note" font-size="10.5">valid dashboard</text>
+  <text x="334" y="312" class="note" font-size="10.5">cards, unreachable</text>
+  <text x="334" y="326" class="note" font-size="10.5">by the wall</text>
+
+  <!-- ===== right: the wall ===== -->
+  <text x="470" y="102" class="sec">THE WALL (1.4x, SHIPPED)</text>
+  <rect x="470" y="118" width="344" height="214" rx="12" fill="#050507" stroke="#23232E" stroke-width="2"/>
+  <rect x="482" y="125" width="320" height="200" fill="#0B0B0F"/>
+  <!-- card A at 1.4x: fills nearly the whole screen; strips right 2px, bottom 7px -->
+  <rect x="485" y="128" width="315" height="190" rx="10" fill="#16161D" stroke="#2A2A36"/>
+  <text x="499" y="150" class="cap" font-size="11">LINEAR &#183; MY ISSUES</text>
+  <circle cx="507" cy="176" r="4" fill="#6E8BFF"/><text x="521" y="181" class="row" font-size="15">AOD-80 viewport contract</text>
+  <circle cx="507" cy="206" r="4" fill="#F2B84B"/><text x="521" y="211" class="row" font-size="15">AOD-81 boundary box build</text>
+  <circle cx="507" cy="236" r="4" fill="#9B9BA8"/><text x="521" y="241" class="meta" font-size="14">AOD-42 store assets</text>
+  <text x="499" y="290" class="meta" font-size="13">3 in progress &#183; 7 todo</text>
+  <!-- the reclaimed strip -->
+  <path d="M640,320 C640,336 620,346 600,350" class="lead"/>
+  <text x="470" y="366" class="tokv">the reclaimed strip below the card (0.34u):</text>
+  <text x="470" y="380" class="tokv">AOD-76 gave the nav bar's 64px back</text>
+  <text x="470" y="398" class="meta">shows [0..11.43] x [0..7.14] u &#183; anchored top-left &#183; overflow hidden</text>
+  <text x="470" y="416" class="err" font-size="11">&#10005; WEATHER + CLOCK exist in the layout, not on the wall</text>
+
+  <line x1="32" y1="496" x2="828" y2="496" stroke="#22222C"/>
+  <text x="32" y="518" class="note"><tspan class="acc">Observed 2026-07-02 on the Fire HD 8 (AOD-78, the first real-content wall), filed as AOD-80.</tspan> The fix is authoring-side.</text>
+  <text x="32" y="536" class="tok">&#167;3 states the window as math &#183; &#167;5 draws it in the editor (the boundary box) &#183; &#167;6 previews the true render &#183; the wall render path does not change</text>
+</svg>
