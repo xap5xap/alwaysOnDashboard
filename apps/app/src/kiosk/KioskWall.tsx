@@ -89,9 +89,15 @@ export function KioskWall() {
         </View>
       </AmbientProvider>
 
-      {/* §7/§8 the exit affordance at the true screen edge (outside the safe-area padding), above the wall.
-          The invisible corner + the "Hold to exit" hint + ring + the PIN pad; the app-level gesture + PIN is
-          the portable exit guard (§9). pinHash is the runtime seam (secure-store on native, dev default on web). */}
+      {/* §7/§8 the exit affordance layered over the whole wall, mounted OUTSIDE the padded content view so
+          its layer spans the true screen edge (the AOD-72 intent, kept). Since AOD-79 the corner + hint
+          anchor themselves INSIDE the OS-bar insets: on Fire OS the nav bar consumes the bottom 64px of the
+          edge-to-edge window and clipped the 56dp corner to an unholdable 11px strip. ExitAffordance reads
+          rt.insets via useUnistyles, which subscribes it to inset changes, so the anchors follow transient
+          bars live; this wall's own content padding reads UnistylesRuntime.insets imperatively (mount-time)
+          and is the AOD-80 viewport contract's concern. The invisible corner + the "Hold to exit" hint +
+          ring + the PIN pad; the app-level gesture + PIN is the portable exit guard (§9). pinHash is the
+          runtime seam (secure-store on native, dev default on web). */}
       <ExitAffordance storedHash={pinHash ?? ''} onExit={onExit} />
 
       {/* §4.3 first-run exit-PIN setup: native with no stored PIN shows this before the wall is exitable, so a
