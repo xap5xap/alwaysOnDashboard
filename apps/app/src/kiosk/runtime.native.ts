@@ -12,6 +12,7 @@
 // managed-lockdown follow-up. That is "behaves per platform" honestly, not a gap.
 import { useCallback, useEffect, useState } from 'react';
 import { BackHandler, Platform } from 'react-native';
+import { UnistylesRuntime } from 'react-native-unistyles';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Brightness from 'expo-brightness';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -54,6 +55,16 @@ export function useKioskRuntime(): KioskRuntimeHandle {
     setCadenceProfile('kiosk'); // §6 cadence profile (cadence.ts FLAG: no scheduler consumer reads it yet)
     void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {}); // §7
 
+    // design-kiosk-wall §8 the no-chrome wall: hide BOTH OS bars (AOD-76). On Android 11+ unistyles maps
+    // this to WindowInsetsController hide(status+nav) + BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE — a swipe
+    // reveals the bars transiently and they re-hide on their own — and it dispatches zeroed window insets,
+    // so every rt.insets subscriber (the AOD-79 exit-corner anchor, the wall's content padding) re-anchors
+    // to the true screen edge live. The PIN surfaces stay bar-free because they render INLINE in this same
+    // window (ui/Overlays Modal inline): an RN Modal is a separate Android window, and on API <= 30 (Fire
+    // OS 8) RN only syncs hidden bars onto modal windows on SDK > R. iOS maps to a status-bar hide (the
+    // home indicator has no hide API; §9 per-platform honesty unchanged).
+    UnistylesRuntime.setImmersiveMode(true);
+
     // §4.3 read the configured exit-PIN hash from secure-store; none stored -> first-run setup (PinSetup).
     void SecureStore.getItemAsync(PIN_HASH_KEY)
       .then((stored) => {
@@ -85,6 +96,7 @@ export function useKioskRuntime(): KioskRuntimeHandle {
       backSub.remove();
       deactivateKeepAwake(KEEP_AWAKE_TAG);
       setCadenceProfile('foreground');
+      UnistylesRuntime.setImmersiveMode(false); // design §8 reversal: show both OS bars for the shell
       void ScreenOrientation.unlockAsync().catch(() => {});
       void Brightness.restoreSystemBrightnessAsync().catch(() => {}); // §8.3 restore system brightness
     };

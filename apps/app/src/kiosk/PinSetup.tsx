@@ -70,7 +70,10 @@ export function PinSetup({ onDone, onCancel }: PinSetupProps) {
         : 'Re-enter your PIN to confirm.';
 
   return (
-    <Modal visible onRequestClose={onCancel} title={title} testID="kiosk-setpin">
+    // INLINE (AOD-76): same reason as the ExitAffordance PIN pad — an RN Modal window re-shows the OS bars
+    // over the immersive wall on Fire OS 8, so the setup pad renders in the wall's own window. Dismissal is
+    // the Cancel button (hardware back is the runtime's §4.3 intercept).
+    <Modal visible inline title={title} testID="kiosk-setpin">
       <Animated.View style={{ transform: [{ translateX: shakeX }], gap: theme.spacing(4), alignItems: 'center' }}>
         <Text style={{ ...theme.type.body, color: theme.colors.textMuted, textAlign: 'center' }} testID="kiosk-setpin-sub">
           {sub}

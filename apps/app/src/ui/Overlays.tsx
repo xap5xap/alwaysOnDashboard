@@ -2,8 +2,10 @@
 // Sheet = a bottom sheet (scrim over the field + a surfaceAlt sheet with a grabber, top corners radius.lg)
 // — this is the shipped ConfigFormModal, whose hardcoded rgba(0,0,0,0.6) backdrop reconciles onto the
 // `scrim` token and whose background fill reconciles onto elevation.overlay (§13 drift 4). Modal = a
-// centered confirm dialog at elevation.overlay. Popover = an anchored menu (surfaceAlt + border, radius.md,
-// items split by border) with NO scrim, since it hangs off a known trigger (§9 rule). Colours are roles.
+// centered confirm dialog at elevation.overlay, hosted in an RN Modal by default or rendered INLINE in the
+// caller's window (the AOD-76 additive mode for the immersive kiosk wall; see ModalProps.inline). Popover =
+// an anchored menu (surfaceAlt + border, radius.md, items split by border) with NO scrim, since it hangs
+// off a known trigger (§9 rule). Colours are roles.
 import React from 'react';
 import { Modal as RNModal, Pressable, StyleSheet as RNStyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -55,24 +57,44 @@ export function Sheet({ visible, onRequestClose, children, bottomInset = 0, test
 
 export interface ModalProps {
   visible: boolean;
+  /** Windowed mode only: RN Modal wires this to the OS dismissal (Android hardware back). Inline mode has
+   *  no OS window of its own, so dismissal is whatever affordance the caller renders (a Cancel button). */
   onRequestClose?: () => void;
   title?: string;
   children: React.ReactNode;
+  /** Render the same §9 visual (scrim + centered card at elevation.overlay) as an absolute-fill overlay in
+   *  the CALLER'S window, instead of hosting it in an RN Modal. An RN Modal is a separate Android window
+   *  carrying its own system-bar state, and on API <= 30 (Fire OS 8) ReactModalHostView only syncs bar
+   *  visibility onto that window on SDK > R, so opening one over the immersive kiosk wall re-shows the OS
+   *  status bar (AOD-76). Inline keeps the surface inside the window whose immersive state already holds.
+   *  No fade (the windowed fade is the RN Modal's own). Default false: every windowed call site unchanged. */
+  inline?: boolean;
   testID?: string;
 }
 
 /** §9 center modal: the scrim + a centered dialog at elevation.overlay (radius.lg). */
-export function Modal({ visible, onRequestClose, title, children, testID }: ModalProps) {
+export function Modal({ visible, onRequestClose, title, children, inline = false, testID }: ModalProps) {
   const { theme } = useUnistyles();
   const t = theme.modal;
+  if (inline && !visible) return null;
+  const surface = (
+    <View
+      style={[
+        inline ? RNStyleSheet.absoluteFill : { flex: 1 },
+        { backgroundColor: theme.colors.scrim, alignItems: 'center', justifyContent: 'center', padding: theme.spacing(5) },
+      ]}
+      testID={testID}
+    >
+      <View style={[elevationStyle(theme, 'overlay'), { borderRadius: roleRadius(theme, t.radius), padding: t.padding, width: '100%', maxWidth: 420, gap: theme.spacing(3) }]}>
+        {title ? <Text style={{ ...theme.type.title, color: theme.colors.text }}>{title}</Text> : null}
+        {children}
+      </View>
+    </View>
+  );
+  if (inline) return surface;
   return (
     <RNModal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose}>
-      <View style={{ flex: 1, backgroundColor: theme.colors.scrim, alignItems: 'center', justifyContent: 'center', padding: theme.spacing(5) }} testID={testID}>
-        <View style={[elevationStyle(theme, 'overlay'), { borderRadius: roleRadius(theme, t.radius), padding: t.padding, width: '100%', maxWidth: 420, gap: theme.spacing(3) }]}>
-          {title ? <Text style={{ ...theme.type.title, color: theme.colors.text }}>{title}</Text> : null}
-          {children}
-        </View>
-      </View>
+      {surface}
     </RNModal>
   );
 }

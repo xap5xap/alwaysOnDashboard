@@ -12,7 +12,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AmbientProvider } from '../ambient/AmbientContext';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboard } from '../layout/useDashboard';
@@ -24,7 +24,7 @@ import { PinSetup } from './PinSetup';
 const noop = () => {};
 
 export function KioskWall() {
-  const { theme } = useUnistyles();
+  const { theme, rt } = useUnistyles();
   // The dashboardId param (app-ia §5 row 12: which layout to mount as the wall). useDashboard bootstraps
   // the single active dashboard today; selecting a layout by id is the SAME app-ia §10 seam AOD-69 flagged
   // for the switcher, so the param is accepted + documented and the active dashboard is rendered. Not forked.
@@ -32,7 +32,12 @@ export function KioskWall() {
   const { instances, isLoading, isError } = useDashboard();
   const { pinHash, ambient, needsPinSetup, setPin } = useKioskRuntime();
   const profile = wallProfile(theme.wall.typeScale);
-  const insets = UnistylesRuntime.insets;
+  // rt.insets (not the imperative UnistylesRuntime.insets snapshot): the useUnistyles proxy SUBSCRIBES this
+  // component to inset changes, so when the AOD-76 runtime hides the OS bars the padding collapses to 0 and
+  // the content reclaims the full screen — and re-pads live if a swipe transiently reveals the bars. Same
+  // source of truth as the ExitAffordance anchors (AOD-79). What the wall's usable viewport MEANS for the
+  // layout math at scale stays the AOD-80 viewport-contract design; this is only the live accessor.
+  const insets = rt.insets;
 
   const onExit = () => {
     // The gesture + PIN is the ONLY exit (the OS back is intercepted by the native seam; gestureEnabled is
@@ -43,7 +48,10 @@ export function KioskWall() {
 
   return (
     <View style={styles.field} testID="kiosk-wall">
-      {/* §8 no OS status bar: the wall is edge to edge (a native effect; a no-op on web). */}
+      {/* §8 no OS status bar: the wall is edge to edge (a native effect; a no-op on web). The SUSTAINED
+          no-chrome state (both bars, transient-by-swipe, insets re-dispatch) is owned by the runtime's
+          setImmersiveMode enter/exit (AOD-76); this expo-status-bar element is kept so the status bar is
+          hidden from the very first wall frame and on platforms where the runtime is a no-op. */}
       <StatusBar hidden />
 
       {/* §8 the wall owns its day/night. On native the runtime drives computeAmbient(now) (§8.4) into this
@@ -99,13 +107,13 @@ export function KioskWall() {
 
       {/* §7/§8 the exit affordance layered over the whole wall, mounted OUTSIDE the padded content view so
           its layer spans the true screen edge (the AOD-72 intent, kept). Since AOD-79 the corner + hint
-          anchor themselves INSIDE the OS-bar insets: on Fire OS the nav bar consumes the bottom 64px of the
-          edge-to-edge window and clipped the 56dp corner to an unholdable 11px strip. ExitAffordance reads
-          rt.insets via useUnistyles, which subscribes it to inset changes, so the anchors follow transient
-          bars live; this wall's own content padding reads UnistylesRuntime.insets imperatively (mount-time)
-          and is the AOD-80 viewport contract's concern. The invisible corner + the "Hold to exit" hint +
-          ring + the PIN pad; the app-level gesture + PIN is the portable exit guard (§9). pinHash is the
-          runtime seam (secure-store on native, dev default on web). */}
+          anchor themselves INSIDE the OS-bar insets (rt.insets via useUnistyles, subscribed), and since
+          AOD-76 the wall's content padding reads the same live rt.insets: with the runtime's immersive mode
+          hiding the bars, both follow the insets to the true edge together, and re-anchor if a swipe
+          transiently reveals the bars. The invisible corner + the "Hold to exit" hint + ring + the PIN pad
+          (rendered inline so no modal window re-shows the bars); the app-level gesture + PIN is the
+          portable exit guard (§9). pinHash is the runtime seam (secure-store on native, dev default on
+          web). */}
       <ExitAffordance storedHash={pinHash ?? ''} onExit={onExit} />
 
       {/* §4.3 first-run exit-PIN setup: native with no stored PIN shows this before the wall is exitable, so a

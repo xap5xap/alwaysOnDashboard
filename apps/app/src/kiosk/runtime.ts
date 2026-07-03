@@ -11,6 +11,9 @@
 //   - ambient driver        computeAmbient(now) on a coarse timer -> AmbientProvider  (§8.4)
 //   - backlight             expo-brightness setBrightnessAsync(backlightFor(...))     (§8.3)
 //   - orientation lock      expo-screen-orientation landscape lock / unlock          (§7)
+//   - immersive chrome      UnistylesRuntime.setImmersiveMode(true/false): hide/show BOTH OS bars,
+//                           transient-by-swipe on Android 11+; the PIN surfaces render inline in the
+//                           same window so a modal window never re-shows the bars (design §8, AOD-76)
 //   - pinning               best-effort per platform; the app-level gesture+PIN is the portable guard (§9)
 //   - OS back intercept     BackHandler so hardware back is not a casual exit         (§4.3)
 //   - PIN hash storage      expo-secure-store read/write, replacing this dev default  (§4.3)
