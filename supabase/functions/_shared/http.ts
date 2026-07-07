@@ -64,3 +64,33 @@ export function parseBody<T>(schema: ZodType<T>, data: unknown): T {
   }
   return result.data;
 }
+
+// CORS for browser clients (Expo web, and any future web dashboard). Native clients (iOS/Android)
+// issue no preflight, so this is inert for them; without it a cross-origin browser call preflights
+// with OPTIONS, which methodGuard would 405, and the actual response would lack
+// Access-Control-Allow-Origin so the browser would block reading it. The functions gateway forwards
+// OPTIONS to the function even when verify_jwt = true (a preflight carries no Authorization header),
+// so answering the preflight here is both reachable and correct. Auth is header-based (no cookies),
+// so a wildcard origin is safe and needs no Access-Control-Allow-Credentials.
+export const CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+};
+
+/**
+ * Wrap a handler so the OPTIONS preflight is answered with a 204 and every response carries the CORS
+ * headers. Applied only at the Deno.serve entrypoint (index.ts), never around the handler under test,
+ * so handler unit tests keep asserting the bare method/status behaviour.
+ */
+export function withCors(
+  handler: (req: Request) => Promise<Response>,
+): (req: Request) => Promise<Response> {
+  return async (req) => {
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+    const res = await handler(req);
+    const headers = new Headers(res.headers);
+    for (const [key, value] of Object.entries(CORS_HEADERS)) headers.set(key, value);
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+  };
+}

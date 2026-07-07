@@ -1,5 +1,8 @@
-// Edge runtime entrypoint. The handler is in handler.ts so it can be imported side-effect-free
-// under `deno test` (testing-strategy.md §5.2, §11); only this file calls Deno.serve.
+// Edge runtime entrypoint. The handler lives in handler.ts for side-effect-free import under
+// `deno test`; only this file calls Deno.serve. withCors answers the browser OPTIONS preflight and
+// adds CORS headers so web clients (Expo web) can call this function. Native clients do no preflight
+// and are unaffected.
 import { handler } from "./handler.ts";
+import { withCors } from "../_shared/http.ts";
 
-Deno.serve(handler);
+Deno.serve(withCors(handler));
