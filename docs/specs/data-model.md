@@ -522,6 +522,12 @@ The fix (per §2: fix the build against current Supabase, record it here) is an 
 
 A consequence worth noting for tests and clients: for the no-client-access tables a client now gets a privilege error rather than an RLS-empty result, which is a strictly stronger denial; the §5.1 tests accept either (error or zero rows). The other build-time claims this spec flagged (local Vault, pg_cron, `gen types`, RLS `auth.uid()`) were all confirmed available in AOD-43 and needed no change.
 
+### 8.4 InitPlan optimization of the policy predicates (build-time refinement, AOD-82)
+
+A bare `auth.uid()` in an RLS predicate is re-evaluated once per row. Supabase's performance advisor flags this as `auth_rls_initplan`; the documented fix is to wrap the call as a scalar subquery `(select auth.uid())`, which the planner hoists into an InitPlan evaluated once per statement. This was noticed while standing up the hosted production project (AOD-82).
+
+The forward migration `20260703233538_optimize_rls_initplan.sql` alters the six owner-CRUD policies in place (`ALTER POLICY`, so only the expressions change; each policy's command and roles are untouched), replacing every `auth.uid()` with `(select auth.uid())` in both `using` and `with check`, including the inner `auth.uid()` inside the `widget_instances` / `kiosk_configs` parent-ownership subquery. The §8.2 SQL above is left showing the original bare form; this refinement changes evaluation, not meaning. `auth.uid()` is `stable`, so the wrapped predicate returns the same single uuid (or NULL when unauthenticated) and enforces exactly the same ownership. The §5.1 RLS suite is unchanged and stays green, and the advisor no longer reports `auth_rls_initplan`.
+
 ## 9. Migration strategy
 
 Per [AOD-25](https://linear.app/thexap/issue/AOD-25): Supabase CLI migrations are the schema source of truth, with no ORM. The workflow:
