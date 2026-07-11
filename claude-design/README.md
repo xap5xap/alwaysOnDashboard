@@ -57,6 +57,24 @@ on them — and explicitly leaves single-sky Tend unchanged from 1 and the guide
 - Wordmark still shows the **retired 4-point star**; the mascot is the **gold sail** — propagate the
   sail mark before the per-face pass.
 
+## Card faces (the per-service pass)
+
+The card-agnostic shell is closed (sessions 1-8). This phase designs the **card faces themselves**, from
+zero, **one service per chat** (see [[aod-ui-redesign-pivot]] in memory). Claude Design is fed only the
+service's real **data palette** (from code, not the old pre-pivot mockups); prompts live in [`prompts/`](prompts/).
+
+| Service | PDF | Date | Directions Fable returned | Decision |
+|---|-----|------|------|------|
+| **Clock** | `Vela - The Watch.pdf` | 2026-07-11 | Four faces + the ember ramp + the ghost + a live card. **Meridian** (the figure, alone: centered, no chrome). **Waterline** (a 1px hairline = the whole day, a 4px mark = now placed on it; zero accent). **Bell** (time as words rounded to 5 min, exact figure beneath). **Beacon** (figure fills the long axis, 24h, minutes a tint behind hours). Thesis: *"everything on the face is the time, or it isn't there."* Fable's pick: Waterline. | **V1 = Meridian** (Xavier, 2026-07-11). Waterline's day-line is a nice-to-have, **deferred** to a future version. Bell / Beacon out of V1 (Beacon a possible future wall night-posture). **Caption-less Clock adopted** — the one card with no `SERVICE · WIDGET` header ("a clock is self-evident"); a second clock wears its place as its only label. |
+
+**Build deltas the Clock (Meridian) carries into code:** no service header at *any* size (code today hides it
+only at small, `hideHeaderAtSizes: ['small']`); the dusk→ember ramp runs ~3 h and gentle ("a shade a minute",
+vs the 60-min default in `apps/app/src/kiosk/ambient.ts`); night recolors to the ember tokens; seconds sit a
+whisper under the meridiem; an **OLED burn-in pixel-shift study** is queued for the wall (Meridian's figure is
+static); `apps/app/src/widgets/sizes.ts` still holds the pre-pivot spans (`medium 2×1`, `wide 3×1`) and needs
+the `M 1×2 / W 2×1` contract. States reduce to **live** (always) + **ghost** preview — the Clock can't fetch,
+so no stale / error / empty / skeleton.
+
 ## Re-rendering a PDF for analysis
 
 The single tall page downsamples when opened whole. To read the detail, render at 150 DPI and slice into
