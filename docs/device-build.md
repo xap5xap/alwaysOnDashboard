@@ -42,6 +42,20 @@ npx eas build --local -p android --profile preview --output $HOME/Downloads/vela
 - Fetches the remote Android keystore from EAS (needs network + login), so signing is identical to cloud builds.
 - Runs `expo prebuild` + Gradle in a temp dir; dependency caches persist in `~/.gradle`, so rebuilds are fast.
 
+## Building against hosted Supabase (production)
+
+The `preview` profile bakes the Mac's LAN IP (local stack). To point the tablet at the **hosted** production project (`kneiiilyihykmgdstdrm`) instead, use the `preview-prod` profile:
+
+```bash
+cd apps/app
+npm run device:build:prod     # bakes https://kneiiilyihykmgdstdrm.supabase.co + hosted anon key
+npm run device:install:prod   # installs ~/Downloads/vela-prod.apk
+```
+
+- Hosted is HTTPS and network-independent, so there is **no LAN IP to check** and the Mac's local Supabase does not need to be running. The tablet works off any network.
+- Same EAS keystore as every other profile, so `-r` updates the install in place (no uninstall). Switching a device between the local and hosted APKs is a keep-data reinstall; the stale session from the other backend simply fails to validate and the app gates to sign-in.
+- `EXPO_PUBLIC_DEV_ENTITLEMENTS=pro` is baked (same dogfood grant as `preview`), so Pro **UI** is unlocked client-side. The hosted **server** still treats an account as Free until it has an `entitlements` row (written by the RevenueCat webhook), so the 2-service connect cap and slower refresh floor apply on hosted unless that row exists.
+
 ## Installing
 
 **USB (preferred):** `npm run device:install` runs `adb install -r ~/Downloads/vela-preview.apk`. The `-r` reinstalls keeping app data; the same keystore means it updates in place, no uninstall.

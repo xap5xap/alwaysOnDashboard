@@ -1,0 +1,160 @@
+{
+  "team": "AOD",
+  "projects": {
+    "Launch & Store Submission": "fcfadcea-3c13-4b4c-affd-695704cd1d46"
+  },
+  "operations": [
+    {
+      "op": "create-milestone",
+      "project": "Launch & Store Submission",
+      "name": "LS-M1 Real infrastructure",
+      "description": "Done when: a hosted Supabase project serves auth, migrations, and all edge functions with production secrets; preview and production EAS builds point at it (no LAN IP, no laptop in the loop); Google OAuth runs on production credentials with verification submitted; and the public legal pages are live. Hard-sequenced before LS-M2."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Launch & Store Submission",
+      "name": "LS-M2 Device validation",
+      "description": "Done when: the full v1 acceptance (sign-up, connect all 5 services, arrange, wall preview, kiosk run) passes on the iPad, the iPhone, and the Fire HD 8, all against production infrastructure, and every ship-blocking bug found is fixed. This is Xavier's gate before any store submission. Blocked by LS-M1."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Launch & Store Submission",
+      "name": "LS-M3 Store release",
+      "description": "Done when: v1 is approved and live on the App Store and Google Play with real RevenueCat Free/Pro entitlements (AOD-77), listings built from the AOD-42 assets, and account deletion satisfying App Store 5.1.1(v) and the Play data-safety form. Blocked by LS-M2."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-1",
+      "title": "[Tech] Hosted Supabase production project: migrations, functions, secrets, auth config",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M1 Real infrastructure",
+      "labels": ["type:tech-task", "area:backend", "risk:medium"],
+      "priority": 2,
+      "description": "## Goal\nStand up the hosted Supabase production project that replaces the laptop-local stack as the app's real backend.\n\n## Context\nEverything today runs on `npx supabase start` on the Mac (docs/device-build.md): the tablet talks to a LAN IP, OAuth callbacks use a loopback URL, and the local edge runtime needs the `EDGE_DB_URL` workaround. Production is a hosted project at `https://<ref>.supabase.co`.\n\n## Scope\n- [ ] Create the hosted project (org, region, DB password stored in a password manager). Decide the tier consciously: the free tier pauses after 7 days of inactivity; the kiosk's daily traffic should keep it warm, but record the choice.\n- [ ] `supabase link --project-ref <ref>` from the repo root, then `supabase db push` (4 migrations: extensions, core_tables, rls, triggers, cron). Confirm `pg_cron` is enabled on hosted and the jobs from `20260623190302_cron.sql` are scheduled.\n- [ ] `supabase functions deploy` for all 8 functions: config-options, credentials-store, disconnect, oauth-callback, oauth-start, proxy, revenuecat-webhook, token-refresh.\n- [ ] Set function secrets (`supabase secrets set`): every key from `supabase/functions/.env` except the local-only ones. `OAUTH_CALLBACK_BASE_URL` becomes `https://<ref>.supabase.co/functions/v1`. NEVER set `EDGE_DB_URL` on hosted; it exists only to dodge a local-CLI DNS bug (docs/device-build.md).\n- [ ] Auth config on hosted: site URL, `vela://` redirect allow-list, email settings. Decide email confirmations: the hosted default SMTP is heavily rate-limited and not production-grade, so either disable confirmations for now or wire custom SMTP (Resend/Postmark). Record the decision in this issue.\n- [ ] Do NOT run local seeds. `seed.sql` and `supabase/dev/seed-dev-pro.sql` are dev-only; production `tier=pro` rows are written exclusively by the revenuecat-webhook (AOD-77).\n- [ ] Post-deploy audit: Supabase security + performance advisors clean, RLS confirmed on every table, function logs clean on a smoke round-trip.\n\n## Acceptance\nFrom Expo web with `.env` pointed at the hosted URL and anon key: fresh sign-up, connect Linear (API-key class), My Issues renders and refreshes through the hosted proxy; a token-refresh invocation succeeds; advisors show no RLS findings.\n\n## Depends\nNothing. This is the LS-M1 root; it blocks the env matrix, Google OAuth production, and account deletion."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-2",
+      "title": "[Tech] EAS env matrix for real infra: preview + production point at hosted Supabase",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M1 Real infrastructure",
+      "labels": ["type:tech-task", "area:app", "area:backend"],
+      "priority": 2,
+      "description": "## Goal\nMake EAS builds self-sufficient: preview and production profiles point at the hosted Supabase project so no installed build depends on the Mac's LAN stack.\n\n## Context\n`apps/app/eas.json` today: `preview` bakes `EXPO_PUBLIC_SUPABASE_URL=http://192.168.68.50:54321` (the Mac's LAN IP plus the demo anon key) and `EXPO_PUBLIC_DEV_ENTITLEMENTS=pro`; `production` has NO Supabase env at all, so a production build currently points nowhere. Cleartext HTTP is allowed via the expo-build-properties plugin in `apps/app/app.json` only because of that LAN URL.\n\n## Scope\n- [ ] `production` env: hosted `EXPO_PUBLIC_SUPABASE_URL` + anon key; keep `EXPO_PUBLIC_DEV_ENTITLEMENTS=off` (the EAS schema rejects empty strings, keep the explicit 'off').\n- [ ] `preview` env: switch to the hosted URL/key too, so the dogfood tablet stops depending on the laptop. Keep `EXPO_PUBLIC_DEV_ENTITLEMENTS=pro` on preview until AOD-77 replaces the grant with real entitlements.\n- [ ] Local iteration keeps working: dev builds/Expo web with `apps/app/.env` against the local stack. Nothing about the local dev path may regress.\n- [ ] Cleartext: production builds must NOT allow cleartext HTTP. Scope the build-properties setting per profile (dynamic app.config keyed on profile/APP_VARIANT) so only local-LAN dev builds allow it.\n- [ ] Update docs/device-build.md: retire the 'check the LAN IP before building' step 0 for preview builds; document the new matrix (dev = local stack, preview = hosted + pro grant, production = hosted + off).\n\n## Acceptance\nA fresh `npm run device:build` preview APK on the Fire HD 8 signs in and renders widgets with the Mac's Supabase stack fully stopped. A production build compiles with the hosted env baked, and an aapt2/strings spot-check confirms no LAN IP ships in either artifact.\n\n## Depends\nBlocked by LS-1."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-3",
+      "title": "[Tech] Google OAuth to production: consent-screen verification + hosted redirect",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M1 Real infrastructure",
+      "labels": ["type:tech-task", "area:backend", "area:integrations:calendar", "risk:high"],
+      "priority": 2,
+      "description": "## Goal\nMove Google OAuth from Testing to production so any Google account can connect Calendar and refresh tokens stop dying after 7 days.\n\n## Context\nThe consent screen is in Testing: only allow-listed test users can connect (403 otherwise) and refresh tokens expire after 7 days, which is fatal for an always-on dashboard. Redirects currently use the local loopback callback (docs/device-build.md, OAUTH_CALLBACK_BASE_URL).\n\n## Scope\n- [ ] Add the hosted callback `https://<ref>.supabase.co/functions/v1/oauth-callback` as an authorized redirect URI on production OAuth credentials (new client or the promoted existing one; record which).\n- [ ] Set the production client id/secret as hosted function secrets (LS-1's mechanism); keep the dev pair in the local `.env`.\n- [ ] Consent screen to In production. The Calendar read scope is a SENSITIVE scope, so submit Google verification: verified domain (Search Console), homepage URL, privacy policy URL (LS-4), scope justification, demo video if requested.\n- [ ] Track the verification until Approved. While it is pending, the 'unverified app' interstitial plus the 100-user cap still lets Xavier's own accounts connect, so device testing (LS-6/LS-7) can proceed. Store launch must not ship on an unverified consent screen.\n- [ ] After approval: reconnect Calendar on a non-test account and confirm the refresh token survives past the old 7-day line (token-refresh cron logs).\n\n## Acceptance\nA Google account NOT on the old test-user list connects Calendar on a device build against production; 8+ days later the connection still refreshes without re-auth.\n\n## Depends\nBlocked by LS-1 (callback URL) and LS-4 (privacy policy + homepage on a verifiable domain). Google review lead time is days to weeks; start this the moment its blockers clear."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-4",
+      "title": "[Tech] Public legal pages: privacy policy, terms, support, account-deletion instructions",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M1 Real infrastructure",
+      "labels": ["type:tech-task", "area:product"],
+      "priority": 3,
+      "description": "## Goal\nPublish the public pages every downstream gate needs: privacy policy, terms of use, support contact, and account-deletion instructions.\n\n## Context\nFour consumers require these URLs: Google OAuth verification (homepage + privacy policy on a verified domain, LS-3), App Store review (privacy policy URL mandatory; terms for auto-renewing subscriptions), Play listing + Data safety form (privacy policy + a WEB account-deletion path, LS-9/LS-11), and the paywall itself (terms/privacy links near the purchase button, LS-10). The AOD-5 privacy posture supplies the content: no third-party trackers, service tokens encrypted server-side in Vault.\n\n## Scope\n- [ ] Pick the domain and host (simple static site; Cloudflare Pages or the portfolio site). The domain must be one Xavier can verify in Google Search Console for LS-3.\n- [ ] Write the four pages: privacy policy (what is collected: account email, encrypted service credentials; no ads or trackers; retention; deletion), terms of use covering the subscription, support page (contact email), and account-deletion instructions (in-app path + email fallback; LS-9 links the Play data-safety form here).\n- [ ] Ship at stable URLs. They get baked into store listings and the Google verification, so they must not move later.\n- [ ] Record the final URLs in this issue for LS-3, LS-10, and LS-11 to consume.\n\n## Acceptance\nAll four pages live over HTTPS at their final URLs.\n\n## Depends\nNothing. Start immediately; LS-3 and both store submissions consume it."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-5",
+      "title": "[Tech] iOS build foundation: Apple Developer enrollment + first EAS builds on iPhone + iPad",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M2 Device validation",
+      "labels": ["type:tech-task", "area:app", "risk:high"],
+      "priority": 2,
+      "description": "## Goal\nGet Vela building and running on Apple hardware for the first time: Apple Developer enrollment, iOS credentials, and a working install on both the iPhone and the iPad.\n\n## Context\nThe codebase has never produced an iOS build; every device verification so far is the Fire HD 8 APK. `apps/app/app.json` already declares `ios.bundleIdentifier=com.thexap.vela` and `supportsTablet=true`. The native set that must compile and behave on iOS New Architecture: unistyles (nitro), reanimated 4, react-native-svg, MMKV, expo-keep-awake, expo-brightness, expo-screen-orientation, expo-secure-store.\n\n## Scope\n- [ ] Enroll in the Apple Developer Program (individual, USD 99/yr). Also unblocks the App Store Connect record (LS-8), TestFlight, and the AOD-77 App Store subscription products. Identity verification can take a couple of days.\n- [ ] Cheap smoke first: `npx expo run:ios` into the Simulator on the Mac to shake out compile errors before touching provisioning.\n- [ ] EAS iOS credentials (let EAS manage certs and profiles), register the iPhone and iPad UDIDs (`eas device:create`), build the preview profile with internal distribution, install on both devices.\n- [ ] Validate the native runtime seam on iOS: keep-awake actually holds the screen, the brightness dimming path works, orientation behavior on the iPhone (portrait) vs the iPad (landscape, multitasking), secure-store session survival, `vela://` deep links.\n- [ ] Record iOS-specific quirks as separate type:bug issues instead of growing this one.\n\n## Acceptance\nThe preview build installs from EAS on BOTH devices, signs into the hosted backend, and renders a dashboard. Compile-level or launch-level blockers are fixed or filed.\n\n## Depends\nBlocked by LS-2 (builds must point at real infra). risk:high: first iOS anything."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-6",
+      "title": "[Tech] iOS acceptance pass on iPad + iPhone against production infra (kiosk-first)",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M2 Device validation",
+      "labels": ["type:tech-task", "area:app", "area:kiosk"],
+      "priority": 3,
+      "description": "## Goal\nRun the full v1 acceptance on the iPad and the iPhone against production infrastructure. This is the iOS test gate before any store work.\n\n## Context\nThe kiosk acceptance checklist lives in docs/specs/kiosk-mode.md (Fire HD 8 worked example). The wall auto-fit contract (AOD-81) computes in DP and must be re-verified per device density: the Fire HD clip bug was exactly a density blind spot, and web cannot reproduce density.\n\n## Scope\n- [ ] Onboarding: fresh sign-up on device, guided connect flow, empty state to populated dashboard.\n- [ ] Connect all 5 v1 services on-device: Linear (API key), Claude usage (Admin key), Google Calendar (OAuth browser round-trip through the hosted callback), Weather, Clock.\n- [ ] Dashboard editor: arrange, resize, instance config sheet, wall preview.\n- [ ] Kiosk wall on the iPad (the real ambient scenario): entry, auto-fit scale sanity at iPad density and aspect, refresh glyph + right-edge visibility (the AOD-81 clip regression check), day/night dimming, keep-awake overnight, PIN exit.\n- [ ] iPhone pass: portrait dashboard, kiosk on a phone-sized screen (record what the contract renders), paywall screens render correctly.\n- [ ] Background/foreground transitions and connectivity-loss behavior (stale to fresh recovery).\n- [ ] File every defect as type:bug + from:dogfood; fix ship-blockers inside this milestone.\n\n## Acceptance\nChecklist executed on both devices with results logged in this issue; zero known ship-blocking bugs open at close.\n\n## Depends\nBlocked by LS-5 and LS-3 (production OAuth credentials for the on-device Calendar connect; Google verification approval may still be pending, the unverified-app interstitial is acceptable for this pass)."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-7",
+      "title": "[Tech] Fire HD 8 on production infra: rebuild + laptop-free kiosk dogfood",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M2 Device validation",
+      "labels": ["type:tech-task", "area:kiosk"],
+      "priority": 3,
+      "description": "## Goal\nRe-point the dogfood Fire HD 8 at production infrastructure and prove the kiosk survives unattended with the laptop out of the loop.\n\n## Context\nThe tablet today runs against the Mac's LAN Supabase (docs/device-build.md): sign-in dies if the laptop sleeps or the LAN IP changes. `dev@vela.test` and `npm run db:grant-pro` are local-only; on production the account is a real one and Pro comes from the preview build's dev-entitlements grant until AOD-77 lands.\n\n## Scope\n- [ ] Rebuild the preview APK after LS-2 (hosted env baked), `npm run device:install`.\n- [ ] Sign in with a real production account (create Xavier's own), reconnect all services on production. Connections are per-user server state; the local ones do not carry over.\n- [ ] 48h+ unattended ambient run: widgets stay fresh on their intervals, Calendar refresh happens server-side (token-refresh cron), day/night dimming cycles, no auth drop, no laptop running.\n- [ ] Update docs/device-build.md dogfood notes: retire 'keep the local stack running' for the tablet; keep the local path documented for dev builds only.\n\n## Acceptance\nAfter 48+ hours with the Mac shut, the wall is current (spot-check refresh timestamps) and no widget is in the error state. Dogfood officially runs on production.\n\n## Depends\nBlocked by LS-2 and LS-3 (Calendar reconnect on production credentials)."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-8",
+      "title": "[Tech] Store accounts + app identity lock: Play Console, App Store Connect record, name + versioning",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M3 Store release",
+      "labels": ["type:tech-task", "area:brand", "risk:high"],
+      "priority": 2,
+      "description": "## Goal\nOpen both store accounts and lock the app's public identity: store display name, package/bundle IDs, and version scheme.\n\n## Context\n`apps/app/app.json`: name 'Vela', `com.thexap.vela` on both platforms, version 0.0.0. The Android `package` is IMMUTABLE after the first Play upload. App Store app names are unique per store and plain 'Vela' is very likely taken, so the display-name decision must happen before listings exist.\n\n## Scope\n- [ ] Google Play Console: register (USD 25 one-time) + identity verification (can take days). CRITICAL: new personal developer accounts must run a closed test with 12+ opted-in testers for 14 continuous days before production access is granted. Check whether Xavier's account predates that rule; if it applies, this inserts a hard 2-week wall clock into LS-11. Recruit the 12 testers early (Carla, friends, cert-study peers) and start the closed test with the LS-7-validated build.\n- [ ] App Store Connect: create the app record under the LS-5 team (also unblocks TestFlight and the AOD-77 IAP products).\n- [ ] Decide the store display name: check availability on both stores; pattern candidates like 'Vela: Ambient Dashboard'. In-app brand stays lowercase 'vela' per AOD-18.\n- [ ] Confirm `com.thexap.vela` is final on BOTH platforms before any upload; bump version to 1.0.0 pre-submission (eas autoIncrement handles build numbers, appVersionSource=local).\n- [ ] Record every decision (name, account type, tester recruitment plan) in this issue.\n\n## Acceptance\nBoth consoles active with an app record each; identity decisions recorded; a first internal-track upload accepted on each store (proves signing and identifiers end to end).\n\n## Depends\nThe App Store Connect record needs LS-5's enrollment. The Play side has no blocker: start the account registration and identity verification now. risk:high because the 14-day closed-test rule is a schedule wall."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-9",
+      "title": "[Tech] Account deletion end-to-end: server wipe + web deletion path (App Store 5.1.1(v), Play data safety)",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M3 Store release",
+      "labels": ["type:tech-task", "area:auth", "area:backend"],
+      "priority": 3,
+      "description": "## Goal\nMake 'Delete account' real, end to end: full server-side wipe plus the web deletion path Play requires.\n\n## Context\n`apps/app/src/screens/Account.tsx` renders the destructive button but `onPress={() => {}}` (the AOD-5 E2 shell placed the control only). App Store Guideline 5.1.1(v) makes in-app deletion mandatory for apps with account creation; Play's Data safety form requires a WEB URL where users can request deletion without reinstalling the app.\n\n## Scope\n- [ ] New `delete-account` edge function (service role): disconnect every connected service (reuse the disconnect function's revocation logic so Google tokens get revoked upstream), purge the user's Vault secrets, delete user rows (verify the core_tables FK cascades cover dashboards, widget instances, connections), then `auth.admin.deleteUser`.\n- [ ] Client: confirmation dialog (destructive pattern per the AOD-28 settings design), call the function, sign out, clear local caches (MMKV query cache + secure-store session and kiosk PIN).\n- [ ] Web path: deletion-request page on the LS-4 site (instructions + support-email fallback). The URL goes into Play's Data safety form in LS-11.\n- [ ] Tests: integration test for the wipe (fresh user, connect a service, delete, verify auth/tables/Vault empty, re-signup with the same email works).\n\n## Acceptance\nOn a device build: delete leads to signed-out, SQL confirms no user rows or secrets remain, and same-email re-signup is clean. The web page is live. Both stores' forms can be answered truthfully.\n\n## Depends\nBlocked by LS-1 (deploys to hosted). Blocks both store submissions."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-10",
+      "title": "[Tech] App Store submission: listing, privacy labels, subscription metadata, review",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M3 Store release",
+      "labels": ["type:tech-task", "area:brand", "area:billing", "risk:medium"],
+      "priority": 2,
+      "description": "## Goal\nSubmit to the App Store and get v1 approved and live.\n\n## Context\nEverything upstream lands here: LS-4 URLs, LS-6 iOS validation, LS-8 app record, LS-9 deletion, AOD-42 assets, AOD-77 subscription products.\n\n## Scope\n- [ ] Listing: name, subtitle, keywords, description; screenshots for the required iPhone sizes and 13-inch iPad (kiosk-wall shots ARE the product; coordinate with AOD-42); privacy policy URL from LS-4.\n- [ ] Privacy nutrition labels: account email collected; service credentials stored encrypted (not used for tracking); NO third-party ads or trackers per the AOD-5 posture; answer toward 'Data Not Linked to You' only where truthful.\n- [ ] Subscription review pack: attach the AOD-77 IAP products to this first submission; the paywall must display price + term + Terms/Privacy links and a working Restore Purchases control. Check the built AOD-29 paywall against Guideline 3.1.2 and fix gaps.\n- [ ] Set `ITSAppUsesNonExemptEncryption=false` in app.json infoPlist (standard HTTPS only) so builds skip the export-compliance question.\n- [ ] Review prep: a demo account seeded with pre-connected services so the reviewer sees a populated wall (never ask reviewers to bring their own API keys); review notes explaining kiosk mode, keep-awake, and brightness use.\n- [ ] TestFlight the production build first, then `eas submit -p ios`; iterate rejections and label findings from:store-review.\n\n## Acceptance\nApproved and downloadable from the App Store; a production install signs up, subscribes (sandbox), and runs the kiosk.\n\n## Depends\nBlocked by LS-6, LS-8, LS-9, LS-4, AOD-42, and AOD-77."
+    },
+    {
+      "op": "create-issue",
+      "key": "LS-11",
+      "title": "[Tech] Google Play submission: listing, data safety, closed-testing track, release",
+      "project": "Launch & Store Submission",
+      "milestone": "LS-M3 Store release",
+      "labels": ["type:tech-task", "area:brand", "area:billing", "risk:medium"],
+      "priority": 2,
+      "description": "## Goal\nSubmit to Google Play and get v1 approved and live.\n\n## Context\nThe Play package name `com.thexap.vela` locks at first upload (LS-8). If the developer account is a new personal one, production access requires a 14-day closed test with 12+ testers first; that clock should already be running per LS-8.\n\n## Scope\n- [ ] Listing: title, short + full description, 512px icon, 1024x500 feature graphic, phone + 7-inch and 10-inch tablet screenshots (coordinate with AOD-42).\n- [ ] Data safety form: email collected; data encrypted in transit and at rest; deletion URL from LS-9's web page; no ads SDK. Content rating questionnaire.\n- [ ] Signing + submit pipeline: Play App Signing, a service-account JSON wired for `eas submit -p android`, production profile app-bundle (autoIncrement already on).\n- [ ] Track ladder: internal, then closed, then production. If the 14-day/12-tester rule applies, run the closed test with the LS-7-validated build and hold it for the full window before requesting production access.\n- [ ] Verify the Play install on a certified Android device. Fire OS canNOT install from Play; use a tester's phone or Carla's. The Fire HD 8 stays on sideload; the Amazon Appstore remains the AOD-77-noted path, out of scope for v1.\n- [ ] Iterate review findings and label them from:store-review.\n\n## Acceptance\nLive on Play production; an install from Play on a certified device signs up and runs.\n\n## Depends\nBlocked by LS-7, LS-8, LS-9, LS-4, AOD-42, and AOD-77."
+    },
+    {
+      "op": "update-issue",
+      "id": "AOD-40",
+      "milestone": "LS-M1 Real infrastructure"
+    },
+    {
+      "op": "update-issue",
+      "id": "AOD-41",
+      "milestone": "LS-M1 Real infrastructure"
+    },
+    {
+      "op": "update-issue",
+      "id": "AOD-42",
+      "milestone": "LS-M3 Store release"
+    },
+    { "op": "set-dependencies", "id": "LS-2", "blockedBy": ["LS-1"] },
+    { "op": "set-dependencies", "id": "LS-3", "blockedBy": ["LS-1", "LS-4"] },
+    { "op": "set-dependencies", "id": "LS-5", "blockedBy": ["LS-2"] },
+    { "op": "set-dependencies", "id": "LS-6", "blockedBy": ["LS-5", "LS-3"] },
+    { "op": "set-dependencies", "id": "LS-7", "blockedBy": ["LS-2", "LS-3"] },
+    { "op": "set-dependencies", "id": "LS-9", "blockedBy": ["LS-1"] },
+    { "op": "set-dependencies", "id": "AOD-77", "blockedBy": ["LS-5", "LS-8"] },
+    { "op": "set-dependencies", "id": "LS-10", "blockedBy": ["LS-6", "LS-8", "LS-9", "LS-4", "AOD-42", "AOD-77"] },
+    { "op": "set-dependencies", "id": "LS-11", "blockedBy": ["LS-7", "LS-8", "LS-9", "LS-4", "AOD-42", "AOD-77"] }
+  ]
+}

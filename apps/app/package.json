@@ -12,7 +12,9 @@
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
     "device:build": "ANDROID_HOME=$HOME/Library/Android/sdk JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home npx eas build --local -p android --profile preview --output $HOME/Downloads/vela-preview.apk",
-    "device:install": "$HOME/Library/Android/sdk/platform-tools/adb install -r $HOME/Downloads/vela-preview.apk"
+    "device:install": "$HOME/Library/Android/sdk/platform-tools/adb install -r $HOME/Downloads/vela-preview.apk",
+    "device:build:prod": "ANDROID_HOME=$HOME/Library/Android/sdk JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home npx eas build --local -p android --profile preview-prod --output $HOME/Downloads/vela-prod.apk",
+    "device:install:prod": "$HOME/Library/Android/sdk/platform-tools/adb install -r $HOME/Downloads/vela-prod.apk"
   },
   "dependencies": {
     "@expo/metro-runtime": "~56.0.15",

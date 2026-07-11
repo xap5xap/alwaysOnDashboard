@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 590 612" width="590" height="612">
+  <defs>
+    <linearGradient id="sailBody" x1="0.2" y1="0.05" x2="0.9" y2="0.95">
+      <stop offset="0" stop-color="#e7c07a"/>
+      <stop offset="0.55" stop-color="#d8a75c"/>
+      <stop offset="1" stop-color="#c68f45"/>
+    </linearGradient>
+    <linearGradient id="sailFold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f2d69a" stop-opacity="0.95"/>
+      <stop offset="0.7" stop-color="#ecca85" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#ecca85" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="590" height="612" fill="#f2f1f3"/>
+
+  <!-- icon tile -->
+  <rect x="33" y="54" width="524" height="524" rx="120" fill="#1f2949" />
+
+  <!-- sail -->
+  <path fill="url(#sailBody)" d="M 297 131
+    C 272 235 224 366 177 463
+    C 236 424 345 406 432 446
+    C 441 295 332 215 297 131
+    Z"/>
+  <!-- lighter left face of the sail -->
+  <path fill="url(#sailFold)" d="M 297 131
+    C 272 235 224 366 177 463
+    C 202 448 224 438 246 430
+    C 285 370 296 235 297 131
+    Z"/>
+
+  <!-- large sparkle, top right -->
+  <path fill="#d8a960" d="M 433 140
+    Q 440 162 462 169
+    Q 440 176 433 198
+    Q 426 176 404 169
+    Q 426 162 433 140
+    Z"/>
+
+  <!-- small sparkle, left -->
+  <path fill="#d8a960" d="M 146 244
+    Q 150.5 257.5 164 262
+    Q 150.5 266.5 146 280
+    Q 141.5 266.5 128 262
+    Q 141.5 257.5 146 244
+    Z"/>
+</svg>

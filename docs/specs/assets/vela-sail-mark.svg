@@ -1,0 +1,8 @@
+<svg width="512" height="512" viewBox="0 0 280 280" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Vela app icon — sail</title>
+  <desc>A warm gold abstract sail with two small star accents on a deep navy rounded square. A clean vector rebuild of the chosen "Ambient Sail" direction.</desc>
+  <rect x="0" y="0" width="280" height="280" rx="62" fill="#101E3B"/>
+  <path d="M122,58 L88,222 Q135,234 178,222 Q198,130 122,58 Z" fill="#E2A94E"/>
+  <path d="M198,69 Q198,78 207,78 Q198,78 198,87 Q198,78 189,78 Q198,78 198,69 Z" fill="#EFE7D4"/>
+  <path d="M70,114 Q70,120 76,120 Q70,120 70,126 Q70,120 64,120 Q70,120 70,114 Z" fill="#EFE7D4"/>
+</svg>

@@ -22,6 +22,17 @@
         "EXPO_PUBLIC_DEV_ENTITLEMENTS": "pro"
       }
     },
+    "preview-prod": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kneiiilyihykmgdstdrm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuZWlpaWx5aWh5a21nZHN0ZHJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzU5NDMsImV4cCI6MjA5ODMxMTk0M30.LQ6S5iHB6Bdk1ILj1GbDBynUr6RyKN0szrjkw2s0TQM",
+        "EXPO_PUBLIC_DEV_ENTITLEMENTS": "pro"
+      }
+    },
     "production": {
       "android": {
         "buildType": "app-bundle"
