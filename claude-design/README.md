@@ -66,6 +66,8 @@ service's real **data palette** (from code, not the old pre-pivot mockups); prom
 | Service | PDF | Date | Directions Fable returned | Decision |
 |---|-----|------|------|------|
 | **Clock** | `Vela - The Watch.pdf` | 2026-07-11 | Four faces + the ember ramp + the ghost + a live card. **Meridian** (the figure, alone: centered, no chrome). **Waterline** (a 1px hairline = the whole day, a 4px mark = now placed on it; zero accent). **Bell** (time as words rounded to 5 min, exact figure beneath). **Beacon** (figure fills the long axis, 24h, minutes a tint behind hours). Thesis: *"everything on the face is the time, or it isn't there."* Fable's pick: Waterline. | **V1 = Meridian** (Xavier, 2026-07-11). Waterline's day-line is a nice-to-have, **deferred** to a future version. Bell / Beacon out of V1 (Beacon a possible future wall night-posture). **Caption-less Clock adopted** — the one card with no `SERVICE · WIDGET` header ("a clock is self-evident"); a second clock wears its place as its only label. |
+| **Weather** | `Vela - Weather Eye.pdf` | 2026-07-11 | Two cards (Current + Forecast), four directions for Current. **Abeam** (glyph + figure side by side). **Transit** (the sunrise→sunset arc carrying the sun's live position). **The Log** (no glyph, a number ledger — self-defeating). **Figurehead** (the glyph huge as a landmark). Forecast: a **List** and a **Range** (hi-lo as span-bars) take. One honest motion each. Fable's pick: Transit. | **V1 = Transit** (Xavier, 2026-07-11): Current leads with the arc (curve at Large, flat waterline at Wide/Medium, absent at Small); **Forecast = the Range take**. The Log and Figurehead rejected (Figurehead inverts the Clock-as-hero hierarchy, "the wrong king"). **Caption = `SERVICE · PLACE`** (`WEATHER · QUITO`, not "Current"). Sizes: Current all four (S/M/W/L), Forecast W/L. The "arc rhymes with the Clock's Waterline" argument is **void in V1** (Clock is Meridian); the arc stands on its own. |
+| **Linear** | `Vela - The Manifest.pdf` | 2026-07-12 | Two cards. My Issues, four directions: **Muster** (count + roll call), **The Heading** (the one issue to pull next), **Stowage** (dense ledger), **Soundings** (count + a priority-mark silhouette, sorted heavy→light). Current Cycle, two takes: **Dead Reckoning** (smooth ring) and **The Log Line** (21-knot segmented ring). Unifying idea: "discrete work drawn as discrete marks." Fable's pick: Soundings + The Log Line. | **V1 = Soundings + The Log Line** (Xavier, 2026-07-12): My Issues = count + priority silhouette (reads at distance, "how many and how heavy"); Current Cycle = the 21-knot ring, **device-verify the knots on the Fire HD 8** — the smooth Dead Reckoning ring is the low-DPI fallback if they shimmer. Muster = free fallback, The Heading = future focus mode, Stowage = the phone's dense option. Caption = `LINEAR · PROJECT` / `LINEAR · TEAM` (needs_config reverts to the widget name). Priority is shape, never hue; My Issues fully monochrome, the one accent lives in the cycle ring. |
 
 **Build deltas the Clock (Meridian) carries into code:** no service header at *any* size (code today hides it
 only at small, `hideHeaderAtSizes: ['small']`); the dusk→ember ramp runs ~3 h and gentle ("a shade a minute",
@@ -74,6 +76,45 @@ whisper under the meridiem; an **OLED burn-in pixel-shift study** is queued for 
 static); `apps/app/src/widgets/sizes.ts` still holds the pre-pivot spans (`medium 2×1`, `wide 3×1`) and needs
 the `M 1×2 / W 2×1` contract. States reduce to **live** (always) + **ghost** preview — the Clock can't fetch,
 so no stale / error / empty / skeleton.
+
+**Build deltas the Weather (Transit) cards carry into code:** Current Weather expands to all four sizes
+(code has `small, medium` only → add `wide, large`); **the sun-arc needs today's sunrise/sunset, which only
+the Forecast `daily=` operation fetches today — the Current operation must also pull today's sunrise/sunset**
+(Open-Meteo returns `current=` + `daily=sunrise,sunset&forecast_days=1` in one call); the arc curves at Large,
+flattens to a waterline at Wide/Medium, is absent at Small; night dims in the normal palette with the moon
+glyph from `condition.isDay` (no ember); the refresh breath is an accent dot on the ~15-min cadence; rework
+`WeatherIcon.tsx` to the 8-kind + day/night set at one line weight across three duties; Forecast adds the Range
+span-bar layout; the caption becomes `WEATHER · <place>`. States (skeleton-with-arc, amber stale dot + "As
+of", red error dot with the sun-mark **paused**, disconnected "Connect / Needs a location") match Holding
+Course.
+
+**Build deltas the Linear cards carry into code:** the priority-glyph set (five marks by shape — none-dashes /
+1-2-3 bars / urgent block) at 11–34px duties; My Issues = count + the **Soundings** silhouette (marks sorted
+heavy→light) at S/M/W/L, the Wide banner being count + silhouette; Current Cycle = **The Log Line** 21-knot
+segmented ring (**must be device-verified on the low-DPI wall; fall back to the smooth Dead Reckoning ring if
+the knots alias** — the AOD-81 density lesson) across S/M/W/L; motion is the settle only (a mark/knot moves
+when work changes, ~400ms, else still); the sort (urgent → due → number) pushed to the data layer so the card
+never re-ranks twice; caption `LINEAR · <project/team>`, reverting to the widget name in needs_config. States:
+two good empties + loading (list + ring skeletons) + stale/error dots + disconnected + needs_config.
+
+**Widget-system note — the caption is per-widget (confirmed across three faces):** it carries the most useful
+identifier, not a fixed `SERVICE · WIDGET` — **none** (Clock, self-evident), **the place** (Weather,
+`WEATHER · QUITO`), **the project / team** (Linear). The widget system needs a per-widget caption strategy
+(hidden / place / custom / widget-name-fallback), not one rule.
+
+## Palette — warming the system (2026-07-12)
+
+After three monochrome faces, Xavier flagged that the cards read too single-color and cold. **Decision: warm
+the system, do not rainbow the cards.** Per-service accent colors would break the one-sky coherence and the
+across-the-room legibility that the restraint is *functionally* protecting (color fails at distance and in dim
+light on a 24/7 emissive wall). The real issue is that the palette is **cold** (a blue accent `#6E8BFF` on a
+cold near-black `#0B0B0F`) while the **brand is warm** (the gold sail `#E2A94E`, the ember night `#C2362B`) —
+"a cold spreadsheet, not a lantern." The fix is a **system-level palette re-tune** (`vela-DESIGN.md` §2 /
+`unistyles.ts`): shift the one accent cold→warm (tied to the gold sail, resolving the collision with the amber
+`warning` status), warm the near-black field and the neutrals, keep the ember night. The card **structures**
+already chosen (Meridian figure, Transit arc, Soundings silhouette) are **color-temperature-independent**, so
+warming costs nothing on work done — the finished directions just re-render warm. Do the palette pass **before
+Calendar and Claude usage** so the last two design in the final palette, and retrofit the three done.
 
 ## Re-rendering a PDF for analysis
 
