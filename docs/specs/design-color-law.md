@@ -62,7 +62,7 @@ Day vs night panes are chosen by a **boolean the data already has** (is the sun 
 - **Clock:** keeps its deep-red ember after dark (The Watch, already shipped). At night it becomes the one *saturated* voice in the room; the ember is now the hot end of the thermometer rather than a lonely exception.
 - **Claude usage:** the spend runs the same cold → gold → ember scale toward the budget (calm under budget, warm near it, ember over). One fixed scale, on the figure.
 - **Linear:** warms **only on a breach** (overdue, blocked); calm otherwise.
-- **Calendar:** neutral for now; may later warm as an event approaches. Not colored in v1.
+- **Calendar:** earns an **imminence** scale (time-to-event on the same cool→warm ramp): the soonest or happening-now event is warmest, distant events cool, all-day sits in a calm band, a clear day reads restful. This is Calendar's one reading; it never wears a pane. (Xavier's call 2026-07-12, overriding Made Fast's "a meeting isn't hot." The source stays imminence, not the user's Google event colors, which are not fetched today and belong to the future per-service theme.)
 - **Every future card** inherits the law: one fixed meaning-scale per service, on the figures, no pane. No per-service **branding** colors in any theme; the per-service *theme* (§8) draws hue from your data, never the logo.
 
 ## 7. The night exam

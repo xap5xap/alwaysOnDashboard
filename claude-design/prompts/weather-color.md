@@ -10,7 +10,7 @@ What we chose: **1C (Running Lights) as the law + a muted 1D (Sailor's Delight) 
 
 > We picked from the color pass. Thank you, that was exactly the range we needed.
 >
-> The direction is **1C (Running Lights), with a muted version of 1D (Sailor's Delight) on the Weather card.** In one sentence: the figures wear the hue of what they measure, and the Weather card's background is a deep, quiet pane of the current sky. We loved 1C most, rain reading blue, the sun gold, the temperature glowing from cold to hot. That is the whole idea, *colors that tell a story.* And we want the card backgrounds from 1D, but calmer.
+> The direction is **1C (Running Lights), with a muted version of 1D (Sailor's Delight) on the Weather card.** Probably, you can create a new direction so that we dont loose the previous created one. In one sentence: the figures wear the hue of what they measure, and the Weather card's background is a deep, quiet pane of the current sky. We loved 1C most, rain reading blue, the sun gold, the temperature glowing from cold to hot. That is the whole idea, *colors that tell a story.* And we want the card backgrounds from 1D, but calmer.
 >
 > Make these two layers work together without fighting:
 >
