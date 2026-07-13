@@ -1,0 +1,1239 @@
+{
+  "_note": "Redesign Build: the code-work project + 60 issues to implement the 2026-07 Fable/Claude Design redesign on the existing app. Scoped from docs/specs/redesign-build-audit.md and the claude-design/ PDFs. Team AOD, under the alwaysOnDashboard v1 initiative, sibling to the retrospective 'UI/UX Redesign' (design) project. All labels pre-exist. Run: node /Users/xavierperez/tools/linear-migration/migrate.mjs tools/linear/manifests/redesign-build.json",
+  "team": "AOD",
+  "operations": [
+    {
+      "op": "create-initiative",
+      "name": "alwaysOnDashboard v1"
+    },
+    {
+      "op": "create-project",
+      "name": "Redesign Build",
+      "description": "Implement the 2026-07 Vela UI/UX redesign on the existing app: color law, widget contract, the 4 card faces, the Sky surface, onboarding, paywall, and the kiosk wall. Scope: docs/specs/redesign-build-audit.md. Closes AOD-93..104."
+    },
+    {
+      "op": "link-project-initiative",
+      "project": "Redesign Build",
+      "initiative": "alwaysOnDashboard v1"
+    },
+    {
+      "op": "create-milestone",
+      "project": "Redesign Build",
+      "name": "RB-M1 Foundation",
+      "description": "The seam everything builds on: color-law tokens + theme axis, the S/M/W/L slot grid, fit-to-bounds body, per-widget caption + chromeless, six states + ghost, stub removal, offline plumbing, sail mark, and the palette device-verify gate."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Redesign Build",
+      "name": "RB-M2 Card faces",
+      "description": "The four faces rebuilt on the M1 contract, bound to color roles: Clock Meridian, Weather Transit + Range (with the sunrise/sunset data add), Linear Soundings + The Log Line, Calendar Dressed Overall. Claude usage deferred. Blocked by RB-M1."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Redesign Build",
+      "name": "RB-M3 The Sky surface",
+      "description": "Many Skies + Add by Seeing: slot placement, live-snap resize, delete-in-place, the Glance/Arrange dial, multi-dashboard paging + page altitude, cross-sky move, and the preview-first add gallery. Closes AOD-98/102/103/104. Blocked by RB-M1."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Redesign Build",
+      "name": "RB-M4 Onboarding, paywall & entitlements",
+      "description": "Raising the Sail (the no-session front door), The Fare v2 (contextual, trial-free paywall), the 2-door Pro model + the paused state, and lazy account creation. Closes AOD-93 and part of AOD-101. Blocked by RB-M2 and RB-M3."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Redesign Build",
+      "name": "RB-M5 Account, connections & edges",
+      "description": "Below Deck (the one-room account & connections home), reconnect-per-auth returning to the sky, real OAuth, the status legend, three removes, the subscription shelf, and the Holding Course app-level edges. Closes AOD-96/99/100. Blocked by RB-M1."
+    },
+    {
+      "op": "create-milestone",
+      "project": "Redesign Build",
+      "name": "RB-M6 Kiosk wall",
+      "description": "The wall adopts the new faces + the night color law (near-black cards + a Weather-only pane + the Clock ember), the multi-sky cycle, the which-sky hold, the never-alarm edges, the ~3h ember ramp, and the OLED study. Blocked by RB-M2 and RB-M3."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-01",
+      "title": "[Spike] Device-verify the frozen Signature palette on the Fire HD 8 (the token gate)",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:spike",
+        "area:design-system",
+        "area:kiosk",
+        "risk:high"
+      ],
+      "description": "The gate before the palette tokens are frozen. Render the --temp / --ink / --pane / --when families on the real Fire HD 8 in a dark room and judge: pane banding on the cheap panel, hairline survival (the pane edge that makes it read as sky), Calendar cool-stop distinctness at 13px, thermometer stops, and the night frame (deep-indigo Weather pane + gold moon + cool temp + the Clock ember, all below a noon-white numeral's luminance). Output: tuned hexes + a go/no-go on the freeze. Web is density- and brightness-blind (the AOD-81 lesson).\n\n**Refs:** claude-design/Vela - Made Fast.pdf; design-color-law.md §7, §10. **Blocked by:** RB-02 (needs provisional tokens in code to render)."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-02",
+      "title": "Land the data-hue color-law token families in unistyles.ts",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:design-system",
+        "risk:medium"
+      ],
+      "description": "Add the frozen Signature families as primitive ramps + semantic data-hue roles on the existing three-tier seam: --temp (8 thermometer stops), --ink (5 event inks: rain/sun/moon/storm/bone, rain+sun with dim variants), --pane (12 condition x daylight panes each bg/line/ink), --when (6 imminence stops cut from --temp cold to balmy). Keep the blue #6E8BFF as the interaction accent only (taps), never data.\n\n**Refs:** claude-design/Vela - Made Fast.pdf; design-color-law.md §4-6; apps/app/unistyles.ts (primitive + darkTheme.colors)."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-03",
+      "title": "Build the role-based theme axis (Signature default + Monochrome)",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:design-system",
+        "risk:high"
+      ],
+      "description": "Extend the existing appThemes seam so the new data-hue roles resolve per theme: Signature maps roles to the --temp/--ink/--pane/--when hues; Monochrome collapses them to the bone/gray ramp (~today's build). Both ship in v1, both free; per-service is a future/Pro theme, off this pass. The load-bearing rule: card faces bind to color ROLES, not literal hexes, so a theme is a token remap. Compose with the existing dark/light axis.\n\n**Refs:** design-color-law.md §8; apps/app/unistyles.ts (appThemes, darkTheme/lightTheme). **Blocked by:** RB-02, RB-01."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-04",
+      "title": "Reconcile the widget size catalogue to the S/M/W/L slot-grid contract",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:app",
+        "area:layout",
+        "risk:medium"
+      ],
+      "description": "Rewrite widgets/sizes.ts SIZE_CATALOGUE to the design contract: S 1x1 / M 1x2 / W 2x1 / L 2x2 on a 2-column, 96px-row grid. Retire wide=3x1; remap the current medium=2x1 -> W and tall=1x2 -> M; align UNIT_PX (80) to the 96px row. Add a read-time rect coercion in mapper.ts/schema.ts so persisted layouts and the stub seed don't render at wrong sizes. Coordinate the leaf size=== branches with the card-face issues. This supersedes vela-DESIGN.md §5 free-form.\n\n**Refs:** claude-design/Vela - Many Skies.pdf (card grid contract); redesign-build-audit.md §2.1; apps/app/src/widgets/sizes.ts, layout/geometry.ts, layout/mapper.ts."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-05",
+      "title": "Build the shared fit-to-bounds card body (value-at-step, truncate-then-drop)",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:app",
+        "risk:medium",
+        "from:dogfood"
+      ],
+      "description": "The AOD-95/97 centerpiece. Add a shared body renderer that fits content within BOTH width and height: the value renders at its type step and never shrinks below it; secondary detail truncates first, then drops. Replaces each leaf's per-size type ramp + numberOfLines clip (host/WidgetHostView.tsx body has overflow:hidden today = the clip). Prefer the host passing px dims over the body self-measuring (avoid a layout frame on the always-on hot path).\n\n**Refs:** vela-DESIGN.md §7-8; host/WidgetHostView.tsx. **Resolves:** AOD-95, AOD-97. **Blocked by:** RB-04."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-06",
+      "title": "Add a per-widget caption strategy + a chromeless card mode",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:app"
+      ],
+      "description": "Replace the fixed SERVICE-WIDGET header with a per-widget caption strategy on WidgetDefinition: hidden (Clock, all sizes) / service-widget / place (Weather -> WEATHER . QUITO) / project|team (Linear) / calendar (Calendar), resolved from {config,data} not just static title. Add a chromeless mode (no header at any size, subsuming hideHeaderAtSizes) and relocate the stale-dot + in-flight refresh mark on a headerless card. NOTE: the Calendar caption needs the calendar's display name, which isn't in the payload today (config stores only calendarId) - persist the chosen label in config.\n\n**Refs:** claude-design/README.md (per-widget caption note); host/WidgetHostView.tsx header block; registry/types.ts (WidgetDefinition)."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-07",
+      "title": "Reconcile the widget lifecycle to the six states + ghost + first-class empty",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:app",
+        "risk:medium"
+      ],
+      "description": "Map the current phases to the design's six: loading->connecting, fresh->live, keep stale/error; promote the leaf-drawn own-empty (EmptyBody) to a first-class empty state; add the NEW ghost / not-yet-lit tile. Keep needs_config and disconnected as action-states alongside the six (they drive reauth/config prompts). Decide the ghost visual (the night-sky placeholder) here.\n\n**Refs:** claude-design/Vela - Many Skies.pdf (six states); Vela - Holding Course.pdf; widgets/lifecycle.ts, host/WidgetHostView.tsx."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-08",
+      "title": "Remove the Stub dev widget and replace the new-signup seed",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:app",
+        "area:onboarding",
+        "from:dogfood"
+      ],
+      "description": "The stub leaks three ways: registered as SERVICE_REGISTRY[0], seeded by STUB_SEED in dashboardRepo.ts bootstrapDashboard on every signup, and mirrored in the server BACKEND_REGISTRY. Remove stubService from the client + server registries in lockstep, move it to a test-only registry (tests already inject via RegistryProvider), and replace STUB_SEED with the redesign first-run seed (interim: seed Clock; the onboarding cold open / skip-seeds refine this in RB-36).\n\n**Refs:** registry/services/stub/*, layout/dashboardRepo.ts (STUB_SEED), supabase/functions/_shared/registry.ts. **Resolves:** AOD-94."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-09",
+      "title": "Add offline / connectivity detection plumbing",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:app",
+        "area:backend",
+        "risk:medium"
+      ],
+      "description": "Add @react-native-community/netinfo, wire TanStack onlineManager, expose a useOnline() hook, and split ProxyDataSource so device-offline / Vela-backend-down / one-service-error are three distinct signals (today they collapse to provider_unavailable). Prerequisite for the Holding Course app-level edges (RB-53) and the never-alarm wall (RB-59). NOTE: new native dep -> EAS rebuild + Fire HD 8 re-verify.\n\n**Refs:** Vela - Holding Course.pdf; host/ProxyDataSource.ts, app/_layout.tsx (PersistQueryClientProvider)."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-10",
+      "title": "Propagate the gold sail brand mark",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:tech-task",
+        "area:brand",
+        "area:design-system"
+      ],
+      "description": "Regenerate the app-icon PNGs (apps/app/assets/*) from docs/specs/assets/vela-sail-mark.svg (the retired 4-point star survives only in the icons + design assets; the in-app Wordmark is text-only and renders no glyph). Optionally introduce a first in-app mark glyph beside the Wordmark for the onboarding cold open. Update the design system + [[aod-brand-identity-vela]] which still say 'star direction approved'.\n\n**Refs:** docs/specs/assets/vela-sail-mark.svg; ui/Surfaces.tsx (Wordmark)."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-11",
+      "title": "Adopt 'Arrange' as the edit-mode label (retire 'Tend')",
+      "project": "Redesign Build",
+      "milestone": "RB-M1 Foundation",
+      "labels": [
+        "type:decision",
+        "area:app",
+        "area:design-system"
+      ],
+      "description": "DECIDED 2026-07-13 (Xavier): rename the dashboard edit mode from 'Tend' to Arrange (over Edit / keeping Tend), resolving the long-flagged comprehension risk. Rationale: the code already uses 'Arrange mode' + an `arrange` token group, so it is the least drift. This issue = propagate the Arrange copy across the Glance/Arrange dial (RB-24), Below Deck's entry row (RB-44), and the add flow, and retire 'Tend' everywhere. The closed issue is the ADR of record.\n\n**Refs:** claude-design/README.md open items; apps/app/unistyles.ts (`arrange` group)."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-12",
+      "title": "Rebuild the Clock card as Meridian",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:integrations:clock"
+      ],
+      "description": "A single centered time figure, NO chrome at any size. Strip the date line, zone kicker, GMT offset, and the wide-banner branch (ClockCard.tsx). Seconds a whisper under AM/PM. States reduce to live + ghost (none-class, no fetch). Night recolors to the ember tokens via a dusk->ember ~3h ramp (see RB-56 for the ambient window). Decide keep-vs-drop the now-vestigial date/second-clock config fields.\n\n**Refs:** claude-design/Vela - The Watch.pdf (Meridian); registry/services/clock/ClockCard.tsx. **Blocked by:** RB-03, RB-04, RB-05, RB-06."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-13",
+      "title": "Add today's sunrise/sunset to the Weather Current operation",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:tech-task",
+        "area:integrations:weather",
+        "area:backend"
+      ],
+      "description": "The Transit arc needs today's sunrise/sunset, which only the Forecast daily= op fetches today. Add daily=sunrise,sunset&forecast_days=1 to buildCurrentQuery and emit them from normalizeCurrent; extend CurrentWeatherData on both server and client types. Server operations.ts ONLY - the /v1/forecast endpoint is already allow-listed for current, so no proxy/allow-list/registry change; still one combined Open-Meteo call.\n\n**Refs:** supabase/functions/.../operations.ts (weather block); registry/services/weather/types.ts. Blocks RB-14."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-14",
+      "title": "Rebuild Weather Current as Transit (sun-arc, 4 sizes, condition pane)",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:integrations:weather",
+        "risk:medium"
+      ],
+      "description": "A sunrise->sunset arc carrying the live sun position: curve at Large, flat waterline at Wide/Medium, absent at Small. Expand Current from S/M to all four sizes. Night dims with a moon glyph from condition.isDay (no ember). The card wears a muted condition PANE (color roles, Weather only). Normalize WeatherIcon to one line weight across the 8 groups + day/night (kill the two 1.5 snowflake overrides). Device-verify the pane for banding on the Fire HD 8.\n\n**Refs:** claude-design/Vela - Weather Eye.pdf + Made Fast.pdf; registry/services/weather/{CurrentWeatherCard,WeatherIcon}.tsx. **Blocked by:** RB-13, RB-03, RB-04, RB-05."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-15",
+      "title": "Rebuild Weather Forecast as Range (hi-lo span-bars)",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:integrations:weather"
+      ],
+      "description": "Each day's hi-lo drawn as a span-bar on a shared scale (replaces the numeric hi-lo text). Sizes stay Wide/Large. Forecast never wears a pane; it reads many skies. Truncation ladder wind->humidity->feels-like->label. No data change.\n\n**Refs:** claude-design/Vela - Weather Eye.pdf (Range) + Made Fast.pdf; registry/services/weather/ForecastCard.tsx. **Blocked by:** RB-03, RB-04, RB-05."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-16",
+      "title": "Rebuild Linear My Issues as Soundings (count + priority silhouette)",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:integrations:linear"
+      ],
+      "description": "Count + a priority-mark silhouette (the 5 shapes by SHAPE not hue, sorted heavy->light). Reuse the existing PriorityGlyph + priorityShape (linear/glyphs.tsx); add the heavy->light sort as a client selector. Expand to S/M/W/L. Warms only on a breach (overdue is client-computable from dueDate; +blocked would need a server query change, out of v1). No data change.\n\n**Refs:** claude-design/Vela - The Manifest.pdf (Soundings); registry/services/linear/{MyIssuesCard,glyphs}.tsx. **Blocked by:** RB-03, RB-04, RB-05."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-17",
+      "title": "Rebuild Linear Current Cycle as The Log Line (21-knot ring)",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:integrations:linear",
+        "risk:medium"
+      ],
+      "description": "A 21-knot segmented ring, 1 knot lit per closed issue (replaces the progress bar). Data present (completedCount/totalCount/progress). New ring geometry token group. MUST device-verify the 21 knots on the low-DPI Fire HD 8 wall; fall back to a smooth ring (Dead Reckoning) if they alias/shimmer (the AOD-81 density lesson). The needs_config state (team/project required) already exists.\n\n**Refs:** claude-design/Vela - The Manifest.pdf (The Log Line); registry/services/linear/CurrentCycleCard.tsx. **Blocked by:** RB-03, RB-04, RB-05."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-18",
+      "title": "Rebuild Calendar Next Event + Today's Agenda as Dressed Overall",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:integrations:calendar",
+        "risk:medium"
+      ],
+      "description": "Every event's time wears its distance on the --when-* imminence ladder (dawn cool far -> balmy at Now), a top-to-bottom warmth spread capped at balmy so Calendar warmth is never trouble. The existing formatWhen/formatClock already compute the delta - map it onto the ladder instead of the single accent. Caption = which calendar; never a pane. No data change. Device-verify the cool stops stay distinct at 13px.\n\n**Refs:** claude-design/Vela - Ship's Bells-V2.pdf (Dressed Overall); registry/services/google_calendar/{NextEventCard,AgendaCard}.tsx. **Blocked by:** RB-03, RB-04, RB-05, RB-06."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-19",
+      "title": "Reface the Claude usage cards (deferred)",
+      "project": "Redesign Build",
+      "milestone": "RB-M2 Card faces",
+      "labels": [
+        "type:user-story",
+        "could",
+        "area:integrations:claude"
+      ],
+      "description": "DEFERRED this pass (Xavier's call). The anthropic_usage Spend MTD + Daily Spend cards already work (AOD-59/64); the color is pre-specced (spend rides the thermometer 25% cold -> 84% balmy -> over ember). Left as a visible could until a bespoke face is designed. No build now.\n\n**Refs:** Made Fast.pdf §1e; registry/services/anthropic_usage/*. **Blocked by:** RB-03."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-20",
+      "title": "Adopt the 2-col slot-grid placement model",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:tech-task",
+        "area:layout",
+        "area:app",
+        "risk:medium"
+      ],
+      "description": "Turn the free-form absolute canvas into a 2-column / 96px-row slot grid (the geometry side of RB-04). Redefine geometry.ts so drag/resize operate on discrete slots; salvage the reconcileSize concept. Persisted continuous rects coerce on load (RB-04). Keep the seam registry-free (no per-service edits).\n\n**Refs:** claude-design/Vela - Many Skies.pdf; layout/geometry.ts, layout/placement.ts. **Blocked by:** RB-04."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-21",
+      "title": "Place new widgets in the first free grid slot",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:layout"
+      ],
+      "description": "Replace defaultPlacementRect's 1-D vertical append with a 2-D first-free-slot scan on the grid; append-below fallback when full. Also fix the rapid-add cache read in useAddWidget so sequential adds don't stack.\n\n**Refs:** layout/placement.ts, layout/useAddWidget.ts. **Resolves:** AOD-103. **Blocked by:** RB-20."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-22",
+      "title": "Slot-based drag + live-snap resize (WYSIWYG)",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:layout",
+        "risk:medium"
+      ],
+      "description": "In Arrange, a held card lifts one grid step and a hairline slot opens; resize snaps LIVE to S/M/W/L so what you drag is what you get (today the bounds are continuous and the size class flips only on release = the felt snap). Reuse the pure geometry helpers, redefined discretely.\n\n**Refs:** claude-design/Vela - The sky fills in.pdf / Many Skies.pdf; layout/PlacedInstance.tsx. **Resolves:** AOD-98. **Blocked by:** RB-20."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-23",
+      "title": "Add per-widget delete-in-place",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:layout",
+        "area:app"
+      ],
+      "description": "Launch blocker: there is no per-widget delete anywhere today. Add deleteWidgetInstance to dashboardRepo (the RLS DELETE is already granted) + a useRemoveWidget hook; in Arrange the tile's own face becomes the question (Remove?), no modal; connections survive (they belong to the account).\n\n**Refs:** claude-design/Vela - Many Skies.pdf (delete-in-place); layout/PlacedInstance.tsx, layout/dashboardRepo.ts, supabase .../rls.sql. **Resolves:** AOD-104."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-24",
+      "title": "Build the Glance / Arrange mode dial",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:app",
+        "area:layout"
+      ],
+      "description": "Replace the long-press -> arranging + Done model with an explicit calm read-only Glance vs Arrange (edit) mode: ghosts + affordances only in Arrange, 'swipe never edits', auto-return to Glance. Uses the RB-11 label. This is the guard against accidental edits (the dogfood arrange pains).\n\n**Refs:** claude-design/Vela - The sky fills in.pdf / Many Skies.pdf; dashboard/Dashboard.tsx, layout/LayoutCanvas.tsx. **Blocked by:** RB-11."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-25",
+      "title": "Build the multi-dashboard (skies) data layer",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:tech-task",
+        "area:app",
+        "area:layout",
+        "risk:medium"
+      ],
+      "description": "The DB is already multi-ready (dashboards.position, no per-user unique) - this is client-only. loadDashboards (drop the .limit(1)); createDashboard / rename / reorder / deleteDashboard (+ the last-sky-empties-never-deletes rule); persist the active sky. Extend useDashboard -> useDashboards. No migration.\n\n**Refs:** claude-design/Vela - Many Skies.pdf; layout/dashboardRepo.ts, layout/useDashboard.ts, supabase .../core_tables.sql."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-26",
+      "title": "Paged sky pager in Glance (page dots, Pro gate on the 2nd sky)",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:app",
+        "area:billing"
+      ],
+      "description": "Horizontal paging between skies like iOS home screens + page dots. 1 free sky; additional = Pro (reads the entitlement gate - the existing maxDashboards today, refined by the 2-door model RB-38). 'Swipe never edits'.\n\n**Refs:** claude-design/Vela - Many Skies.pdf; dashboard/Dashboard.tsx. **Blocked by:** RB-25."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-27",
+      "title": "Page altitude in Arrange (sky thumbnails: reorder / label / delete / empty)",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:app",
+        "area:layout"
+      ],
+      "description": "The second altitude inside one Arrange session: grown page-dots / pinch-in -> whole skies as thumbnail tiles; reorder, optional label (nameless-but-labelable), delete-in-place (reuse RB-23's pattern) / empty, last-sky rule. Retire the DashboardsSwitcher modal into this.\n\n**Refs:** claude-design/Vela - Many Skies.pdf; dashboard/DashboardsSwitcher.tsx. **Blocked by:** RB-25, RB-23, RB-24."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-28",
+      "title": "Cross-sky card move (carry to the edge)",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "could",
+        "area:layout"
+      ],
+      "description": "Carry a held card to the screen edge and hold -> the next sky slides under the finger, so a card moves between skies without lifting.\n\n**Refs:** claude-design/Vela - Many Skies.pdf. **Blocked by:** RB-22, RB-26."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-29",
+      "title": "Build the Add-by-Seeing gallery (preview-first, on-your-sky)",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:app",
+        "area:layout",
+        "area:onboarding"
+      ],
+      "description": "Replace the plain WidgetPicker list with the preview-first gallery: see the card at real size AND previewed on the user's own sky before it lands; 'shelf under the sky' layout + a search field. Registry-driven (renders the widget's own renderer for preview - seam preserved). Uses the ghost state (RB-07).\n\n**Refs:** claude-design/Vela - Many Skies - v2.pdf (Add by Seeing); layout/WidgetPicker.tsx. **Blocked by:** RB-04, RB-05, RB-07."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-30",
+      "title": "Add the already-added state + size-by-seeing to the gallery",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:app"
+      ],
+      "description": "A per-widget already-added indicator (. ON THIS SKY / Add again) and a S/M/W/L selector that flips the tile + the on-sky preview together, landing as shown.\n\n**Refs:** claude-design/Vela - Many Skies - v2.pdf; layout/WidgetPicker.tsx. **Resolves:** AOD-102. **Blocked by:** RB-29."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-31",
+      "title": "Ghost-connect-in-place from the gallery (OAuth returns to the picker)",
+      "project": "Redesign Build",
+      "milestone": "RB-M3 The Sky surface",
+      "labels": [
+        "type:user-story",
+        "should",
+        "from:dogfood",
+        "area:app",
+        "area:integrations",
+        "risk:medium"
+      ],
+      "description": "An unconnected service sits in the gallery as the dim ghost it would be, with an honest price on its face (a sign-in / a key / just a location); connect out-and-back -> the tile lights -> Add appears; sizes wait until lit. Requires the vela://oauth deep-link to return to the ADD PICKER mid-add, not to Settings.\n\n**Refs:** claude-design/Vela - Many Skies - v2.pdf; layout/WidgetPicker.tsx, screens/OAuthDone.tsx. **Resolves:** AOD-96 (the connect path from a card). **Blocked by:** RB-29, RB-45."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-32",
+      "title": "Invert the auth gate to a no-session onboarding front door",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:tech-task",
+        "area:onboarding",
+        "area:auth"
+      ],
+      "description": "Today gate.ts routes no-session -> /sign-in before onboarding, so an account exists before onboarding runs. Invert it: onboarding is the no-session front door (Clock + Weather are local/keyless, no account needed). Rework resolveGateTarget + index.tsx + the (app) guard.\n\n**Refs:** claude-design/Vela - Raising the Sail.pdf; shell/gate.ts, app/index.tsx. Enables AOD-93."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-33",
+      "title": "Build the Raising-the-Sail cold open",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:onboarding",
+        "area:brand"
+      ],
+      "description": "The cold open: the gold-sail mascot + 'the one screen you leave on' value prop + Build your sky / Skip. Warm-but-calm copy, no hype. Mascot motion is build-time (not a Fable still).\n\n**Refs:** claude-design/Vela - Raising the Sail.pdf; onboarding/Onboarding.tsx. **Resolves:** AOD-93. **Blocked by:** RB-10, RB-32."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-34",
+      "title": "Build the deal-one-card-at-a-time onboarding engine",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:onboarding",
+        "risk:medium"
+      ],
+      "description": "Deal cards one service at a time with the board building below: Clock first (free, teaches the mechanic), Weather location-only, 'two cards, one cost' reveal; interactive / try-as-you-build; ends in the 'Your sky, lit.' reveal that hands off to the Glance surface (don't redesign it). Replaces the Stepper + the full ConnectionsList dump.\n\n**Refs:** claude-design/Vela - Raising the Sail.pdf; onboarding/Onboarding.tsx, onboarding/Stepper.tsx. **Resolves:** AOD-101 (partly). **Blocked by:** RB-33, RB-29, RB-31, RB-12, RB-14, RB-25."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-35",
+      "title": "Fold in lazy account creation at first server-side connect (+ Apple/Google)",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:onboarding",
+        "area:auth",
+        "area:backend",
+        "risk:medium"
+      ],
+      "description": "A Vela account is created lazily at the first server-side connect (a server-side card can't light without a session). Rework SignIn into an out-and-back handoff + add Apple/Google to AuthProvider (Supabase social providers). Define the interstitial if the user bails on account creation mid-connect. Email must stay a fallback (the Fire HD 8 has no Play services, so Google likely fails on the tablet).\n\n**Refs:** claude-design/Vela - Raising the Sail.pdf; screens/SignIn.tsx, auth/AuthProvider.tsx. **Resolves:** AOD-101 (partly). **Blocked by:** RB-32."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-36",
+      "title": "Skip seeds Clock + Weather (never an empty screen)",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:onboarding",
+        "area:layout"
+      ],
+      "description": "Skipping onboarding seeds the two free cards (Clock + Weather) instead of landing on an empty dashboard. Finalizes the RB-08 seed replacement.\n\n**Refs:** claude-design/Vela - Raising the Sail.pdf; onboarding/Onboarding.tsx, layout/dashboardRepo.ts. **Resolves:** part of AOD-93/AOD-94. **Blocked by:** RB-25, RB-08."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-37",
+      "title": "Wall first-run pairing code (companion-gated)",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "could",
+        "area:kiosk",
+        "area:onboarding",
+        "risk:high"
+      ],
+      "description": "First-time wall pairing: the phone drives, the wall shows a pairing code. NO pairing exists today (entry is same-install via Settings). Gated on the standalone-vs-companion-wall decision (see redesign-build-audit.md §3C); defer for v1 if the wall stays same-install.\n\n**Refs:** claude-design/Vela - Raising the Sail.pdf / Many Skies.pdf. **Blocked by:** RB-25."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-38",
+      "title": "Collapse Pro to the 2-door model in the shared Entitlements",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:tech-task",
+        "area:billing",
+        "area:backend",
+        "risk:high"
+      ],
+      "description": "Collapse Pro from six levers to exactly two doors: a 2nd sky (maxDashboards) + the wall (canUseKiosk). All services go free (maxConnectedServices unlimited); themes + premium packs + the refresh floor de-gate to free. Rewrite FREE/PRO + the Entitlements shape in supabase/functions/_shared/entitlements.ts - the SAME file the server enforces on, so coordinate with server enforcement (client-only change would diverge).\n\n**Refs:** claude-design/Vela - The Fare v2.pdf; supabase/functions/_shared/entitlements.ts, packages/shared/src/entitlements.ts. Blocks RB-39/40/50."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-39",
+      "title": "Add the paused entitlement state (free / pro / paused)",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:tech-task",
+        "area:billing",
+        "risk:medium"
+      ],
+      "description": "A third state: on lapse nothing is deleted. paused is a DERIVED signal (was-pro + now-free + >1 retained sky), not a RevenueCat id. Build the state model + the client resolver; STUB the signal - the real RC/webhook is AOD-77 (out of scope), so paused can't be verified end-to-end until then.\n\n**Refs:** claude-design/Vela - The Fare v2.pdf (§1f paused, not lost); entitlements/*. **Blocked by:** RB-38."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-40",
+      "title": "Rebuild the paywall as The Fare v2 (trial removed, contextual)",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:billing"
+      ],
+      "description": "Remove the 7-day trial everywhere (CTA, package subtitle, TRIAL_LEAD). Pro is bought outright: the CTA is the errand it finishes (Hang it on the wall / Make your second sky / Go Pro / Resume Pro); subtext price-only + 'cancel anytime - nothing you made is deleted'. Four contextual first-breaths (wall / second-sky / neutral See Pro / post-lapse) replace the 6-trigger map. Monthly default. The store does the money (App Store deep-links; Restore in-app). The sail earns one breath on the post-purchase Welcome to Pro only.\n\n**Refs:** claude-design/Vela - The Fare v2.pdf; paywall/Paywall.tsx, paywall/triggerLeads.ts. **Blocked by:** RB-38, RB-42."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-41",
+      "title": "Build the 'paused, not lost' post-lapse surface",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:billing",
+        "area:layout"
+      ],
+      "description": "On lapse: the front sky stays lit + free, extra skies + the wall are paused/kept exactly as left, the user drags in Arrange to choose which sky stays free, Resume Pro re-lights all. Paused skies stay swipeable-but-asleep with a pill.\n\n**Refs:** claude-design/Vela - The Fare v2.pdf §1f; entitlements/*, dashboard/*. **Blocked by:** RB-39, RB-25."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-42",
+      "title": "Build the live wall-miniature component for the paywall register",
+      "project": "Redesign Build",
+      "milestone": "RB-M4 Onboarding, paywall & entitlements",
+      "labels": [
+        "type:tech-task",
+        "area:billing",
+        "area:kiosk"
+      ],
+      "description": "The paywall register leads with a live wall miniature ticking with the real now ('one picture, zero adjectives'), the only pre-purchase taste of the wall. Reuse the KioskWall/WallPreview scale helper (wallFitScale).\n\n**Refs:** claude-design/Vela - The Fare v2.pdf (Take B); kiosk/WallPreview.tsx, kiosk/viewport.ts. **Blocked by:** RB-12, RB-20."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-43",
+      "title": "Collapse Settings + Account into the Below Deck one-room screen",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:app",
+        "area:auth",
+        "risk:medium"
+      ],
+      "description": "One quiet scrolling room, two shelves (Connections + Account), no tabs/tree. Collapse Settings.tsx + Account.tsx; retire the /settings/* nav-row tree (keep Themes + Kiosk entry reachable). The mascot is deliberately absent here. Verify the light-theme frame reads (lightTheme already exists).\n\n**Refs:** claude-design/Vela - Below Deck.pdf; screens/Settings.tsx, screens/Account.tsx, connections/ConnectionsList.tsx. **Blocked by:** RB-03, RB-11."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-44",
+      "title": "Add the pull-down + Arrange-row entry to Below Deck",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:app",
+        "risk:medium"
+      ],
+      "description": "Entry = a pull-down gesture + a page-altitude (Arrange) row (the wordmark-as-door was rejected). The broken card is a third door. Start the pull-down BELOW the top edge so it doesn't fight the OS notification shade (phone-only; the wall never shows Below Deck).\n\n**Refs:** claude-design/Vela - Below Deck.pdf; dashboard/*, shell/*. **Blocked by:** RB-43."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-45",
+      "title": "Wire the real in-session OAuth round-trip (expo-web-browser)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:tech-task",
+        "area:integrations",
+        "area:auth",
+        "risk:medium"
+      ],
+      "description": "Replace the fire-and-forget Linking.openURL (flagged in ConnectionRow) with openAuthSessionAsync so the OAuth round-trip captures in-session and can return to the caller (Settings, the add picker, or a card). New native dep -> EAS rebuild + Fire HD 8 re-verify.\n\n**Refs:** connections/connectionsApi.ts, connections/ConnectionRow.tsx, screens/OAuthDone.tsx. Unblocks RB-31, RB-46."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-46",
+      "title": "Reconnect-per-auth-kind that returns to the sky and relights all cards",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:app",
+        "area:integrations"
+      ],
+      "description": "Reconnect = the first-connect door re-run per auth kind: OAuth out-and-back / 'Check the key' / 'Allow location or name a city'. It returns to the SKY (not /settings) and relights all of that service's cards at once (the invalidate() seam already does the relight).\n\n**Refs:** claude-design/Vela - Below Deck.pdf; connections/affordance.ts, connections/useConnectionActions.ts. **Blocked by:** RB-45."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-47",
+      "title": "Rework the connection status legend (expired / error / stale / healthy)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:app"
+      ],
+      "description": "New status vocabulary: expired (needs your hand) / error (network, self-retries) / stale (self-resolves) / healthy (nothing shown). No green anything; trouble sorts to top. Source a connection-level stale signal (today staleness is per-widget only - derive from last-refresh age or add a status).\n\n**Refs:** claude-design/Vela - Below Deck.pdf; connections/{ConnectionsList,ConnectionRow,affordance}.ts(x), connections/connectionsRepo.ts."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-48",
+      "title": "Fix a broken card in place (a reconnect sheet on the card)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:app",
+        "area:layout"
+      ],
+      "description": "A broken/disconnected card fixes in place via a sheet mounted on the card (reusing the reconnect mechanics), so 'Connect X' is actually tappable. Wire the currently-unwired onReconnect at the dashboard (PlacedInstance only wires onReconfigure today).\n\n**Refs:** claude-design/Vela - Below Deck.pdf; layout/PlacedInstance.tsx, host/WidgetHostView.tsx. **Resolves:** AOD-96. **Blocked by:** RB-46."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-49",
+      "title": "Three removes, three weights (undo card / confirm disconnect / hold-to-delete account)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:app",
+        "area:auth",
+        "area:backend",
+        "risk:high"
+      ],
+      "description": "Three interaction weights: undo (remove a card), a confirm step on disconnect (today it's immediate -> cards ghost everywhere), and hold-to-delete-3s for the account -> setOnboarded(false) + signOut + clear MMKV/query cache + a backend account/data purge -> a fresh cold-start sky. NOTE: the account-delete backend is a no-op stub today (Account.tsx) and needs a purge Edge Function built. Provide an accessible alternative to the 3s hold.\n\n**Refs:** claude-design/Vela - Below Deck.pdf; screens/Account.tsx, connections/ConnectionRow.tsx. **Blocked by:** RB-46."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-50",
+      "title": "Add the Below Deck subscription shelf (Free featured / Pro variant)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:billing"
+      ],
+      "description": "The subscription shelf: Free featured (See Pro -> paywall) + a Pro variant (Renews/date). Manage/Cancel/Switch defer to the App Store (deep-links); Restore in-app. Point Account's 'Manage subscription' at the store, not the paywall; de-trial the upgrade entry.\n\n**Refs:** claude-design/Vela - Below Deck.pdf / The Fare v2.pdf; screens/Account.tsx, paywall/Paywall.tsx (Restore). **Blocked by:** RB-38, RB-43."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-51",
+      "title": "Give connections descriptions + icons (gallery and Below Deck)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "should",
+        "from:dogfood",
+        "area:app",
+        "area:onboarding"
+      ],
+      "description": "Each service explains what it is and what its cards show (a description + an icon), in the Add-by-Seeing gallery and the Below Deck connections shelf. Kills the plain unexplained list.\n\n**Refs:** claude-design/Vela - Below Deck.pdf / Many Skies - v2.pdf; connections/ConnectionsList.tsx, registry/types.ts (ServiceDefinition). **Resolves:** AOD-99. **Blocked by:** RB-29, RB-43."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-52",
+      "title": "Fix the keyboard covering the connect input",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "must",
+        "from:dogfood",
+        "area:app"
+      ],
+      "description": "The credential/location connect sheet hides the input + its Save behind the Android soft keyboard (landscape tablet). Add KeyboardAvoidingView / keyboard-aware behavior so the field and controls stay visible. A straight engineering fix folded in with the connect-sheet rework.\n\n**Refs:** connections/CredentialSheet.tsx, connections/CredentialForm.tsx. **Resolves:** AOD-100."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-53",
+      "title": "Build the app-level edge states (Holding Course, phone)",
+      "project": "Redesign Build",
+      "milestone": "RB-M5 Account, connections & edges",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:app",
+        "risk:medium"
+      ],
+      "description": "The mark sits at the scope of the cause: a thin amber sky-line for offline ('holding your last picture', last-known kept + honestly aged, heals with one accent breath, no toast), a red sky-line for Vela-unreachable ('our side, not yours . retrying'), a card badge for one service - never both ('nearer fault wins'). Cache-first cold launch (skeleton-not-spinner only on a truly-fresh device; the persister already rehydrates). The empty sky = 'A clear sky . Tend this sky'.\n\n**Refs:** claude-design/Vela - Holding Course.pdf; host/ProxyDataSource.ts, dashboard/Dashboard.tsx, app/_layout.tsx. **Blocked by:** RB-09."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-54",
+      "title": "Verify the redesigned card faces at wall scale",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:tech-task",
+        "area:kiosk"
+      ],
+      "description": "The wall composes the same LayoutCanvas -> WidgetHost chain, so the new faces land for free - but verify them at auto-fit wall scale on the Fire HD 8, and re-check layoutBounds (larger faces may change the fit). Confirm the full-wall composite reads calm+alive, not a cold monitor.\n\n**Refs:** kiosk/KioskWall.tsx, kiosk/viewport.ts. **Blocked by:** RB-12, RB-14, RB-16, RB-17, RB-18."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-55",
+      "title": "Rework the wall night color law + the Weather pane",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:kiosk",
+        "area:design-system",
+        "risk:high"
+      ],
+      "description": "Replace today's uniform-black dim overlay + single-ember-opt-out model with role-bound near-black cards + a Weather-only deep-indigo pane at night + the Clock as the only saturated ember. Keep WallPreview pixel-honest with this. Device-verify the pane for banding on the tablet panel.\n\n**Refs:** claude-design/Vela - Made Fast.pdf / kiosk-wall design; host/WidgetHostView.tsx (night model), kiosk/KioskWall.tsx, kiosk/WallPreview.tsx. **Blocked by:** RB-03, RB-14."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-56",
+      "title": "Lengthen the ember ramp to ~3h (decouple from dim/backlight if needed)",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:tech-task",
+        "area:kiosk"
+      ],
+      "description": "The Clock dusk->ember ramp should run ~3h and gentle ('a shade a minute') vs the current 60-min transition. Caveat: transitionMinutes drives dim + backlight + ember together off one curve, so a gentle ember may need the ambient signal decoupled or enriched. Update ambient.test.ts.\n\n**Refs:** kiosk/ambient.ts (transitionMinutes), ambient/AmbientContext.tsx. **Blocked by:** RB-12."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-57",
+      "title": "Build the multi-sky wall cycle (opt-in, off by default)",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:kiosk"
+      ],
+      "description": "An opt-in slow cycle, off by default: dwell 5 / 15 / 60 min, ~800ms cross-dissolve, skips empty skies. The wall hangs one sky by default; enumerate dashboards and mount by id (the dashboardId seam is already accepted-but-ignored).\n\n**Refs:** claude-design/Vela - Many Skies.pdf; kiosk/KioskWall.tsx. **Blocked by:** RB-25."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-58",
+      "title": "Add the 'which sky . Tend from your phone' 1s-hold",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:user-story",
+        "should",
+        "area:kiosk"
+      ],
+      "description": "A 1-second hold shows a transient 'which sky . Tend from your phone' overlay; the wall stays glance-only (no editing). Must be disambiguated from the existing 2s corner exit-hold (location vs duration).\n\n**Refs:** claude-design/Vela - Many Skies.pdf; kiosk/ExitAffordance.tsx, kiosk/exitFlow.ts. **Blocked by:** RB-57."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-59",
+      "title": "Rework the wall edges to Holding Course (never alarm)",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:user-story",
+        "must",
+        "area:kiosk",
+        "risk:medium"
+      ],
+      "description": "THE WALL NEVER ALARMS. Remove the three hard splash branches (loading/error/empty); a wall-scoped host variant suppresses the below-deck Retry/Connect/Reconfigure prompts and dims-and-keeps-last-value on a broken card; an empty sky falls back to the Clock (never dark/setup); a 1s-hold whisper pill 'X needs a sign-in | Tend from your phone' is the only fault signal.\n\n**Refs:** claude-design/Vela - Holding Course.pdf; kiosk/KioskWall.tsx, host/WidgetHostView.tsx. **Blocked by:** RB-03, RB-12, RB-09."
+    },
+    {
+      "op": "create-issue",
+      "key": "RB-60",
+      "title": "OLED burn-in pixel-shift study",
+      "project": "Redesign Build",
+      "milestone": "RB-M6 Kiosk wall",
+      "labels": [
+        "type:user-story",
+        "could",
+        "area:kiosk",
+        "risk:medium"
+      ],
+      "description": "Meridian's Clock figure is static, so an OLED wall is at burn-in risk. Spike a slow sub-pixel drift and measure on real OLED hardware. Only bites on OLED - the current dogfood Fire HD 8 is LCD - so prioritize with the standalone-wall decision.\n\n**Refs:** claude-design/Vela - The Watch.pdf; kiosk/KioskWall.tsx. **Blocked by:** RB-12."
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-01",
+      "blockedBy": [
+        "RB-02"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-03",
+      "blockedBy": [
+        "RB-02",
+        "RB-01"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-05",
+      "blockedBy": [
+        "RB-04"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-12",
+      "blockedBy": [
+        "RB-03",
+        "RB-04",
+        "RB-05",
+        "RB-06"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-14",
+      "blockedBy": [
+        "RB-13",
+        "RB-03",
+        "RB-04",
+        "RB-05"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-15",
+      "blockedBy": [
+        "RB-03",
+        "RB-04",
+        "RB-05"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-16",
+      "blockedBy": [
+        "RB-03",
+        "RB-04",
+        "RB-05"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-17",
+      "blockedBy": [
+        "RB-03",
+        "RB-04",
+        "RB-05"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-18",
+      "blockedBy": [
+        "RB-03",
+        "RB-04",
+        "RB-05",
+        "RB-06"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-19",
+      "blockedBy": [
+        "RB-03"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-20",
+      "blockedBy": [
+        "RB-04"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-21",
+      "blockedBy": [
+        "RB-20"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-22",
+      "blockedBy": [
+        "RB-20"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-24",
+      "blockedBy": [
+        "RB-11"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-26",
+      "blockedBy": [
+        "RB-25"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-27",
+      "blockedBy": [
+        "RB-25",
+        "RB-23",
+        "RB-24"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-28",
+      "blockedBy": [
+        "RB-22",
+        "RB-26"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-29",
+      "blockedBy": [
+        "RB-04",
+        "RB-05",
+        "RB-07"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-30",
+      "blockedBy": [
+        "RB-29"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-31",
+      "blockedBy": [
+        "RB-29",
+        "RB-45"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-33",
+      "blockedBy": [
+        "RB-10",
+        "RB-32"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-34",
+      "blockedBy": [
+        "RB-33",
+        "RB-29",
+        "RB-31",
+        "RB-12",
+        "RB-14",
+        "RB-25"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-35",
+      "blockedBy": [
+        "RB-32"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-36",
+      "blockedBy": [
+        "RB-25",
+        "RB-08"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-37",
+      "blockedBy": [
+        "RB-25"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-39",
+      "blockedBy": [
+        "RB-38"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-40",
+      "blockedBy": [
+        "RB-38",
+        "RB-42"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-41",
+      "blockedBy": [
+        "RB-39",
+        "RB-25"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-42",
+      "blockedBy": [
+        "RB-12",
+        "RB-20"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-43",
+      "blockedBy": [
+        "RB-03",
+        "RB-11"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-44",
+      "blockedBy": [
+        "RB-43"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-46",
+      "blockedBy": [
+        "RB-45"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-48",
+      "blockedBy": [
+        "RB-46"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-49",
+      "blockedBy": [
+        "RB-46"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-50",
+      "blockedBy": [
+        "RB-38",
+        "RB-43"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-51",
+      "blockedBy": [
+        "RB-29",
+        "RB-43"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-53",
+      "blockedBy": [
+        "RB-09"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-54",
+      "blockedBy": [
+        "RB-12",
+        "RB-14",
+        "RB-16",
+        "RB-17",
+        "RB-18"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-55",
+      "blockedBy": [
+        "RB-03",
+        "RB-14"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-56",
+      "blockedBy": [
+        "RB-12"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-57",
+      "blockedBy": [
+        "RB-25"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-58",
+      "blockedBy": [
+        "RB-57"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-59",
+      "blockedBy": [
+        "RB-03",
+        "RB-12",
+        "RB-09"
+      ]
+    },
+    {
+      "op": "set-dependencies",
+      "id": "RB-60",
+      "blockedBy": [
+        "RB-12"
+      ]
+    }
+  ]
+}
