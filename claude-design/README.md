@@ -68,6 +68,7 @@ service's real **data palette** (from code, not the old pre-pivot mockups); prom
 | **Clock** | `Vela - The Watch.pdf` | 2026-07-11 | Four faces + the ember ramp + the ghost + a live card. **Meridian** (the figure, alone: centered, no chrome). **Waterline** (a 1px hairline = the whole day, a 4px mark = now placed on it; zero accent). **Bell** (time as words rounded to 5 min, exact figure beneath). **Beacon** (figure fills the long axis, 24h, minutes a tint behind hours). Thesis: *"everything on the face is the time, or it isn't there."* Fable's pick: Waterline. | **V1 = Meridian** (Xavier, 2026-07-11). Waterline's day-line is a nice-to-have, **deferred** to a future version. Bell / Beacon out of V1 (Beacon a possible future wall night-posture). **Caption-less Clock adopted** — the one card with no `SERVICE · WIDGET` header ("a clock is self-evident"); a second clock wears its place as its only label. |
 | **Weather** | `Vela - Weather Eye.pdf` | 2026-07-11 | Two cards (Current + Forecast), four directions for Current. **Abeam** (glyph + figure side by side). **Transit** (the sunrise→sunset arc carrying the sun's live position). **The Log** (no glyph, a number ledger — self-defeating). **Figurehead** (the glyph huge as a landmark). Forecast: a **List** and a **Range** (hi-lo as span-bars) take. One honest motion each. Fable's pick: Transit. | **V1 = Transit** (Xavier, 2026-07-11): Current leads with the arc (curve at Large, flat waterline at Wide/Medium, absent at Small); **Forecast = the Range take**. The Log and Figurehead rejected (Figurehead inverts the Clock-as-hero hierarchy, "the wrong king"). **Caption = `SERVICE · PLACE`** (`WEATHER · QUITO`, not "Current"). Sizes: Current all four (S/M/W/L), Forecast W/L. The "arc rhymes with the Clock's Waterline" argument is **void in V1** (Clock is Meridian); the arc stands on its own. |
 | **Linear** | `Vela - The Manifest.pdf` | 2026-07-12 | Two cards. My Issues, four directions: **Muster** (count + roll call), **The Heading** (the one issue to pull next), **Stowage** (dense ledger), **Soundings** (count + a priority-mark silhouette, sorted heavy→light). Current Cycle, two takes: **Dead Reckoning** (smooth ring) and **The Log Line** (21-knot segmented ring). Unifying idea: "discrete work drawn as discrete marks." Fable's pick: Soundings + The Log Line. | **V1 = Soundings + The Log Line** (Xavier, 2026-07-12): My Issues = count + priority silhouette (reads at distance, "how many and how heavy"); Current Cycle = the 21-knot ring, **device-verify the knots on the Fire HD 8** — the smooth Dead Reckoning ring is the low-DPI fallback if they shimmer. Muster = free fallback, The Heading = future focus mode, Stowage = the phone's dense option. Caption = `LINEAR · PROJECT` / `LINEAR · TEAM` (needs_config reverts to the widget name). Priority is shape, never hue; My Issues fully monochrome, the one accent lives in the cycle ring. |
+| **Calendar** | `Vela - Ship's Bells.pdf` (V1) · `Vela - Ship's Bells-V2.pdf` (V2, committed) | 2026-07-12 | Two cards (Next Event + Today's Agenda). V1 argued both ways: **Dead Reckoning** (fully bone) vs **Landfall** (the next event's "when" warms only in its last hour) — Fable picked Landfall + a late ramp, so bone most of the day. Xavier wanted color, so V2 **"Dressed Overall"** widened it. | **V1 = Dressed Overall** (widened Landfall, Xavier 2026-07-12): every event's time wears its distance on the `--when-*` ladder (dawn `#7FA3D9` far → balmy `#DC9853` at Now) — the thermometer read as time, capped at balmy so Calendar warmth is never trouble. Colorful all day incl. the 08:00 morning; the imminent event still pops warmest. **"One freeze, three postures"** (Dead Reckoning / Landfall / Dressed Overall via config). Caption = `CALENDAR · <calendar>`; never a pane. Device-verify the cool stops stay distinct at 13px on the Fire HD 8. |
 
 **Build deltas the Clock (Meridian) carries into code:** no service header at *any* size (code today hides it
 only at small, `hideHeaderAtSizes: ['small']`); the dusk→ember ramp runs ~3 h and gentle ("a shade a minute",
@@ -102,7 +103,9 @@ identifier, not a fixed `SERVICE · WIDGET` — **none** (Clock, self-evident), 
 `WEATHER · QUITO`), **the project / team** (Linear). The widget system needs a per-widget caption strategy
 (hidden / place / custom / widget-name-fallback), not one rule.
 
-## Palette — warming the system (2026-07-12)
+## Palette — warming the system (2026-07-12) · SUPERSEDED
+
+> **Superseded by the data-hue color law** (see the Color section below and [`docs/specs/design-color-law.md`](../docs/specs/design-color-law.md)). This "warm the neutrals" plan was explored openly, then replaced by the bolder 1C data-hue direction. Kept for the trail.
 
 After three monochrome faces, Xavier flagged that the cards read too single-color and cold. **Decision: warm
 the system, do not rainbow the cards.** Per-service accent colors would break the one-sky coherence and the
@@ -115,6 +118,17 @@ cold near-black `#0B0B0F`) while the **brand is warm** (the gold sail `#E2A94E`,
 already chosen (Meridian figure, Transit arc, Soundings silhouette) are **color-temperature-independent**, so
 warming costs nothing on work done — the finished directions just re-render warm. Do the palette pass **before
 Calendar and Claude usage** so the last two design in the final palette, and retrofit the three done.
+
+## Color — the data-hue law (2026-07-12)
+
+The "warming" plan above was replaced by a bolder, more ownable direction: **color encodes meaning, drawn from real data, never decoration.** Full rules and the conscious revisions in [`docs/specs/design-color-law.md`](../docs/specs/design-color-law.md).
+
+| PDF | Date | What it is |
+|-----|------|------------|
+| `Vela - Colors.pdf` | 2026-07-12 | The **open color exploration** on the Weather cards, four directions subtle→loud: **A Lamplight** (warm the neutral tokens), **B The Sky's Hour** (five time-of-day light stops), **C Running Lights** (figures wear data-hues: a temperature thermometer, rain teal, sun gold, storm violet, moon pale), **D Sailor's Delight** (the Weather card becomes a flat condition pane). Fable's own pick was 1e (B + C's thermometer). |
+| `Vela - Made Fast.pdf` | 2026-07-12 | The **color freeze.** Xavier chose **1C (Running Lights) + a muted 1D pane on Weather**: figures wear the data's hue, the Weather background is a deep muted pane of the current sky, everything else stays dark. Freezes three token families for `unistyles.ts` — `--temp-*` (8 thermometer stops, `#7FA3D9` cold → `#D65A3C` ember), `--ink-*` (5 event inks: rain / sun / moon / storm / bone), `--pane-*` (12 condition panes). Four laws: pane owns the condition, figures own the readings, ≤3 hues/card, hue never the only carrier. Warm-on-warm solved by pinned lightness. Generalizes to Claude (spend on the thermometer) and Linear (warms only on a breach). |
+
+**The law is a theme axis:** **Signature** (this, the default) / **Monochrome** (the roles collapse to bone; today's build) / a future **Per-service** theme — built against color *roles* so a theme is a token remap, not a redesign. Calendar's imminence ladder (`--when-*`) is the same thermometer read as time. Prompts in [`prompts/`](prompts/): `weather-color.md`, `calendar.md`.
 
 ## Re-rendering a PDF for analysis
 
