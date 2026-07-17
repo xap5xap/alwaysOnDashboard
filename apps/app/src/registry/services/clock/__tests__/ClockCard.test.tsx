@@ -14,6 +14,7 @@ import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../hos
 import { RegistryProvider } from '../../../RegistryProvider';
 import type { WidgetInstance } from '../../../types';
 import { validateConfig } from '../../../../widgets/config';
+import { tabularWidth } from '../../../../widgets/fitLadder';
 
 jest.mock('../../../../connections/useConnections', () => ({
   useConnections: () => ({ connections: new Map(), isLoading: false, isError: false, error: null }),
@@ -174,6 +175,28 @@ describe('ClockCard face across sizes (AOD-37 §8.2-§8.4 over the AOD-122 S/W/L
     render(<ClockCard data={undefined} config={cfg()} size="L" />);
     expect(screen.getByTestId('clock-time')).toBeTruthy();
     expect(screen.getByTestId('clock-date')).toBeTruthy();
+  });
+});
+
+describe('ClockCard width-fit: the time never clips (AOD-95/97)', () => {
+  /** The fitted font size the time rendered at. */
+  const timeSize = () => screen.getByTestId('clock-time').props.style.fontSize as number;
+
+  it('AOD-95: at S a seconds time scales BELOW its 34px step so "HH:MM:SS" fits the 72px width', () => {
+    // Direct render -> the S fallback box is 72x72 (header suppressed). clockSize.small is 34; the full
+    // "18:45:30" is ~150px at 34px, so the width-fit must scale it down. Before the fix it hard-clipped.
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: true, showDate: false, timezone: 'UTC' }} size="S" />);
+    expect(timeSize()).toBeLessThan(34); // scaled down to fit the narrow cell
+    expect(timeSize()).toBeGreaterThan(0);
+  });
+
+  it('AOD-97: at L the time fits the cell WIDTH rather than overflowing it at the 96px step', () => {
+    // The clockSize steps are sized for the wall; a 96px "14:05" is ~270px, far wider than the 168px L
+    // body, so the old fixed step overflowed/clipped. The width-fit scales it to fit the width — no clip.
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: false, timezone: 'UTC' }} size="L" />);
+    const size = timeSize();
+    expect(size).toBeLessThanOrEqual(96);
+    expect(tabularWidth('14:05', size)).toBeLessThanOrEqual(168 + 0.001); // fits the L body width
   });
 });
 

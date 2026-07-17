@@ -16,6 +16,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { CurrentWeatherData, WeatherCondition } from './types';
 import { WeatherIcon } from './WeatherIcon';
+import { FitBody } from '../../../widgets/FitBody';
+import { tabularWidth } from '../../../widgets/fitLadder';
 
 const FALLBACK_CONDITION: WeatherCondition = { code: -1, label: 'Unknown', group: 'cloudy', isDay: true };
 
@@ -46,7 +48,7 @@ function compass(deg: number): string {
   return COMPASS[Math.round((((deg % 360) + 360) % 360) / 45) % 8] ?? 'N';
 }
 
-export function CurrentWeatherCard({ data, size }: WidgetRenderProps) {
+export function CurrentWeatherCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const c = asCurrent(data);
   const unit = c.units.temperature;
@@ -65,26 +67,49 @@ export function CurrentWeatherCard({ data, size }: WidgetRenderProps) {
     />
   );
 
-  const temp = (
-    <Text style={styles.temp} testID="weather-current-temp">
-      {Math.round(c.temperature)}
-      {unit}
-    </Text>
-  );
+  const tempText = `${Math.round(c.temperature)}${unit}`;
 
-  // S (1x1): the self-evident glance is just icon over temperature (the host suppresses the header
-  // at S). No condition label, no meta.
+  // S (1x1): the self-evident glance is icon over temperature (the host suppresses the header at S).
+  // AOD-123: the fixed hero temp overflowed the 72px cell (e.g. "18°C" is ~110px at 44px, and icon+temp
+  // was ~91px tall in a 72px body). The shared FitBody holds the icon as a lead and WIDTH-FITS the temp
+  // into the space left, so the glance never clips either axis. No condition label, no meta (§4.1).
   if (isSmall) {
+    const heroSize = theme.type.hero.fontSize ?? 44;
     return (
-      <View style={styles.small} accessibilityRole="summary" testID="weather-current">
-        {icon}
-        {temp}
-      </View>
+      <FitBody
+        size={size}
+        box={box}
+        headerShown={false}
+        glance
+        lead={{ key: 'icon', role: 'display', node: icon, height: theme.weatherIcon.currentSmall }}
+        value={{
+          key: 'temp',
+          baseSize: heroSize,
+          intrinsicWidth: tabularWidth(tempText, heroSize),
+          render: (fontSize) => (
+            <Text style={[styles.temp, { fontSize }]} testID="weather-current-temp">
+              {tempText}
+            </Text>
+          ),
+        }}
+        gap={theme.spacing(1)}
+        testID="weather-current"
+        accessibilityRole="summary"
+      />
     );
   }
 
+  const temp = (
+    <Text style={styles.temp} testID="weather-current-temp">
+      {tempText}
+    </Text>
+  );
+
   // W (2x1, and any other coerced slot): temperature + icon on the value row, the accent condition
-  // line, then the muted meta.
+  // line, then the muted meta. NOTE (AOD-123 audit): W keeps this row renderer; its temp+icon row fills
+  // the 1-unit (48px) body, so the condition + meta below can still clip. A wide-short W that seats all
+  // four elements needs a horizontal reflow (temp+icon left, condition/meta right) — an M4 face decision,
+  // not a fit-mechanism one (flagged in the report). The smallest supported size (S) is fixed above.
   return (
     <View style={styles.body} accessibilityRole="summary" testID="weather-current">
       <View style={styles.heroRow}>

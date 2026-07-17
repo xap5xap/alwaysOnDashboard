@@ -11,21 +11,19 @@
 // perDay = amount / daysElapsed, derived here with no extra request (§5.2). The leaf's old hand-drawn
 // "Claude Spend (MTD)" label is gone: the host owns the quiet SERVICE · WIDGET caption (§4).
 //
-// AOD-123: this is the REFERENCE migration onto the shared FitBody (fit-to-bounds, value-at-step,
-// truncate-then-drop). The amount is the held VALUE (type.xl, never dropped); the run-rate is the one
-// secondary DETAIL line. The leaf no longer branches the run-rate on `isSmall` (the old per-size clip) —
-// it always declares it and FitBody drops it when it does not fit the host-passed box HEIGHT. On the two
-// slots Spend MTD supports (S 1x1 and W 2x1, both one unit tall ~= a 48px body) a type.xl value already
-// fills the height, so the run-rate SHEDS rather than clipping under the card — the AOD-95/97 fix. It
-// reappears automatically on any taller slot the widget may gain. VISUAL JUDGMENT (flagged, AOD-123 #5):
-// dropping the run-rate leaves the wide-short W value-only; a face that instead reflows the run-rate
-// BESIDE the value to use W's width is an M4 decision, not a fit-mechanism one.
+// AOD-123 (attempt 2): migrated onto the shared FitBody. The amount is the WIDTH-FIT value: the money
+// typography at its type.xl step when it fits, scaled down by min(widthScale, heightScale) otherwise, so a
+// long "$1,234.56" never clips the narrow S cell (the AOD-95 class of bug — the S money was ~110px in a
+// 72px cell). The run-rate is the one secondary DETAIL line, eligible above S (the S 1x1 stays the minimal
+// glance, §5); at the wide-short W the VALUE YIELDS height so the run-rate is KEPT with a smaller amount
+// rather than dropped (the anti-regression rule). A taller slot shows a larger amount + the run-rate.
 import React from 'react';
 import { Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { SpendMtdData } from './types';
-import { FitBody, type FitLine } from '../../../widgets/FitBody';
+import { FitBody, type FitLine, type FitValue } from '../../../widgets/FitBody';
+import { tabularWidth } from '../../../widgets/fitLadder';
 import { MoneyValue, formatPlainMoney } from './MoneyValue';
 
 /** Defensive read: a renderer must never crash on a partial payload (the host shows an empty card). */
@@ -43,19 +41,24 @@ function asSpendMtd(data: unknown): SpendMtdData {
 export function SpendMtdCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const d = asSpendMtd(data);
+  const isSmall = size === 'S';
   // A run-rate the renderer derives from amount + daysElapsed with no extra request (§5.2); a literal
   // prior-month delta / projection are named future seams (§10). Suppressed before any day is covered.
   const perDay = d.daysElapsed > 0 ? d.amount / d.daysElapsed : null;
 
-  // The held value: the MTD total in the §5.1 cents-precision money typography (type.xl, $0.00 included).
-  const value: FitLine = {
+  // The width-fit value: the MTD total in the §5.1 cents-precision money typography. baseSize is type.xl;
+  // intrinsicWidth over-estimates the full string at that step (MoneyValue draws the $ and cents reduced,
+  // so this is conservative) so the money never clips a narrow cell.
+  const baseSize = theme.type.xl.fontSize ?? 40;
+  const value: FitValue = {
     key: 'amount',
-    role: 'xl',
-    node: (
+    baseSize,
+    intrinsicWidth: tabularWidth(formatPlainMoney(d.amount, d.currency), baseSize),
+    render: (fontSize) => (
       <MoneyValue
         amount={d.amount}
         currency={d.currency}
-        dollarsSize={theme.type.xl.fontSize ?? 40}
+        dollarsSize={fontSize}
         dollarsWeight={theme.type.xl.fontWeight}
         dollarsColor={theme.colors.text}
         centsColor={theme.colors.textMuted}
@@ -64,10 +67,11 @@ export function SpendMtdCard({ data, size, box }: WidgetRenderProps) {
     ),
   };
 
-  // The one detail line: the run-rate ($/day bright, the rest muted). Declared unconditionally; FitBody
-  // truncates it to width then drops it when the box is too short (§7-8), so no per-size branch here.
+  // The one detail line: the run-rate ($/day bright, the rest muted). Eligible above S (the 1x1 stays the
+  // minimal glance, §5); FitBody keeps it wherever it fits (the value yields height), only truncating /
+  // dropping it when the box genuinely cannot seat it.
   const detail: FitLine[] =
-    perDay != null
+    !isSmall && perDay != null
       ? [
           {
             key: 'runrate',

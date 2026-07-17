@@ -124,19 +124,20 @@ describe('admin_key host params (integration-claude.md §6.3): the host else-bra
 });
 
 describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
-  // AOD-123: Spend MTD migrated onto the shared FitBody. Both the slots it ships (S 1x1, W 2x1) are one
-  // unit tall (~48px body), where the type.xl value already fills the height, so the run-rate SHEDS rather
-  // than clipping under the card — the AOD-95/97 fix (was: the run-rate was in the tree but chopped by the
-  // card's overflow:hidden). The run-rate's content is covered by the tall-box render below; it reappears
-  // automatically on any taller slot the widget gains.
-  it('at W renders the MTD amount; the run-rate sheds on the 1-unit body (AOD-123 fit-to-bounds)', async () => {
+  // AOD-123 (attempt 2): Spend MTD migrated onto the shared FitBody. The amount width-fits (never clips a
+  // narrow cell), and at the wide-short W the value YIELDS height so the run-rate is KEPT (a smaller amount,
+  // not a dropped line). S stays the minimal 1x1 glance (amount only, §5). Nothing clips.
+  it('at W renders the MTD amount + the emphasised run-rate (the value yields so detail is kept)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
-    expect(screen.queryByTestId('claude-spend-mtd-runrate')).toBeNull();
+    // one run-rate line: the $/day value + the day count (§5.2), kept at W (not clipped, not dropped)
+    const runRate = screen.getByTestId('claude-spend-mtd-runrate');
+    expect(runRate).toHaveTextContent(/\$2\.00\/day avg/); // 4 / 2 days
+    expect(runRate).toHaveTextContent(/2 days this month/);
   });
 
   it('at S renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
@@ -148,14 +149,13 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
     expect(screen.queryByTestId('claude-spend-mtd-runrate')).toBeNull();
   });
 
-  it('seats the run-rate when the box has the HEIGHT for it (§5.2 content preserved through the migration)', () => {
-    // A direct render with a 2-unit-tall box: the run-rate line is declared unconditionally, so FitBody
-    // seats it (with its $/day + day-count content) whenever there is vertical room — proving the migration
-    // did not drop the §5.2 feature, only its seat on the too-short 1-unit slots.
-    render(<SpendMtdCard data={SPEND_MTD_DATA} config={{}} size="W" box={{ width: 168, height: 144 }} />);
-    const runRate = screen.getByTestId('claude-spend-mtd-runrate');
-    expect(runRate).toHaveTextContent(/\$2\.00\/day avg/); // 4 / 2 days
-    expect(runRate).toHaveTextContent(/2 days this month/);
+  it('width-fits a long amount so it never clips the narrow S cell (AOD-95 class)', () => {
+    // "$1,234.56" at type.xl (40px) is ~110px, wider than the 72px S body — before the fit it clipped. The
+    // width-fit renders the money at a smaller font so the whole figure shows.
+    const big: SpendMtdData = { amount: 1234.56, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-10', daysElapsed: 10 };
+    render(<SpendMtdCard data={big} config={{}} size="S" box={{ width: 72, height: 48 }} />);
+    // The whole figure renders (nothing clipped to "$1,23…"): the width-fit chose a smaller font instead.
+    expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$1,234.56');
   });
 
   it('renders a zero-spend org as the $0.00 hero (a valid figure, NOT the empty body, §5.3)', async () => {
@@ -165,7 +165,8 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$0.00');
-    // $0.00 is the hero (a valid figure), NOT routed through the calm empty body Daily Spend uses.
+    // $0.00 is the hero with its run-rate (a valid figure), NOT the calm empty body Daily Spend uses.
+    expect(screen.getByTestId('claude-spend-mtd-runrate')).toHaveTextContent(/\$0\.00\/day avg/);
     expect(screen.queryByTestId('widget-empty-body')).toBeNull();
   });
 });
