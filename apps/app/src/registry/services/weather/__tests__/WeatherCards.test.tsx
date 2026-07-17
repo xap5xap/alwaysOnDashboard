@@ -31,7 +31,7 @@ const currentInstance: WidgetInstance = {
   serviceId: 'weather',
   widgetType: 'current',
   config: {}, // zero-config: the location lives on the connection (§5.1)
-  size: 'small',
+  size: 'S', // AOD-122 slot id (was 'small')
   rect: { x: 0, y: 0, w: 1, h: 1, z: 0 },
 };
 
@@ -40,8 +40,8 @@ const forecastInstance: WidgetInstance = {
   serviceId: 'weather',
   widgetType: 'forecast',
   config: {},
-  size: 'wide',
-  rect: { x: 0, y: 0, w: 3, h: 1, z: 0 },
+  size: 'W', // AOD-122: the banner slot (was the retired wide 3x1; W is 2x1)
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
 const CURRENT_DATA: CurrentWeatherData = {
@@ -112,7 +112,7 @@ describe('platform_key host params-seeding (integration-weather.md §6.3)', () =
       serviceId: 'google_calendar',
       widgetType: 'next_event',
       config: { calendarId: 'me@example.com' },
-      size: 'small',
+      size: 'S',
       rect: { x: 0, y: 0, w: 1, h: 1, z: 0 },
     };
     const source: WidgetDataSource = {
@@ -130,9 +130,9 @@ describe('platform_key host params-seeding (integration-weather.md §6.3)', () =
   });
 });
 
-const mediumCurrentInstance: WidgetInstance = {
+const wCurrentInstance: WidgetInstance = {
   ...currentInstance,
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
@@ -144,9 +144,9 @@ function currentSource(data: CurrentWeatherData): WidgetDataSource {
 }
 
 describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
-  it('at small renders the temperature + the day-form condition icon, header/meta suppressed (the glance)', async () => {
+  it('at S renders the temperature + the day-form condition icon, header/meta suppressed (the glance)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    renderHost(currentSource(CURRENT_DATA), currentInstance); // small
+    renderHost(currentSource(CURRENT_DATA), currentInstance); // S
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
@@ -158,9 +158,9 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     expect(screen.queryByTestId('weather-current-meta')).toBeNull();
   });
 
-  it('at medium adds the accent condition and the muted feels/humidity/wind meta line', async () => {
+  it('at W adds the accent condition and the muted feels/humidity/wind meta line', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    renderHost(currentSource(CURRENT_DATA), mediumCurrentInstance);
+    renderHost(currentSource(CURRENT_DATA), wCurrentInstance);
 
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
     expect(screen.getByText('Partly cloudy')).toBeTruthy();
@@ -184,7 +184,7 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
 
 const largeForecastInstance: WidgetInstance = {
   ...forecastInstance,
-  size: 'large',
+  size: 'L', // AOD-122 slot id (was 'large'; same 2x2 rect)
   rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
 };
 
@@ -196,21 +196,21 @@ function forecastSource(data: ForecastData): WidgetDataSource {
 }
 
 describe('ForecastCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
-  it('at wide is a banner strip: Today, the day-form per-day icon, and the accent precip (no label)', async () => {
+  it('at W is a banner strip: Today, the day-form per-day icon, and the accent precip (no label)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // wide
+    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // W (the banner slot since AOD-122)
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
     expect(screen.getByText('Today')).toBeTruthy();
     // forecast days always use the day form (§4.2), even for showers/cloudy which swap at Current
     expect(screen.getByTestId('weather-icon-drizzle-day')).toBeTruthy();
     expect(screen.getByTestId('weather-icon-showers-day')).toBeTruthy();
-    // precip is its own accent element at wide; the condition label is carried by the icon, not text
+    // precip is its own accent element at W; the condition label is carried by the icon, not text
     expect(screen.getByText('16%')).toBeTruthy();
     expect(screen.queryByText(/Light drizzle/)).toBeNull();
   });
 
-  it('at large is a row list with the condition label + appended precip', async () => {
+  it('at L is a row list with the condition label + appended precip', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(forecastSource(FORECAST_DATA), largeForecastInstance);
 
@@ -220,7 +220,7 @@ describe('ForecastCard through the host lifecycle (AOD-58 + AOD-35 polish)', () 
     expect(screen.getByText('Slight rain showers · 4%')).toBeTruthy();
   });
 
-  it('omits precip entirely when the payload value is null (wide)', async () => {
+  it('omits precip entirely when the payload value is null (W)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     const noPrecip: ForecastData = {
       units: { temperature: '°C' },

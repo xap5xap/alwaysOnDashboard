@@ -31,7 +31,7 @@ const widget = (serviceId: string, type: string, title: string): WidgetDefinitio
   type,
   serviceId,
   title,
-  supportedSizes: ['small', 'medium', 'large'],
+  supportedSizes: ['S', 'W', 'L'], // AOD-122 slot ids
   defaultRefresh: { seconds: 300 },
   configSchema: { fields: [] },
   render: () => null,
@@ -149,7 +149,7 @@ describe('adding a widget', () => {
         serviceId: 'stub',
         widgetType: 'placeholder',
         config: {},
-        size: 'medium',
+        size: 'W', // AOD-122: the default placement slot (was 'medium'; same 2x1 rect)
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
       }),
     );
@@ -162,7 +162,7 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
     type: 'configured',
     serviceId: 'cfg',
     title: 'Configured Widget',
-    supportedSizes: ['small', 'medium', 'large'],
+    supportedSizes: ['S', 'W', 'L'], // AOD-122 slot ids
     defaultRefresh: { seconds: 300 },
     configSchema: { fields: [{ key: 'name', label: 'Name', kind: 'string', required: true }] },
     render: () => null,
@@ -218,7 +218,7 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
         serviceId: 'cfg',
         widgetType: 'configured',
         config: { name: 'My Board' },
-        size: 'medium',
+        size: 'W', // AOD-122: the default placement slot (was 'medium'; same 2x1 rect)
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
       }),
     );

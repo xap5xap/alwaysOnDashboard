@@ -5,8 +5,8 @@
 // params are instance.config (empty) and connection.config is NOT merged in. The cents->dollars /100 lives
 // server-side (operations.ts); the card receives an already-normalized payload, so these assert rendering.
 //
-// AOD-36 polish (design-claude-usage.md): the Spend MTD run-rate is medium-only (§5 layout); $0.00 is a
-// valid hero, NOT the EmptyBody (§5.3); Daily Spend draws the sparkline at wide/large with a large-only
+// AOD-36 polish (design-claude-usage.md): the Spend MTD run-rate is W-only (§5 layout); $0.00 is a
+// valid hero, NOT the EmptyBody (§5.3); Daily Spend draws the sparkline at W/L with an L-only
 // today label, and an empty days[] is the §5.1 EmptyBody (§6.2).
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
@@ -34,14 +34,14 @@ const spendInstance: WidgetInstance = {
   serviceId: 'anthropic_usage',
   widgetType: 'spend_mtd',
   config: {}, // zero-config: org-wide totals, no per-instance choice (§5.1)
-  size: 'small',
+  size: 'S', // AOD-122 slot id (was 'small')
   rect: { x: 0, y: 0, w: 1, h: 1, z: 0 },
 };
 
-const mediumSpendInstance: WidgetInstance = {
+const wSpendInstance: WidgetInstance = {
   ...spendInstance,
   instanceId: 'au-spend-md',
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
@@ -50,14 +50,14 @@ const dailyInstance: WidgetInstance = {
   serviceId: 'anthropic_usage',
   widgetType: 'daily_spend',
   config: {},
-  size: 'wide',
-  rect: { x: 0, y: 0, w: 3, h: 1, z: 0 },
+  size: 'W', // AOD-122: the banner slot (was the retired wide 3x1; W is 2x1)
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
 const largeDailyInstance: WidgetInstance = {
   ...dailyInstance,
   instanceId: 'au-daily-lg',
-  size: 'large',
+  size: 'L', // AOD-122 slot id (was 'large')
   rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
 };
 
@@ -74,7 +74,7 @@ const DAILY_SPEND_DATA: DailySpendData = {
   total: 4,
   days: [
     { date: '2026-06-01', amount: 1.5 },
-    { date: '2026-06-02', amount: 2.5 }, // the rightmost is today -> "today $2.50" at large
+    { date: '2026-06-02', amount: 2.5 }, // the rightmost is today -> "today $2.50" at L
   ],
 };
 
@@ -123,9 +123,9 @@ describe('admin_key host params (integration-claude.md §6.3): the host else-bra
 });
 
 describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
-  it('at medium renders the MTD amount (cents-precision) + the emphasised run-rate', async () => {
+  it('at W renders the MTD amount (cents-precision) + the emphasised run-rate', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    renderHost(spendSource(SPEND_MTD_DATA), mediumSpendInstance);
+    renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
@@ -136,9 +136,9 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
     expect(runRate).toHaveTextContent(/2 days this month/);
   });
 
-  it('at small renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
+  it('at S renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    renderHost(spendSource(SPEND_MTD_DATA), spendInstance); // small
+    renderHost(spendSource(SPEND_MTD_DATA), spendInstance); // S
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
@@ -148,7 +148,7 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
   it('renders a zero-spend org as the $0.00 hero (a valid figure, NOT the empty body, §5.3)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     const zero: SpendMtdData = { amount: 0, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-12', daysElapsed: 12 };
-    renderHost(spendSource(zero), mediumSpendInstance);
+    renderHost(spendSource(zero), wSpendInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$0.00');
@@ -159,17 +159,17 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
 });
 
 describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
-  it('at wide renders the sparkline + the MTD total, no large-only today label', async () => {
+  it('at W renders the sparkline + the MTD total, no L-only today label', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(dailySource(DAILY_SPEND_DATA), dailyInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-daily-spend')).toBeTruthy());
     expect(screen.getByTestId('claude-daily-spend-total')).toHaveTextContent('$4.00');
     expect(screen.getByTestId('claude-sparkline')).toBeTruthy();
-    expect(screen.queryByTestId('claude-daily-spend-today')).toBeNull(); // today label is large-only (§6.1)
+    expect(screen.queryByTestId('claude-daily-spend-today')).toBeNull(); // today label is L-only (§6.1)
   });
 
-  it('at large adds the "today $X.XX" value label over the today bar (§6.1)', async () => {
+  it('at L adds the "today $X.XX" value label over the today bar (§6.1)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(dailySource(DAILY_SPEND_DATA), largeDailyInstance);
 
@@ -196,7 +196,7 @@ describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', (
 describe('the host caption is de-duplicated (the SERVICE · WIDGET header convention)', () => {
   it('Spend MTD reads "Claude usage · Spend (MTD)", not a doubled "Claude"', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    renderHost(spendSource(SPEND_MTD_DATA), mediumSpendInstance);
+    renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByText('Claude usage · Spend (MTD)')).toBeTruthy();

@@ -6,7 +6,7 @@
 //
 // AOD-35 polish: the value-first body. The temperature is the type.hero value with tabular-nums; the
 // condition icon (WeatherIcon, §4) joins it at the bright colors.text tier; the condition label is the
-// one accent line (type.heading); feels/humidity/wind recede as one muted type.meta line. At small (the
+// one accent line (type.heading); feels/humidity/wind recede as one muted type.meta line. At S (the
 // 1x1 glance, header suppressed by the host) the body is just icon over temperature. The icon's day/night
 // comes from the PAYLOAD (condition.isDay -> sun vs moon); the card's night DIM is the host's ambient
 // overlay (Weather is overlay-default, not the Clock's deep-red opt-in) -- two independent signals (§5.2).
@@ -50,7 +50,7 @@ export function CurrentWeatherCard({ data, size }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const c = asCurrent(data);
   const unit = c.units.temperature;
-  const isSmall = size === 'small';
+  const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
 
   // The condition icon, day or night by the payload's own isDay (the observation's local day/night), at
   // the size ramp's small or hero step. colors.text keeps it co-equal with the temperature value.
@@ -72,8 +72,8 @@ export function CurrentWeatherCard({ data, size }: WidgetRenderProps) {
     </Text>
   );
 
-  // small (1x1): the self-evident glance is just icon over temperature (the host suppresses the header
-  // at small). No condition label, no meta.
+  // S (1x1): the self-evident glance is just icon over temperature (the host suppresses the header
+  // at S). No condition label, no meta.
   if (isSmall) {
     return (
       <View style={styles.small} accessibilityRole="summary" testID="weather-current">
@@ -83,7 +83,8 @@ export function CurrentWeatherCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // medium (2x1): temperature + icon on the value row, the accent condition line, then the muted meta.
+  // W (2x1, and any other coerced slot): temperature + icon on the value row, the accent condition
+  // line, then the muted meta.
   return (
     <View style={styles.body} accessibilityRole="summary" testID="weather-current">
       <View style={styles.heroRow}>

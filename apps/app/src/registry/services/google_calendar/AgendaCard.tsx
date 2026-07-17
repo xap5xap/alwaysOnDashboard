@@ -6,10 +6,11 @@
 //
 // AOD-35 polish: one event list, three densities. All-day events have no time anchor, so they group at the
 // top (separated by a hairline); the soonest upcoming event is the agenda's one emphasis (an accent LEFT
-// RAIL + an accent time), so the list points at what is next. At tall a deep column of 2-line rows; at
-// wide a banner of event cells laid left to right; at large (a reconciled class, §9) single-line rows with
-// a location on a second line. Overflow folds into "+N more". The empty render (no events left today, a
-// normal state, not an error) is the shared §5.1 EmptyBody with the per-widget calendar glyph, no action.
+// RAIL + an accent time), so the list points at what is next. At M (1x2; the old tall) a deep column of
+// 2-line rows; at W (2x1; the banner layout the retired 3x1 wide slot wore pre-AOD-122) event cells laid
+// left to right; at L (a coerced class, §9) single-line rows with a location on a second line. Overflow
+// folds into "+N more". The empty render (no events left today, a normal state, not an error) is the
+// shared §5.1 EmptyBody with the per-widget calendar glyph, no action.
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -18,8 +19,10 @@ import type { AgendaData, CalendarEvent } from './types';
 import { EmptyBody } from '../../../widgets/EmptyBody';
 import { CalendarGlyph } from './glyphs';
 
-// How many rows fit a glance at each size; the rest collapse into a "+N more" footer.
-const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { small: 4, medium: 5, wide: 5, large: 8, tall: 10 };
+// How many rows fit a glance at each slot; the rest collapse into a "+N more" footer. AOD-122 remap:
+// M (1x2) keeps the old tall 10; W (2x1) keeps 5 (the old medium and the retired wide agreed on 5);
+// L the old large 8; S the old small 4 (defensive — S is not a declared Agenda size).
+const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { S: 4, M: 10, W: 5, L: 8 };
 
 /** Defensive read: a renderer must never crash on a partial payload (host shows an empty card instead). */
 function asAgendaData(data: unknown): AgendaData {
@@ -87,8 +90,8 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
   const visibleTimed = visible.filter((e) => !e.allDay);
   const titleOf = (e: CalendarEvent) => e.summary || '(No title)';
 
-  // wide (3x1): a banner of event cells laid left to right, time over title, hairline dividers between.
-  if (size === 'wide') {
+  // W (2x1): a banner of event cells laid left to right, time over title, hairline dividers between.
+  if (size === 'W') {
     return (
       <View style={styles.wideStrip} accessibilityRole="summary" testID="gcal-agenda">
         {visible.map((e, i) => {
@@ -121,8 +124,8 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // tall (1x2): a deep column of 2-line rows (time over title); all-day grouped under a kicker on top.
-  if (size === 'tall') {
+  // M (1x2): a deep column of 2-line rows (time over title); all-day grouped under a kicker on top.
+  if (size === 'M') {
     return (
       <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
         {visibleAllDay.length > 0 ? (
@@ -164,7 +167,7 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // large (2x2, a reconciled class) and any other size: single-line rows with a 2nd location line.
+  // L (2x2, a coerced class) and any other size: single-line rows with a 2nd location line.
   return (
     <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
       {visibleAllDay.map((e) => (
@@ -217,7 +220,7 @@ const styles = StyleSheet.create((theme) => ({
   rail: { width: 3, borderRadius: 1.5, alignSelf: 'stretch', backgroundColor: 'transparent' },
   railActive: { backgroundColor: theme.colors.accent },
 
-  // all-day group (tall): a quiet kicker over the all-day titles, then a hairline
+  // all-day group (M): a quiet kicker over the all-day titles, then a hairline
   allDayGroup: { gap: theme.spacing(1) },
   groupLabel: { ...theme.type.badge, color: theme.colors.textMuted },
   divider: { height: 1, backgroundColor: theme.colors.border },
@@ -228,18 +231,18 @@ const styles = StyleSheet.create((theme) => ({
   evt: { ...theme.type.body, color: theme.colors.text },
   more: { ...theme.type.meta, color: theme.colors.textMuted, paddingTop: theme.spacing(0.5) },
 
-  // tall: 2-line rows
+  // M: 2-line rows (style keys keep their pre-slot names; only the WidgetSize ids changed, AOD-122)
   tallRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
   tallRowText: { flexShrink: 1, gap: theme.spacing(0.25) },
 
-  // wide: event cells left to right
+  // W: event cells left to right
   wideStrip: { flexDirection: 'row', alignItems: 'stretch', flex: 1 },
   wideCell: { flex: 1, flexDirection: 'row', gap: theme.spacing(1.5), paddingRight: theme.spacing(2) },
   cellBorder: { borderLeftWidth: 1, borderLeftColor: theme.colors.border, paddingLeft: theme.spacing(2) },
   cellText: { flexShrink: 1, gap: theme.spacing(0.25) },
   moreCell: { alignItems: 'center', justifyContent: 'center', flexGrow: 0, flexBasis: 72 },
 
-  // large: single-line rows, location on a 2nd line
+  // L: single-line rows, location on a 2nd line
   largeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
   timeCol: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'], width: 64 },
   largeRowText: { flexShrink: 1, gap: theme.spacing(0.25) },

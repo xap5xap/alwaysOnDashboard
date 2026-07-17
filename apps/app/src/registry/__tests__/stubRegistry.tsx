@@ -62,7 +62,7 @@ const stubWidget: WidgetDefinition = {
   type: 'placeholder',
   serviceId: 'stub',
   title: 'Stub Widget',
-  supportedSizes: ['small', 'medium', 'large'],
+  supportedSizes: ['S', 'W', 'L'], // AOD-122 slot ids (was ['small','medium','large'], same geometry)
   defaultRefresh: { seconds: 300 },
   cacheTtlSeconds: 120,
   minRefreshSeconds: 60,
@@ -95,7 +95,7 @@ const stubRemoteWidget: WidgetDefinition = {
   type: 'placeholder_remote',
   serviceId: 'stub',
   title: 'Stub Remote Widget',
-  supportedSizes: ['small', 'medium', 'large'],
+  supportedSizes: ['S', 'W', 'L'], // AOD-122 slot ids (was ['small','medium','large'], same geometry)
   defaultRefresh: { seconds: 300 },
   cacheTtlSeconds: 120,
   minRefreshSeconds: 60,

@@ -16,13 +16,13 @@ const nextEvent: WidgetDefinition = {
   type: 'next_event',
   serviceId: 'google_calendar',
   title: 'Next Event',
-  supportedSizes: ['small', 'medium'],
+  supportedSizes: ['S', 'W'], // AOD-122 slot remap: was ['small','medium'] (same 1x1 / 2x1 geometry)
   defaultRefresh: { seconds: 600 }, // device asks every 10 min (AOD-4, AOD-10 §6.2)
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices (AOD-10 §6.1)
   minRefreshSeconds: 120, // never poll Google faster than once every 2 min
   dimsWithAmbient: true,
   // §7: the 1x1 glance is self-evident (when kicker over the title), so the host suppresses the header there.
-  hideHeaderAtSizes: ['small'],
+  hideHeaderAtSizes: ['S'],
   configSchema: {
     fields: [
       {
@@ -43,7 +43,9 @@ const agenda: WidgetDefinition = {
   type: 'agenda',
   serviceId: 'google_calendar',
   title: "Today's Agenda",
-  supportedSizes: ['tall', 'wide'],
+  // AOD-122 slot remap: was ['tall','wide']; tall (1x2) -> M, and the retired wide (3x1) folds into
+  // W (2x1) — the banner keeps the horizontal-slot layout (AgendaCard).
+  supportedSizes: ['M', 'W'],
   defaultRefresh: { seconds: 900 }, // device asks every 15 min (AOD-4)
   cacheTtlSeconds: 600, // provider hit at most once per 10 min across devices
   minRefreshSeconds: 300,

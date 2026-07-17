@@ -24,7 +24,7 @@ const instance: WidgetInstance = {
   serviceId: 'stub',
   widgetType: 'placeholder',
   config: {},
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
@@ -106,7 +106,7 @@ const remoteInstance: WidgetInstance = {
   serviceId: 'stub',
   widgetType: 'placeholder_remote',
   config: { project: 'alpha' },
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 

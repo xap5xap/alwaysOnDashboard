@@ -17,7 +17,7 @@ const spendMtd: WidgetDefinition = {
   type: 'spend_mtd',
   serviceId: 'anthropic_usage',
   title: 'Spend (MTD)', // bare noun: the host prepends the service, composing "Claude usage · Spend (MTD)" (§4.2). No brand prefix, like every sibling widget.
-  supportedSizes: ['small', 'medium'],
+  supportedSizes: ['S', 'W'], // AOD-122 slot remap: was ['small','medium'] (same 1x1 / 2x1 geometry)
   defaultRefresh: { seconds: 1800 }, // device asks every ~30 min; the figure is daily-granular and lags (§7)
   cacheTtlSeconds: 900, // provider hit at most once / 15 min; at the AOD-5 ceiling (§7)
   minRefreshSeconds: 900,
@@ -32,7 +32,9 @@ const dailySpend: WidgetDefinition = {
   type: 'daily_spend',
   serviceId: 'anthropic_usage',
   title: 'Daily Spend', // bare noun: the host prepends the service, composing "Claude usage · Daily Spend" (§4.2). No brand prefix, like every sibling widget.
-  supportedSizes: ['wide', 'large'],
+  // AOD-122 slot remap: was ['wide','large']; the retired wide (3x1) folds into W (2x1) — the banner
+  // stays the horizontal-slot layout (DailySpendCard).
+  supportedSizes: ['W', 'L'],
   defaultRefresh: { seconds: 3600 }, // device asks every ~60 min; a daily series barely moves intraday (§7)
   cacheTtlSeconds: 900, // provider floor at the AOD-5 ceiling (§7)
   minRefreshSeconds: 900,
