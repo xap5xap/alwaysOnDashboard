@@ -52,7 +52,7 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, AOD-125 six states, 
     render(
       <WidgetHostView
         {...base}
-        state={{ phase: 'error', error: { kind: 'provider_unavailable' }, data: { n: 1 }, fetchedAt: 1 }}
+        state={{ phase: 'error', error: { kind: 'service_error' }, data: { n: 1 }, fetchedAt: 1 }}
       />,
     );
     expect(screen.getByTestId('widget-error-dot')).toBeTruthy();
@@ -60,7 +60,7 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, AOD-125 six states, 
   });
 
   it('error without data: host placeholder, renderer NOT invoked', () => {
-    render(<WidgetHostView {...base} state={{ phase: 'error', error: { kind: 'provider_unavailable' } }} />);
+    render(<WidgetHostView {...base} state={{ phase: 'error', error: { kind: 'service_error' } }} />);
     expect(screen.getByTestId('widget-error')).toBeTruthy();
     expect(screen.queryByText(/stub payload/i)).toBeNull();
   });

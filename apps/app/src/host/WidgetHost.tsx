@@ -157,7 +157,9 @@ export function WidgetHost({
     // ever lived". At runtime our queries auto-fetch, so 'idle' is rare (see the deriveViewState DESIGN FLAG).
     snapshot = query.fetchStatus === 'idle' ? { status: 'idle' } : { status: 'pending' };
   } else if (erroredNoData) {
-    snapshot = { status: 'error', error: latestError ?? { kind: 'provider_unavailable' } };
+    // AOD-127: an errored query with no typed ProxyError attached defaults to the generic card-level
+    // failure (was `provider_unavailable`). service_error is the "one service errored" successor.
+    snapshot = { status: 'error', error: latestError ?? { kind: 'service_error' } };
   } else if (refetchErrored) {
     snapshot = { status: 'error', error: latestError!, lastData: query.data! };
   } else {

@@ -83,17 +83,35 @@ describe('deriveViewState (AOD-10 §7.2, AOD-125 six states)', () => {
     // shows the data-less error prompt (Retry) instead of an empty card behind an error mark.
     const s = deriveViewState({
       needsConfig: false,
-      query: { status: 'error', error: { kind: 'provider_unavailable' }, lastData: { data: { items: [] }, fetchedAt: NOW - 1000 } },
+      query: { status: 'error', error: { kind: 'service_error' }, lastData: { data: { items: [] }, fetchedAt: NOW - 1000 } },
       staleAfterSeconds: 300,
       now: NOW,
       isEmpty: (d) => (d as { items: unknown[] }).items.length === 0,
     });
-    expect(s).toEqual({ phase: 'error', error: { kind: 'provider_unavailable' } });
+    expect(s).toEqual({ phase: 'error', error: { kind: 'service_error' } });
   });
 
   it('error without data routes to the host error placeholder', () => {
-    const s = deriveViewState({ needsConfig: false, query: { status: 'error', error: { kind: 'provider_unavailable' } }, staleAfterSeconds: 300, now: NOW });
-    expect(s).toEqual({ phase: 'error', error: { kind: 'provider_unavailable' } });
+    const s = deriveViewState({ needsConfig: false, query: { status: 'error', error: { kind: 'service_error' } }, staleAfterSeconds: 300, now: NOW });
+    expect(s).toEqual({ phase: 'error', error: { kind: 'service_error' } });
+  });
+
+  it('AOD-127: device_offline / vela_unreachable / service_error all map to the error phase (no new UI here)', () => {
+    for (const kind of ['device_offline', 'vela_unreachable', 'service_error'] as const) {
+      const s = deriveViewState({ needsConfig: false, query: { status: 'error', error: { kind } }, staleAfterSeconds: 300, now: NOW });
+      // Not disconnected (only 409 needs_reconnect is) — the M5/M6 edges read the kind off these error snapshots.
+      expect(s).toEqual({ phase: 'error', error: { kind } });
+    }
+  });
+
+  it('AOD-127: the new kinds retain last-known data under the error mark (Holding Course holds the picture)', () => {
+    const s = deriveViewState({
+      needsConfig: false,
+      query: { status: 'error', error: { kind: 'device_offline' }, lastData: { data: { x: 1 }, fetchedAt: NOW - 1000 } },
+      staleAfterSeconds: 300,
+      now: NOW,
+    });
+    expect(s).toEqual({ phase: 'error', error: { kind: 'device_offline' }, data: { x: 1 }, fetchedAt: NOW - 1000 });
   });
 
   it('needs_config short-circuits before the query (§4.4)', () => {
@@ -106,8 +124,8 @@ describe('invokesRenderer (AOD-10 §7.3, AOD-125)', () => {
   it('reaches the widget renderer only on data-bearing states (live / stale / error-with-data)', () => {
     expect(invokesRenderer({ phase: 'live', data: {}, fetchedAt: NOW })).toBe(true);
     expect(invokesRenderer({ phase: 'stale', data: {}, fetchedAt: NOW })).toBe(true);
-    expect(invokesRenderer({ phase: 'error', error: { kind: 'provider_unavailable' }, data: {} })).toBe(true);
-    expect(invokesRenderer({ phase: 'error', error: { kind: 'provider_unavailable' } })).toBe(false);
+    expect(invokesRenderer({ phase: 'error', error: { kind: 'service_error' }, data: {} })).toBe(true);
+    expect(invokesRenderer({ phase: 'error', error: { kind: 'service_error' } })).toBe(false);
     // host-drawn states never reach the leaf
     expect(invokesRenderer({ phase: 'connecting' })).toBe(false);
     expect(invokesRenderer({ phase: 'ghost' })).toBe(false);
