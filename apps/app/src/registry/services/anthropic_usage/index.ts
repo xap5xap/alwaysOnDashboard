@@ -9,7 +9,7 @@
 // in the client index; the layout engine, the widget host, the config form, and Settings are NOT edited.
 import type { ServiceDefinition, WidgetDefinition } from '../../types';
 import { SpendMtdCard } from './SpendMtdCard';
-import { DailySpendCard } from './DailySpendCard';
+import { DailySpendCard, isDailySpendEmpty } from './DailySpendCard';
 
 // Spend MTD (the single glance). Sizes / cadence / TTLs are integration-claude.md §4.1, §7.2. Zero-config:
 // org-wide totals, no per-instance or connection config (§5.1), so configSchema.fields is empty.
@@ -41,6 +41,9 @@ const dailySpend: WidgetDefinition = {
   dimsWithAmbient: true,
   configSchema: { fields: [] },
   render: DailySpendCard,
+  // AOD-125: no daily buckets yet (empty series) -> the host-drawn `empty` phase. Spend MTD is NOT
+  // empty-capable ($0.00 is a valid hero, §5.3), so only Daily Spend declares the predicate.
+  isEmpty: isDailySpendEmpty,
 };
 
 export const anthropicUsageService: ServiceDefinition = {

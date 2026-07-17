@@ -1,7 +1,7 @@
 // CurrentCycleCard driven through the real WidgetHost + the registry + TanStack Query + a mock
 // WidgetDataSource (testing-strategy §9, mirroring MyIssuesCard.test.tsx). Proves the Linear current_cycle
-// path on the client: loading -> fresh renders the progress bar / percent / counts (and the L-only
-// "ends in N days"), and active:false renders the shared §5.1 empty body. AOD-30 polish (design-linear.md
+// path on the client: connecting -> live renders the progress bar / percent / counts (and the L-only
+// "ends in N days"), and active:false resolves to the host-drawn `empty` phase (AOD-125). AOD-30 polish (design-linear.md
 // §6): the progress bar is the value, the percent the accent readout; the bar token is fixed off skeleton.
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
@@ -66,7 +66,7 @@ describe('Linear Current Cycle through the host lifecycle (AOD-30 polish)', () =
   it('at L renders the percent, the progress bar, the counts, and the "ends in N days" meta', async () => {
     renderHost(source(ACTIVE), largeInstance);
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
     expect(screen.getByTestId('linear-cycle-pct')).toHaveTextContent('67%');
     expect(screen.getByTestId('linear-cycle-bar')).toBeTruthy();
@@ -97,11 +97,12 @@ describe('Linear Current Cycle through the host lifecycle (AOD-30 polish)', () =
     expect(screen.getByText('Cycle 8')).toBeTruthy();
   });
 
-  it('renders the §5.1 empty body when the team has no active cycle (active:false, §6.3)', async () => {
+  it('resolves to the host-drawn empty phase when the team has no active cycle (active:false, AOD-125)', async () => {
     renderHost(source({ active: false }), largeInstance);
 
-    await waitFor(() => expect(screen.getByTestId('linear-cycle-inactive')).toBeTruthy());
-    expect(screen.getByTestId('widget-empty-body')).toBeTruthy(); // the shared EmptyBody convention
+    // AOD-125: active:false is now the host-drawn `empty` phase (isCurrentCycleEmpty), the shared EmptyBody.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
     expect(screen.queryByTestId('linear-cycle')).toBeNull();
   });
 });

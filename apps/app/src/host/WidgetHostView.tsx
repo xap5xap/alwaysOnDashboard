@@ -1,7 +1,7 @@
 // The generic widget host chrome (AOD-8 §6.1, AOD-10 §7.3, design-widget-system.md §4-§7). Pure and
 // presentational: given a WidgetViewState it draws the shared card frame, the per-widget caption header
 // (AOD-124), the status-and-refresh cluster, and one visual per lifecycle state, and on data-bearing
-// states (fresh / stale / error-with-data) it mounts the widget's own renderer with { data, config, size }
+// states (live / stale / error-with-data) it mounts the widget's own renderer with { data, config, size }
 // and overlays staleness/error chrome. It branches on the view state, never on which service. The day/night
 // dim overlay (§7) and the night-frame for an opt-out widget (dimsWithAmbient: false, §7.2) ride the
 // ambient signal; the refresh control (§6) and the caption strategy (AOD-124, resolved to null = a
@@ -12,7 +12,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetDefinition, WidgetSize } from '../registry/types';
 import { invokesRenderer, type WidgetViewState } from '../widgets/lifecycle';
 import { useAmbient } from '../ambient/AmbientContext';
-import { LinkGlyph, SlidersGlyph } from '../widgets/glyphs';
+import { EmptyBody } from '../widgets/EmptyBody';
+import { LinkGlyph, RingGlyph, SlidersGlyph } from '../widgets/glyphs';
 import { RefreshControl, type RefreshControlState } from './RefreshControl';
 import { SIZE_CATALOGUE } from '../widgets/sizes';
 import { UNIT_PX } from '../layout/geometry';
@@ -35,7 +36,9 @@ export interface WidgetHostViewProps {
 }
 
 function dataOf(state: WidgetViewState): unknown {
-  if (state.phase === 'fresh' || state.phase === 'stale') return state.data;
+  // AOD-125: live/stale/empty all carry data (empty carries the fetched-but-empty payload, so a data-derived
+  // caption still resolves); error may carry last-known data. Everything else (connecting/ghost/prompts) has none.
+  if (state.phase === 'live' || state.phase === 'stale' || state.phase === 'empty') return state.data;
   if (state.phase === 'error') return state.data;
   return undefined;
 }
@@ -51,8 +54,9 @@ function updatedAgo(fetchedAt: number, now: number): string {
   return `updated ${Math.floor(h / 24)}d ago`;
 }
 
-/** The shared action-bearing prompt (§5): a centred glyph over a muted line over one accent action. The
- *  empty body (§5.1) deliberately looks similar but carries NO action; this is the host-drawn cousin. */
+/** The shared action-bearing prompt (§5): a centred glyph over a muted line over one accent action. Drives
+ *  the needs_config / disconnected / data-less error states. The host-drawn `empty` and `ghost` placeholders
+ *  (AOD-125) look similar but carry NO action — nothing is wrong, so there is nothing to act on. */
 function Prompt({
   glyph,
   line,
@@ -144,7 +148,10 @@ export function WidgetHostView({
   );
 
   return (
-    <View style={[styles.card, nightFrame && styles.cardNight]} testID="widget-card">
+    <View
+      style={[styles.card, state.phase === 'ghost' && styles.cardGhost, nightFrame && styles.cardNight]}
+      testID="widget-card"
+    >
       {!suppressHeader && (
         <View style={styles.header} testID="widget-header">
           <Text style={[styles.title, nightFrame && styles.titleNight]} numberOfLines={1}>
@@ -155,14 +162,35 @@ export function WidgetHostView({
       )}
 
       <View style={styles.body}>
-        {state.phase === 'loading' && (
-          <View style={styles.skeleton} testID="widget-loading" accessibilityLabel="Loading">
+        {/* AOD-125 `connecting` (Many Skies §1c): the first-fetch skeleton, shimmering in skeleton greys —
+            "skeletons only where nothing has ever lived" (Holding Course). Renamed from the AOD-10 `loading`. */}
+        {state.phase === 'connecting' && (
+          <View style={styles.skeleton} testID="widget-connecting" accessibilityLabel="Connecting">
             <View style={[styles.bar, styles.barHeader]} />
             <View style={[styles.bar, styles.barValue]} />
             <View style={[styles.bar, styles.barMetaWide]} />
             <View style={[styles.bar, styles.barMetaNarrow]} />
           </View>
         )}
+
+        {/* AOD-125 `ghost` (Many Skies §1c "GHOST"): the not-yet-lit tile. A dim, transparent placeholder
+            (the cardGhost frame above), NOT a card pretending to be lit and NOT the skeleton's busy shimmer.
+            Action-less by design: unlike `disconnected`, a ghost is initializing and will light on its own
+            (the user-action "Connect" case is the disconnected action-state). See the lifecycle DESIGN FLAG. */}
+        {state.phase === 'ghost' && (
+          <View style={styles.ghost} testID="widget-ghost" accessibilityLabel="Not yet lit">
+            <View style={styles.ghostGlyph}>
+              <RingGlyph color={theme.colors.textMuted} />
+            </View>
+            <Text style={styles.ghostLine}>Not yet lit</Text>
+          </View>
+        )}
+
+        {/* AOD-125 `empty` (Many Skies §1c "EMPTY — PLAIN WORDS"): a data-bearing fetch whose content is
+            legitimately empty, promoted from the leaf-drawn EmptyBody to a host-drawn phase. Plain words, no
+            action (nothing is wrong; the data simply says "nothing"). The per-widget copy/glyph the leaves
+            used pre-AOD-125 is retired here for the design's shared plain words (faces revisit it at M4+). */}
+        {state.phase === 'empty' && <EmptyBody line="Nothing right now." />}
 
         {showData && <Renderer data={dataOf(state)} config={config} size={size} box={bodyPxBox} />}
 
@@ -250,6 +278,14 @@ const styles = StyleSheet.create((theme) => ({
   cardNight: {
     backgroundColor: theme.night.surface,
     borderColor: theme.night.border,
+  },
+  // AOD-125 the ghost frame (Many Skies §1c): "transparent — an invitation, not a card pretending to be
+  // lit". No surface fill and a dashed hairline read as an empty, not-yet-lit slot; the whole tile sits at
+  // reduced opacity so it recedes into the night sky. Reuses existing tokens only (no new colour).
+  cardGhost: {
+    backgroundColor: 'transparent',
+    borderStyle: 'dashed',
+    opacity: 0.6,
   },
   header: {
     flexDirection: 'row',
@@ -343,6 +379,23 @@ const styles = StyleSheet.create((theme) => ({
   action: {
     ...theme.type.label,
     color: theme.colors.accent,
+  },
+  // AOD-125 the ghost placeholder body: centred, calm, action-less — a faint mark over quiet plain words.
+  // The muted (not accent) glyph keeps it inert, so it never reads as a lit card (Many Skies §1c).
+  ghost: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing(1.5),
+    paddingVertical: theme.spacing(2),
+  },
+  ghostGlyph: {
+    marginBottom: theme.spacing(0.5),
+  },
+  ghostLine: {
+    ...theme.type.body,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
   },
   overlay: {
     position: 'absolute',

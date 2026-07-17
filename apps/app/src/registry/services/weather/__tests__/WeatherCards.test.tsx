@@ -121,7 +121,9 @@ describe('platform_key host params-seeding (integration-weather.md §6.3)', () =
     };
     renderHost(source, calendarInstance);
 
-    await waitFor(() => expect(screen.getByTestId('gcal-next-event-empty')).toBeTruthy());
+    // AOD-125: hasEvent:false now resolves to the host-drawn `empty` phase (widget-empty-body), which settles
+    // the render so the params assertion below is reached.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(source.fetch).toHaveBeenCalledWith({
       serviceId: 'google_calendar',
       widgetType: 'next_event',
@@ -148,7 +150,7 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(currentSource(CURRENT_DATA), currentInstance); // S
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
     expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C'); // unit echoed from the payload
     // condition.isDay: true -> the day glyph (the icon's day/night is the payload's, §5.2)

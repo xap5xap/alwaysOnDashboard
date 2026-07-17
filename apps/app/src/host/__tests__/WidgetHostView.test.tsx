@@ -3,7 +3,7 @@
 // strategy §9). Uses the test-only stub widget definition (its StubCard renderer) as the leaf.
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, within } from '@testing-library/react-native';
 import { WidgetHostView } from '../WidgetHostView';
 import { stubService } from '../../registry/__tests__/stubRegistry';
 import type { WidgetDefinition, WidgetRenderProps } from '../../registry/types';
@@ -11,15 +11,33 @@ import type { WidgetDefinition, WidgetRenderProps } from '../../registry/types';
 const def = stubService.widgets[0];
 const base = { def, size: 'W' as const, config: {}, serviceName: 'Stub' }; // AOD-122 slot id
 
-describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, testing-strategy §9)', () => {
-  it('loading: host skeleton, renderer NOT invoked', () => {
-    render(<WidgetHostView {...base} state={{ phase: 'loading' }} />);
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, AOD-125 six states, testing-strategy §9)', () => {
+  it('connecting: host skeleton, renderer NOT invoked (was `loading`)', () => {
+    render(<WidgetHostView {...base} state={{ phase: 'connecting' }} />);
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     expect(screen.queryByText(/stub payload/i)).toBeNull();
   });
 
-  it('fresh: invokes the widget renderer with data', () => {
-    render(<WidgetHostView {...base} state={{ phase: 'fresh', data: { hello: 'world' }, fetchedAt: 1 }} />);
+  it('ghost: host-drawn not-yet-lit placeholder, renderer NOT invoked (AOD-125)', () => {
+    render(<WidgetHostView {...base} state={{ phase: 'ghost' }} />);
+    expect(screen.getByTestId('widget-ghost')).toBeTruthy();
+    expect(screen.getByText('Not yet lit')).toBeTruthy();
+    expect(screen.queryByText(/stub payload/i)).toBeNull();
+    // action-less by design (unlike disconnected): no button in the ghost placeholder
+    expect(within(screen.getByTestId('widget-ghost')).queryByRole('button')).toBeNull();
+  });
+
+  it('empty: host-drawn shared EmptyBody ("Nothing right now."), renderer NOT invoked (AOD-125)', () => {
+    render(<WidgetHostView {...base} state={{ phase: 'empty', data: {}, fetchedAt: 1 }} />);
+    expect(screen.getByTestId('widget-empty-body')).toBeTruthy();
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
+    expect(screen.queryByText(/stub payload/i)).toBeNull();
+    // the empty body carries NO action (the trait separating it from the host prompts)
+    expect(within(screen.getByTestId('widget-empty-body')).queryByRole('button')).toBeNull();
+  });
+
+  it('live: invokes the widget renderer with data (was `fresh`)', () => {
+    render(<WidgetHostView {...base} state={{ phase: 'live', data: { hello: 'world' }, fetchedAt: 1 }} />);
     expect(screen.getByText(/stub payload/i)).toBeTruthy();
     expect(screen.getByText(/hello/)).toBeTruthy();
   });
@@ -70,15 +88,15 @@ describe('WidgetHostView passes the computed body box to the renderer (AOD-123 �
     const Echo = ({ box }: WidgetRenderProps) => <Text testID="echo-box">{box ? `${box.width}x${box.height}` : 'no-box'}</Text>;
     return { ...def, render: Echo, ...overrides };
   }
-  const fresh = { phase: 'fresh' as const, data: {}, fetchedAt: 1 };
+  const live = { phase: 'live' as const, data: {}, fetchedAt: 1 };
 
   it('W (2x1) with the header shown: 168 x 48 (192-24 wide, 96-24-24 tall)', () => {
-    render(<WidgetHostView {...base} def={boxEchoDef()} size="W" state={fresh} />);
+    render(<WidgetHostView {...base} def={boxEchoDef()} size="W" state={live} />);
     expect(screen.getByTestId('echo-box')).toHaveTextContent('168x48');
   });
 
   it('L (2x2) with the header shown: 168 x 144', () => {
-    render(<WidgetHostView {...base} def={boxEchoDef()} size="L" state={fresh} />);
+    render(<WidgetHostView {...base} def={boxEchoDef()} size="L" state={live} />);
     expect(screen.getByTestId('echo-box')).toHaveTextContent('168x144');
   });
 
@@ -88,19 +106,19 @@ describe('WidgetHostView passes the computed body box to the renderer (AOD-123 �
         {...base}
         def={boxEchoDef({ caption: { kind: 'serviceWidget', hideAtSizes: ['S'] } })}
         size="S"
-        state={fresh}
+        state={live}
       />,
     );
     expect(screen.getByTestId('echo-box')).toHaveTextContent('72x72');
   });
 
   it('S (1x1) chromeless caption { kind: hidden }: 72 x 72 (no header subtraction, AOD-124 §2)', () => {
-    render(<WidgetHostView {...base} def={boxEchoDef({ caption: { kind: 'hidden' } })} size="S" state={fresh} />);
+    render(<WidgetHostView {...base} def={boxEchoDef({ caption: { kind: 'hidden' } })} size="S" state={live} />);
     expect(screen.getByTestId('echo-box')).toHaveTextContent('72x72');
   });
 
   it('W (2x1) chromeless caption keeps the full width but drops the header row: 168 x 72', () => {
-    render(<WidgetHostView {...base} def={boxEchoDef({ caption: { kind: 'hidden' } })} size="W" state={fresh} />);
+    render(<WidgetHostView {...base} def={boxEchoDef({ caption: { kind: 'hidden' } })} size="W" state={live} />);
     expect(screen.getByTestId('echo-box')).toHaveTextContent('168x72');
   });
 });
