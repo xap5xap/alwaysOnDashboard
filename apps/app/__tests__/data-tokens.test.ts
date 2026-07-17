@@ -132,7 +132,7 @@ describe('light theme: the untuned mirror of the dark/Signature freeze (PROVISIO
   });
 });
 
-describe('the discipline rules the byte-lock can enforce (design-color-law.md §4, §7)', () => {
+describe('the discipline rules the byte-lock can enforce (Made Fast 1a freeze + colour-law §7)', () => {
   it('no data role resolves to the interaction accent in either theme (blue stays taps-only)', () => {
     for (const theme of [darkTheme, lightTheme]) {
       const hues = dataHues(theme);

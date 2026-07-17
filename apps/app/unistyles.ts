@@ -144,8 +144,9 @@ export const night = {
 // per-service themes remap ROLES without touching primitives (§8: a theme is a role→colour remap, never
 // a redesign). Deliberately NOT inside `colors`: roleColor() and every §12 token-group alias assume
 // colors is a FLAT role→string map, so the structured families sit beside it as theme-level groups (the
-// `night` precedent). ALL VALUES PROVISIONAL pending AOD-119. Accent discipline (the colour-law §4 rule
-// the byte-lock enforces): blue.400/600 — the interaction accent — appears in NO family below.
+// `night` precedent). ALL VALUES PROVISIONAL pending AOD-119. Accent discipline (the Made Fast 1a
+// freeze + the AOD-120 acceptance rule; the freeze moved the cold end OFF the accent that colour-law §4
+// nominally sketched onto it): blue.400/600 — the interaction accent — appears in NO family below.
 // bone is the freeze's "--ink-bone #F4F4F8 (= --text)": it aliases each theme's text step, so a figure
 // with nothing to say draws exactly as plain text does (gray weather is allowed to be gray).
 const inkDark = { ...primitive.ink, bone: primitive.neutral[100] } as const; // bone #F4F4F8 = dark colors.text
