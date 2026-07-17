@@ -157,6 +157,13 @@ afterAll(async () => {
 });
 
 describe("proxy (proxied call, AOD-9 §9)", { sanitizeResources: false, sanitizeOps: false }, () => {
+  it("the AOD-126-removed stub service fails closed (400 unknown_service) — stale clients still ask", async () => {
+    const user = await freshUser();
+    const res = await handler(await userPost("proxy", user, { service: "stub", widget: "placeholder", params: {} }));
+    assertEquals(res.status, 400);
+    assertEquals((await res.json()).error, "unknown_service");
+  });
+
   it("cache miss: builds the GraphQL body, normalizes, returns data, writes proxy_cache within the 900s ceiling", async () => {
     const user = await freshUser();
     await connectedLinear(user.id);
