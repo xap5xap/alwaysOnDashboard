@@ -132,6 +132,8 @@ Every component color is a **role reference**, never a raw hex. Nothing draws a 
 
 ## 5. Layout Principles
 
+> **REVISED 2026-07-17 (AOD-122). This section's free-form grid model is SUPERSEDED for the dashboard surface.** The Many Skies card-grid contract (`claude-design/Vela - Many Skies.pdf` §1c, recorded in `redesign-build-audit.md` §2.1) replaces free-form sizing with the **S/M/W/L slot grid**: S 1×1 / M 1×2 / W 2×1 / L 2×2 on a **two-column, 96px-row** grid. The code of record is [`apps/app/src/widgets/sizes.ts`](../../apps/app/src/widgets/sizes.ts) (`SIZE_CATALOGUE`, `coerceToSlotGrid`) with `UNIT_PX = 96` in [`layout/geometry.ts`](../../apps/app/src/layout/geometry.ts); persisted pre-slot layouts are coerced onto the grid at read time (no migration). The spacing and radius rungs below still hold; only the "free-form arrangement" grid bullet is superseded.
+
 - **Spacing: 4px base.** Rungs and roles: 4 (icon→text) · 8 (intra-card row gap) · 12 (**card padding**) · 16 (element gap, list row v-padding) · 24 (section gap, **inter-card gutter**) · 32 (section break, screen top) · 48 (screen margins, a big empty-state block).
 - **Radius:** `sm` 8 (chips, inputs, badge) · `md` 14 (**the card** and most panels) · `lg` 22 (sheets, modals, paywall, auth card) · `full` 9999 (pills, toggles, progress ends).
 - **Grid:** the dashboard is a **free-form arrangement of cards**, not a rigid wall of identical tiles. Compose intentionally; leave breathing room without dead space. The value dominates; the chrome recedes to muted.
