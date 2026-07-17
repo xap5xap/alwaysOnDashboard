@@ -153,7 +153,7 @@ describe('WidgetHost render-time remote-options membership re-check (AOD-10 §4.
   it('keeps the selection when the option set cannot be resolved (provider outage stays unverified)', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { ok: true }, fetchedAt: Date.now() }),
-      resolveOptions: jest.fn().mockRejectedValue({ kind: 'provider_unavailable' }),
+      resolveOptions: jest.fn().mockRejectedValue({ kind: 'service_error' }),
     };
     renderRemoteHost(source, { project: 'ghost' });
     // Unresolved options -> membership unverified -> NOT needs_config; the data path proceeds.

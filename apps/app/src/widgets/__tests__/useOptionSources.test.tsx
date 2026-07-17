@@ -57,7 +57,7 @@ describe('useOptionSources (AOD-10 §4.3)', () => {
   it('maps a typed provider error to an error state (with the field absent from resolved)', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn(),
-      resolveOptions: jest.fn().mockRejectedValue({ kind: 'provider_unavailable' }),
+      resolveOptions: jest.fn().mockRejectedValue({ kind: 'service_error' }),
     };
     const { result } = renderHook(() => useOptionSources(remoteSchema, 'stub'), { wrapper: makeWrapper(source) });
     await waitFor(() => expect(result.current.byField.project.status).toBe('error'));

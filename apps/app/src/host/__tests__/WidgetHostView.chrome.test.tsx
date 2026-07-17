@@ -70,7 +70,7 @@ describe('WidgetHostView status + refresh cluster (AOD-37 §5, §6)', () => {
     render(
       <WidgetHostView
         {...base}
-        state={{ phase: 'error', error: { kind: 'provider_unavailable' }, data: { n: 1 }, fetchedAt: 1 }}
+        state={{ phase: 'error', error: { kind: 'service_error' }, data: { n: 1 }, fetchedAt: 1 }}
       />,
     );
     expect(screen.getByTestId('widget-error-dot')).toBeTruthy();

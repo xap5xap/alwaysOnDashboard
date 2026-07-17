@@ -23,13 +23,13 @@ describe('effectiveInterval (AOD-10 §6.2)', () => {
 
 describe('nextDelaySeconds (AOD-10 §6.4)', () => {
   it('grows exponentially and caps at 1800s', () => {
-    expect(nextDelaySeconds(60, 0, { kind: 'provider_unavailable' })).toBe(60);
-    expect(nextDelaySeconds(60, 2, { kind: 'provider_unavailable' })).toBe(240);
-    expect(nextDelaySeconds(1000, 5, { kind: 'provider_unavailable' })).toBe(1800);
+    expect(nextDelaySeconds(60, 0, { kind: 'service_error' })).toBe(60);
+    expect(nextDelaySeconds(60, 2, { kind: 'service_error' })).toBe(240);
+    expect(nextDelaySeconds(1000, 5, { kind: 'service_error' })).toBe(1800);
   });
   it('caps the exponent at 6 consecutive failures', () => {
-    expect(nextDelaySeconds(10, 6, { kind: 'provider_unavailable' })).toBe(640);
-    expect(nextDelaySeconds(10, 100, { kind: 'provider_unavailable' })).toBe(640);
+    expect(nextDelaySeconds(10, 6, { kind: 'service_error' })).toBe(640);
+    expect(nextDelaySeconds(10, 100, { kind: 'service_error' })).toBe(640);
   });
   it('honors a rate_limited Retry-After exactly', () => {
     expect(nextDelaySeconds(60, 3, { kind: 'rate_limited', retryAfterSeconds: 30 })).toBe(30);

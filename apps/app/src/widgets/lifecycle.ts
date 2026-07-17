@@ -24,8 +24,14 @@ import type { ConnectionStatus } from '../registry/types';
 
 export type ProxyError =
   | { kind: 'rate_limited'; retryAfterSeconds?: number } // 429
-  | { kind: 'provider_unavailable' } // 5xx / timeout
-  | { kind: 'needs_reconnect' }; // 409: credential dead / no connection
+  | { kind: 'needs_reconnect' } // 409: credential dead / no connection -> the `disconnected` action-state
+  // AOD-127: the former catch-all `provider_unavailable` ("5xx / timeout / unknown") is split into three
+  // distinct signals so the M5/M6 Holding Course app-level edges (RB-53/RB-59) can name whose fault it is
+  // ("the mark sits at the scope of the cause"). All three still map to the `error` phase below — this is
+  // PLUMBING, no amber/red UI here; the difference lives in the kind alone for those later consumers.
+  | { kind: 'device_offline' } // netinfo was offline at the moment of failure — YOUR network (amber, sky-wide)
+  | { kind: 'vela_unreachable' } // network-level failure reaching our backend while online — OUR server (red, sky-wide)
+  | { kind: 'service_error' }; // the proxy answered a non-2xx (5xx / other) — ONE upstream service failed (card badge)
 
 // The six design states (Many Skies §1c) + the two action-states. `ghost`, `connecting` and `empty` are
 // HOST-DRAWN (no leaf); `live`, `stale` and error-with-data reach the leaf renderer (§7.3, invokesRenderer).
@@ -73,6 +79,13 @@ export type WidgetQuerySnapshot =
  * data lifecycle because there is no valid request to make (§4.4). An `idle` snapshot yields `ghost` (the
  * not-yet-lit tile). A 409 needs_reconnect maps to `disconnected` (the reauth_required form). Other typed
  * errors keep last-known data on screen if present, otherwise fall to the host error placeholder.
+ *
+ * AOD-127 taxonomy: the three new ProxyError kinds (device_offline / vela_unreachable / service_error) all
+ * land here in the `error` phase, last-known data preserved — identical rendering to the old catch-all. No
+ * amber/red treatment is decided here; the M5/M6 Holding Course edges read the kind off the phase-`error`
+ * snapshots to raise their sky-wide line vs card badge. Note the offline-first-load path lives in the host
+ * (WidgetHost): an offline query with nothing cached is `paused` (not `idle`), so it maps to `connecting`
+ * (the skeleton), never `ghost` — "skeletons only where nothing has ever lived" (Holding Course 1e).
  *
  * AOD-125 empty promotion: `isEmpty` is the per-widget emptiness predicate (WidgetDefinition.isEmpty). When
  * a successful fetch's content is empty it yields the host-drawn `empty` phase, which SUPERSEDES live/stale
