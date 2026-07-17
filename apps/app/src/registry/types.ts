@@ -5,6 +5,7 @@
 // provider URL (AOD-8 §4). The generic engine (registry lookups, the widget host, the dashboard)
 // reads these types and is never edited to add a service.
 import type { ComponentType } from 'react';
+import type { FitBox } from '../widgets/fitLadder';
 
 export type ServiceId = string;
 export type WidgetTypeId = string;
@@ -69,6 +70,11 @@ export interface WidgetRenderProps {
   data: unknown; // normalized payload from the proxy (per-widget shape is AOD-10/per-integration)
   config: Record<string, unknown>;
   size: WidgetSize;
+  // AOD-123: the host-computed body box (DP), the slot minus header + padding. The shared FitBody fits
+  // content to it (value held, detail truncate-then-drop) with NO onLayout on the always-on hot path.
+  // Optional so a leaf that does not use FitBody, or a direct-render test, still type-checks; FitBody
+  // falls back to deriving the box from `size` when it is absent.
+  box?: FitBox;
 }
 export type WidgetRenderer = ComponentType<WidgetRenderProps>;
 

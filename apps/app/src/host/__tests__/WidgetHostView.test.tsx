@@ -2,9 +2,11 @@
 // AOD-10 §7.3 rule: the widget's own renderer is reached ONLY on data-bearing states (testing-
 // strategy §9). Uses the test-only stub widget definition (its StubCard renderer) as the leaf.
 import React from 'react';
+import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { WidgetHostView } from '../WidgetHostView';
 import { stubService } from '../../registry/__tests__/stubRegistry';
+import type { WidgetDefinition, WidgetRenderProps } from '../../registry/types';
 
 const def = stubService.widgets[0];
 const base = { def, size: 'W' as const, config: {}, serviceName: 'Stub' }; // AOD-122 slot id
@@ -56,5 +58,34 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, testing-strategy §9
     expect(screen.getByTestId('widget-disconnected')).toBeTruthy();
     expect(screen.getByText(/Connect Stub to use this/)).toBeTruthy();
     expect(screen.queryByText(/stub payload/i)).toBeNull();
+  });
+});
+
+// AOD-123 acceptance #3: the host computes the body px box from the slot rect (UNIT_PX 96 * nominal units,
+// minus card padding on both axes and — when shown — the header row + gap) and passes it to the renderer,
+// so FitBody never measures on the always-on hot path. A box-echoing renderer proves both the pass-through
+// and the arithmetic (padding spacing(3)=12 both sides; header 16 + gap spacing(2)=8 when the header shows).
+describe('WidgetHostView passes the computed body box to the renderer (AOD-123 §3)', () => {
+  function boxEchoDef(overrides?: Partial<WidgetDefinition>): WidgetDefinition {
+    const Echo = ({ box }: WidgetRenderProps) => <Text testID="echo-box">{box ? `${box.width}x${box.height}` : 'no-box'}</Text>;
+    return { ...def, render: Echo, ...overrides };
+  }
+  const fresh = { phase: 'fresh' as const, data: {}, fetchedAt: 1 };
+
+  it('W (2x1) with the header shown: 168 x 48 (192-24 wide, 96-24-24 tall)', () => {
+    render(<WidgetHostView {...base} def={boxEchoDef()} size="W" state={fresh} />);
+    expect(screen.getByTestId('echo-box')).toHaveTextContent('168x48');
+  });
+
+  it('L (2x2) with the header shown: 168 x 144', () => {
+    render(<WidgetHostView {...base} def={boxEchoDef()} size="L" state={fresh} />);
+    expect(screen.getByTestId('echo-box')).toHaveTextContent('168x144');
+  });
+
+  it('S (1x1) header suppressed via hideHeaderAtSizes: 72 x 72 (no header subtraction)', () => {
+    render(
+      <WidgetHostView {...base} def={boxEchoDef({ hideHeaderAtSizes: ['S'] })} size="S" state={fresh} />,
+    );
+    expect(screen.getByTestId('echo-box')).toHaveTextContent('72x72');
   });
 });
