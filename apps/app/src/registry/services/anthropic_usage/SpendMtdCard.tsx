@@ -6,16 +6,24 @@
 //
 // AOD-36 polish: the value-first money body. The month-to-date total is the hero, drawn in the §5.1
 // cents-precision money typography (MoneyValue: type.xl tabular dollars, a reduced raised $, reduced
-// muted baseline-aligned cents). At W the run-rate is the emphasised derived figure below it: a
-// type.meta line whose $/day VALUE is bright (colors.text) and whose label + day count recede
-// (colors.textMuted); perDay = amount / daysElapsed, derived here with no extra request (§5.2). At S
-// (the 1x1 glance) there is no room, so the body is just the amount, no run-rate (§5 layout). The leaf's
-// old hand-drawn "Claude Spend (MTD)" label is gone: the host owns the quiet SERVICE · WIDGET caption (§4).
+// muted baseline-aligned cents). The run-rate is the emphasised derived figure below it: a type.meta line
+// whose $/day VALUE is bright (colors.text) and whose label + day count recede (colors.textMuted);
+// perDay = amount / daysElapsed, derived here with no extra request (§5.2). The leaf's old hand-drawn
+// "Claude Spend (MTD)" label is gone: the host owns the quiet SERVICE · WIDGET caption (§4).
+//
+// AOD-123 (attempt 2): migrated onto the shared FitBody. The amount is the WIDTH-FIT value: the money
+// typography at its type.xl step when it fits, scaled down by min(widthScale, heightScale) otherwise, so a
+// long "$1,234.56" never clips the narrow S cell (the AOD-95 class of bug — the S money was ~110px in a
+// 72px cell). The run-rate is the one secondary DETAIL line, eligible above S (the S 1x1 stays the minimal
+// glance, §5); at the wide-short W the VALUE YIELDS height so the run-rate is KEPT with a smaller amount
+// rather than dropped (the anti-regression rule). A taller slot shows a larger amount + the run-rate.
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { SpendMtdData } from './types';
+import { FitBody, type FitLine, type FitValue } from '../../../widgets/FitBody';
+import { tabularWidth } from '../../../widgets/fitLadder';
 import { MoneyValue, formatPlainMoney } from './MoneyValue';
 
 /** Defensive read: a renderer must never crash on a partial payload (the host shows an empty card). */
@@ -30,42 +38,70 @@ function asSpendMtd(data: unknown): SpendMtdData {
   };
 }
 
-export function SpendMtdCard({ data, size }: WidgetRenderProps) {
+export function SpendMtdCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const d = asSpendMtd(data);
-  const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
+  const isSmall = size === 'S';
   // A run-rate the renderer derives from amount + daysElapsed with no extra request (§5.2); a literal
   // prior-month delta / projection are named future seams (§10). Suppressed before any day is covered.
   const perDay = d.daysElapsed > 0 ? d.amount / d.daysElapsed : null;
 
-  return (
-    <View style={styles.body} accessibilityRole="summary" testID="claude-spend-mtd">
-      {/* The hero: the MTD total in the §5.1 cents-precision money typography (type.xl, $0.00 included). */}
+  // The width-fit value: the MTD total in the §5.1 cents-precision money typography. baseSize is type.xl;
+  // intrinsicWidth over-estimates the full string at that step (MoneyValue draws the $ and cents reduced,
+  // so this is conservative) so the money never clips a narrow cell.
+  const baseSize = theme.type.xl.fontSize ?? 40;
+  const value: FitValue = {
+    key: 'amount',
+    baseSize,
+    intrinsicWidth: tabularWidth(formatPlainMoney(d.amount, d.currency), baseSize),
+    render: (fontSize) => (
       <MoneyValue
         amount={d.amount}
         currency={d.currency}
-        dollarsSize={theme.type.xl.fontSize ?? 40}
+        dollarsSize={fontSize}
         dollarsWeight={theme.type.xl.fontWeight}
         dollarsColor={theme.colors.text}
         centsColor={theme.colors.textMuted}
         testID="claude-spend-mtd-amount"
       />
+    ),
+  };
 
-      {/* W: the run-rate, the emphasised derived figure ($/day bright, the rest muted). No room at S. */}
-      {!isSmall && perDay != null ? (
-        <Text style={styles.runRate} numberOfLines={1} testID="claude-spend-mtd-runrate">
-          <Text style={styles.runRateValue}>{formatPlainMoney(perDay, d.currency)}</Text>
-          <Text style={styles.runRateMuted}>
-            /day avg  ·  {d.daysElapsed} {d.daysElapsed === 1 ? 'day' : 'days'} this month
-          </Text>
-        </Text>
-      ) : null}
-    </View>
+  // The one detail line: the run-rate ($/day bright, the rest muted). Eligible above S (the 1x1 stays the
+  // minimal glance, §5); FitBody keeps it wherever it fits (the value yields height), only truncating /
+  // dropping it when the box genuinely cannot seat it.
+  const detail: FitLine[] =
+    !isSmall && perDay != null
+      ? [
+          {
+            key: 'runrate',
+            role: 'meta',
+            node: (
+              <Text style={styles.runRate} numberOfLines={1} testID="claude-spend-mtd-runrate">
+                <Text style={styles.runRateValue}>{formatPlainMoney(perDay, d.currency)}</Text>
+                <Text style={styles.runRateMuted}>
+                  /day avg  ·  {d.daysElapsed} {d.daysElapsed === 1 ? 'day' : 'days'} this month
+                </Text>
+              </Text>
+            ),
+          },
+        ]
+      : [];
+
+  return (
+    <FitBody
+      size={size}
+      box={box}
+      value={value}
+      detail={detail}
+      gap={theme.spacing(1.5)}
+      testID="claude-spend-mtd"
+      accessibilityRole="summary"
+    />
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  body: { gap: theme.spacing(1.5) },
   runRate: { ...theme.type.meta },
   runRateValue: { color: theme.colors.text, fontWeight: '600', fontVariant: ['tabular-nums'] },
   runRateMuted: { color: theme.colors.textMuted },

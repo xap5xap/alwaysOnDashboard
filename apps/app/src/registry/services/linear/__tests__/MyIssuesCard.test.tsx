@@ -63,7 +63,9 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
       fetch: jest.fn().mockResolvedValue({ data: sampleData, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(projectChoices),
     };
-    renderHost(source);
+    // AOD-123: rendered at L (2x2) where the rows fit — the visible count is now height-driven, so the
+    // short W cell (48px) leads with the count and sheds the rows into "+N more" rather than overflowing.
+    renderHost(source, baseInstance.config, largeInstance);
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
@@ -76,6 +78,20 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
       widgetType: 'my_issues',
       params: { projectId: 'p1', filter: 'open' },
     });
+  });
+
+  it('at the short W cell leads with the count and sheds rows into "+N more" (AOD-123 no-overflow)', async () => {
+    // W (2x1) is a 48px body; a count line + issue rows cannot both fit, so the height-driven count keeps
+    // the §5.1 count value and folds the rows into "+N more" rather than overflowing the card.
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data: sampleData, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(projectChoices),
+    };
+    renderHost(source); // W (baseInstance)
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open'); // the value still leads
+    expect(screen.getByTestId('linear-myissues-more')).toHaveTextContent('+2 more'); // rows shed, not clipped
+    expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // no row overflow
   });
 
   it('renders the empty state when there are no assigned issues', async () => {

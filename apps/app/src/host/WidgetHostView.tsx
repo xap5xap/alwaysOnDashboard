@@ -14,6 +14,9 @@ import { invokesRenderer, type WidgetViewState } from '../widgets/lifecycle';
 import { useAmbient } from '../ambient/AmbientContext';
 import { LinkGlyph, SlidersGlyph } from '../widgets/glyphs';
 import { RefreshControl, type RefreshControlState } from './RefreshControl';
+import { SIZE_CATALOGUE } from '../widgets/sizes';
+import { UNIT_PX } from '../layout/geometry';
+import { bodyBox } from '../widgets/fitLadder';
 
 export interface WidgetHostViewProps {
   state: WidgetViewState;
@@ -102,6 +105,18 @@ export function WidgetHostView({
   // widget's hideHeaderAtSizes, not a Clock special case.
   const suppressHeader = !!def.hideHeaderAtSizes?.includes(size);
 
+  // AOD-123: the body px box (DP) the leaf's FitBody fits content into. Derived from the slot rect —
+  // UNIT_PX * nominal units — minus the card padding on both axes and, when the header shows, the header
+  // row + the header->body gap. Computed here (host), passed down: no leaf measures on the hot path. DP,
+  // not screen px (the AOD-81 lesson: the kiosk wall auto-fits on top, so the body must be DP-correct).
+  const cat = SIZE_CATALOGUE[size];
+  const bodyPxBox = bodyBox(cat.nominalW, cat.nominalH, UNIT_PX, {
+    headerShown: !suppressHeader,
+    padding: theme.spacing(3),
+    headerHeight: theme.type.caption.lineHeight ?? 16, // the caption row == the RefreshControl box (16)
+    headerGap: theme.spacing(2),
+  });
+
   // §4.2 SERVICE · WIDGET, collapsed to one token when the widget title is the service name (Clock).
   const headerTitle =
     def.title.toLowerCase() === serviceName.toLowerCase() ? serviceName : `${serviceName} · ${def.title}`;
@@ -134,7 +149,7 @@ export function WidgetHostView({
           </View>
         )}
 
-        {showData && <Renderer data={dataOf(state)} config={config} size={size} />}
+        {showData && <Renderer data={dataOf(state)} config={config} size={size} box={bodyPxBox} />}
 
         {/* §5 host staleness / error captions appended under the last good render. */}
         {state.phase === 'stale' && state.fetchedAt != null && (
@@ -199,6 +214,10 @@ const styles = StyleSheet.create((theme) => ({
     padding: theme.spacing(3),
     gap: theme.spacing(2),
     minWidth: 160,
+    // AOD-123: with the shared FitBody, this is now a BACKSTOP, not the primary fit. A migrated leaf fits
+    // its own content to the host-passed box (value held, detail truncate-then-drop), so it no longer
+    // relies on this clip; it stays to defend not-yet-migrated leaves, the prompts, and the dim overlay's
+    // rounded corners. The bare-clip-as-fit that AOD-95/97 complained about is gone for migrated cards.
     overflow: 'hidden',
   },
   cardNight: {

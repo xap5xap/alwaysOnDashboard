@@ -16,6 +16,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import { EmptyBody } from '../../../widgets/EmptyBody';
+import { fitCount } from '../../../widgets/fitLadder';
 import { CheckboxGlyph, PriorityGlyph } from './glyphs';
 
 // The normalized payload the proxy delivers (integration-linear.md §4.1). This mirrors the server-side
@@ -38,16 +39,20 @@ export interface MyIssuesData {
   totalCount: number;
 }
 
-// How many rows fit a glance at each slot; the rest collapse into a "+N more" footer (design-linear.md
-// §5.2, the pre-slot counts carried over by geometry, AOD-122: W keeps medium's 4 — the retired 3x1
-// wide also said 4 — L keeps 7, M keeps tall's 10). S is defensive (a coerced off-aspect rect never
-// reads an undefined count); it is not in My Issues' declared supportedSizes (§8).
+// The pre-AOD-123 fixed per-size counts. Kept only as the fallback when the host does not pass a box
+// (a direct render). AOD-123 replaces them with a HEIGHT-DRIVEN count (fitCount) so a short cell never
+// overflows: the old fixed 4-at-W stacked ~128px of count + rows into a 48px body and clipped. The count
+// line is the §5.1 value lead and always shows; the rows shed into "+N more" by how many actually fit.
 const VISIBLE_BY_SIZE: Record<WidgetSize, number> = {
   S: 3,
   M: 10,
   W: 4,
   L: 7,
 };
+
+// Row-fit chrome for My Issues (DP, conservative so it never under-counts height -> never clips): a single
+// body-line row (glyph · id · title), the type.title count line as the lead, and the "+N more" footer.
+const ROW_FIT = { rowHeight: 22, leadHeight: 24, footerHeight: 20 } as const;
 
 /** The count's muted qualifier, echoing the active filter (integration-linear.md §5.1; default 'open'). */
 function filterQualifier(filter: unknown): string {
@@ -90,7 +95,7 @@ function asMyIssuesData(data: unknown): MyIssuesData {
   };
 }
 
-export function MyIssuesCard({ data, config, size }: WidgetRenderProps) {
+export function MyIssuesCard({ data, config, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { issues, totalCount } = asMyIssuesData(data);
 
@@ -108,7 +113,13 @@ export function MyIssuesCard({ data, config, size }: WidgetRenderProps) {
     );
   }
 
-  const visible = issues.slice(0, VISIBLE_BY_SIZE[size] ?? 4);
+  // AOD-123: the visible-row count is HEIGHT-DRIVEN so a short cell never overflows — the rows shed into
+  // "+N more" by what actually fits the host-passed box (the count line reserved as the lead). Falls back
+  // to the fixed per-size count only on a direct render with no box.
+  const visibleCount = box
+    ? fitCount(totalCount, box.height, { ...ROW_FIT, gap: theme.spacing(1.5) })
+    : (VISIBLE_BY_SIZE[size] ?? 4);
+  const visible = issues.slice(0, visibleCount);
   const remaining = totalCount - visible.length;
   const qualifier = filterQualifier(config?.filter);
   const isLarge = size === 'L'; // AOD-122 slot id (was 'large'; same 2x2 geometry)

@@ -17,12 +17,20 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { AgendaData, CalendarEvent } from './types';
 import { EmptyBody } from '../../../widgets/EmptyBody';
+import { fitCount } from '../../../widgets/fitLadder';
 import { CalendarGlyph } from './glyphs';
 
-// How many rows fit a glance at each slot; the rest collapse into a "+N more" footer. AOD-122 remap:
-// M (1x2) keeps the old tall 10; W (2x1) keeps 5 (the old medium and the retired wide agreed on 5);
-// L the old large 8; S the old small 4 (defensive — S is not a declared Agenda size).
+// The pre-AOD-123 fixed per-size counts. AOD-122 remap: M (1x2) kept the old tall 10; W (2x1) 5; L 8;
+// S 4. AOD-123 keeps these only as the no-box fallback: the VERTICAL layouts (M deep column, L rows) now
+// derive the count from the box HEIGHT (fitCount) so a short cell never overflows — 10 two-line rows in a
+// 144px M body was ~400px and clipped. The W BANNER strip stays count-based: it distributes cells across
+// the WIDTH, so its budget is horizontal, not the height fitCount governs (a narrow-strip width-fit is an
+// M4 follow-up, flagged).
 const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { S: 4, M: 10, W: 5, L: 8 };
+
+// Row-fit chrome for the vertical Agenda layouts (DP, conservative): M is a 2-line row (time over title),
+// L a single-line row; both shed into "+N more".
+const ROW_HEIGHT_BY_SIZE: Partial<Record<WidgetSize, number>> = { M: 42, L: 26 };
 
 /** Defensive read: a renderer must never crash on a partial payload (host shows an empty card instead). */
 function asAgendaData(data: unknown): AgendaData {
@@ -56,7 +64,7 @@ function formatClock(event: CalendarEvent): string {
   return start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-export function AgendaCard({ data, size }: WidgetRenderProps) {
+export function AgendaCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { events } = asAgendaData(data);
   const now = new Date();
@@ -84,7 +92,14 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
   const nextId = timed.find((e) => new Date(e.start).getTime() >= nowMs)?.id;
 
   const ordered = [...allDay, ...timed];
-  const visible = ordered.slice(0, VISIBLE_BY_SIZE[size] ?? 6);
+  // AOD-123: the vertical layouts (M / L) count by HEIGHT so a short cell never overflows; the W banner
+  // strip stays width-budgeted on the fixed count. Falls back to the fixed count on a direct render.
+  const rowHeight = ROW_HEIGHT_BY_SIZE[size];
+  const visibleCount =
+    box && rowHeight != null
+      ? fitCount(ordered.length, box.height, { rowHeight, gap: theme.spacing(1.5), footerHeight: 20 })
+      : (VISIBLE_BY_SIZE[size] ?? 6);
+  const visible = ordered.slice(0, visibleCount);
   const remaining = ordered.length - visible.length;
   const visibleAllDay = visible.filter((e) => e.allDay);
   const visibleTimed = visible.filter((e) => !e.allDay);
