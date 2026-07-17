@@ -54,7 +54,18 @@ export type WidgetConfigField = { key: string; label: string; required: boolean 
   | { kind: 'number'; default?: number; min?: number; max?: number; step?: number }
   | { kind: 'boolean'; default?: boolean }
   | { kind: 'enum'; default?: string; options: Choice[] }
-  | { kind: 'remote-options'; default?: string | string[]; source: RemoteOptionsSource; multiple?: boolean }
+  | {
+      kind: 'remote-options';
+      default?: string | string[];
+      source: RemoteOptionsSource;
+      multiple?: boolean;
+      // AOD-124: when set, the config form persists the CHOSEN choice's LABEL under this config key at
+      // save time (single-select only), so a per-widget caption (place / project·team / calendar) can show
+      // a human name the stored id and the payload both lack. The key is DISPLAY-ONLY: the host strips it
+      // from the fetch params (WidgetHost) so it never enters the requestKey or the provider request, and
+      // validateConfig ignores it (it is not a schema field of its own). See widgets/caption.ts.
+      labelKey?: string;
+    }
 );
 
 export type WidgetConfigFieldKind = WidgetConfigField['kind'];
@@ -62,6 +73,37 @@ export type WidgetConfigFieldKind = WidgetConfigField['kind'];
 export interface WidgetConfigSchema {
   fields: WidgetConfigField[];
 }
+
+// --- the per-widget caption strategy (AOD-124) ---------------------------------------------------
+
+/**
+ * How the host resolves a card's quiet header caption, per widget (AOD-124; claude-design/README.md
+ * §"the caption is per-widget"). Replaces the fixed SERVICE · WIDGET header and the AOD-37 hideHeaderAtSizes:
+ * the caption carries the most useful identifier, not one rule. A DECLARATIVE union — the leaf declares
+ * `caption`, the pure host helper `resolveCaption` (widgets/caption.ts) resolves it from { size, config,
+ * data, serviceName } to a string or `null`. `null` == a HEADERLESS card:
+ *   - `hidden`            : chromeless at EVERY size (Clock: "a clock is self-evident"). Subsumes the
+ *                           old hideHeaderAtSizes when a leaf wants no header anywhere.
+ *   - `serviceWidget`     : the DEFAULT — SERVICE · WIDGET, collapsed to one token when the widget title
+ *                           equals the service name.
+ *   - `place`             : SERVICE · <place> (Weather → WEATHER · QUITO). The place is read from the
+ *                           payload (`data.place`) when present, else the merged connection config's
+ *                           `labelKey` (WidgetHost seeds the platform_key connection location).
+ *   - `projectOrTeam`     : SERVICE · <project | team> (Linear). Reads the config `labelKey` persisted at
+ *                           selection; reverts to the widget name when absent (the needs_config case).
+ *   - `calendar`          : SERVICE · <calendar> (Calendar). Reads the config `labelKey` persisted at
+ *                           selection (the events payload never carries the calendar's own name).
+ * `hideAtSizes` makes any non-hidden strategy resolve to `null` at a size — this is how Weather / Calendar
+ * drop the header at S (the old `hideHeaderAtSizes: ['S']`), size-aware without a second field.
+ */
+export type CaptionStrategy =
+  | { kind: 'hidden' }
+  | ({ hideAtSizes?: WidgetSize[] } & (
+      | { kind: 'serviceWidget' }
+      | { kind: 'place'; labelKey: string }
+      | { kind: 'projectOrTeam'; labelKey: string }
+      | { kind: 'calendar'; labelKey: string }
+    ));
 
 // --- the widget (AOD-8 §6 WidgetDefinition + AOD-10 §3 WidgetModel additions) --------------------
 
@@ -90,9 +132,10 @@ export interface WidgetDefinition {
   cacheTtlSeconds?: number; // provider-facing floor (AOD-9 proxy cache); defaults from defaultRefresh
   minRefreshSeconds?: number; // device-cadence floor the author asserts; default 0
   dimsWithAmbient?: boolean; // default true: host applies the global dim overlay (AOD-10 §8)
-  // AOD-37 §4.2: sizes at which the host suppresses the quiet header for a self-evident card (Clock
-  // declares ['S']). A generic host capability, not a per-service branch; default = show.
-  hideHeaderAtSizes?: WidgetSize[];
+  // AOD-124: the per-widget caption strategy the host resolves into the quiet header (or `null` = a
+  // headerless card). Replaces the AOD-37 hideHeaderAtSizes + the hardcoded SERVICE · WIDGET collapse.
+  // Default (omitted) = { kind: 'serviceWidget' }. Resolved by widgets/caption.ts (pure).
+  caption?: CaptionStrategy;
 }
 
 /** AOD-10 §3 names the AOD-8 widget + its additions WidgetModel; kept as an alias for traceability. */

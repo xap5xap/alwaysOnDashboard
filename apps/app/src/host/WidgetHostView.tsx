@@ -1,11 +1,11 @@
 // The generic widget host chrome (AOD-8 §6.1, AOD-10 §7.3, design-widget-system.md §4-§7). Pure and
-// presentational: given a WidgetViewState it draws the shared card frame, the quiet SERVICE · WIDGET
-// header, the status-and-refresh cluster, and one visual per lifecycle state, and on data-bearing states
-// (fresh / stale / error-with-data) it mounts the widget's own renderer with { data, config, size } and
-// overlays staleness/error chrome. It branches on the view state, never on which service. The day/night
+// presentational: given a WidgetViewState it draws the shared card frame, the per-widget caption header
+// (AOD-124), the status-and-refresh cluster, and one visual per lifecycle state, and on data-bearing
+// states (fresh / stale / error-with-data) it mounts the widget's own renderer with { data, config, size }
+// and overlays staleness/error chrome. It branches on the view state, never on which service. The day/night
 // dim overlay (§7) and the night-frame for an opt-out widget (dimsWithAmbient: false, §7.2) ride the
-// ambient signal; the refresh control (§6) and header suppression (§4.2) are host capabilities keyed on
-// generic widget properties, not on a service name.
+// ambient signal; the refresh control (§6) and the caption strategy (AOD-124, resolved to null = a
+// headerless card) are host capabilities keyed on generic widget properties, not on a service name.
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -17,6 +17,7 @@ import { RefreshControl, type RefreshControlState } from './RefreshControl';
 import { SIZE_CATALOGUE } from '../widgets/sizes';
 import { UNIT_PX } from '../layout/geometry';
 import { bodyBox } from '../widgets/fitLadder';
+import { DEFAULT_CAPTION_STRATEGY, resolveCaption } from '../widgets/caption';
 
 export interface WidgetHostViewProps {
   state: WidgetViewState;
@@ -101,14 +102,25 @@ export function WidgetHostView({
   const nightFrame = optOut && ambient.phase === 'night';
   const overlayOpacity = optOut ? 0 : ambient.dimLevel * theme.overlay.maxDim;
 
-  // §4.2 the header is suppressible for a self-evident card (Clock S declares it). Generic per the
-  // widget's hideHeaderAtSizes, not a Clock special case.
-  const suppressHeader = !!def.hideHeaderAtSizes?.includes(size);
+  // AOD-124 §4.2: the per-widget caption. The host resolves the leaf's declared strategy (default
+  // SERVICE · WIDGET) from { size, config, data, serviceName, title } to a header string, or `null` for a
+  // HEADERLESS card (chromeless `hidden`, or a size-suppressed `place`/`calendar` at S). Generic — it
+  // branches on the strategy, never on a service; the pure resolver lives in widgets/caption.ts.
+  const caption = resolveCaption({
+    strategy: def.caption ?? DEFAULT_CAPTION_STRATEGY,
+    size,
+    title: def.title,
+    serviceName,
+    config,
+    data: dataOf(state),
+  });
+  const suppressHeader = caption == null;
 
   // AOD-123: the body px box (DP) the leaf's FitBody fits content into. Derived from the slot rect —
   // UNIT_PX * nominal units — minus the card padding on both axes and, when the header shows, the header
-  // row + the header->body gap. Computed here (host), passed down: no leaf measures on the hot path. DP,
-  // not screen px (the AOD-81 lesson: the kiosk wall auto-fits on top, so the body must be DP-correct).
+  // row + the header->body gap. Keyed off the RESOLVED caption (null → no header → full-height body).
+  // Computed here (host), passed down: no leaf measures on the hot path. DP, not screen px (the AOD-81
+  // lesson: the kiosk wall auto-fits on top, so the body must be DP-correct).
   const cat = SIZE_CATALOGUE[size];
   const bodyPxBox = bodyBox(cat.nominalW, cat.nominalH, UNIT_PX, {
     headerShown: !suppressHeader,
@@ -117,25 +129,28 @@ export function WidgetHostView({
     headerGap: theme.spacing(2),
   });
 
-  // §4.2 SERVICE · WIDGET, collapsed to one token when the widget title is the service name (Clock).
-  const headerTitle =
-    def.title.toLowerCase() === serviceName.toLowerCase() ? serviceName : `${serviceName} · ${def.title}`;
-
   const showStaleDot = state.phase === 'stale';
   const showErrorDot = state.phase === 'error' && showData;
+  const hasStatusCluster = showStaleDot || showErrorDot || !!refresh;
+
+  // The stale/error mark + the on-demand refresh control. It sits in the header when a caption shows; on a
+  // headerless card it floats to the top-trailing corner (see below), so the SAME cluster serves both.
+  const statusCluster = (
+    <>
+      {showStaleDot && <View style={[styles.dot, styles.dotWarning]} testID="widget-stale-dot" />}
+      {showErrorDot && <View style={[styles.dot, styles.dotError]} testID="widget-error-dot" />}
+      {refresh ? <RefreshControl state={refresh.state} onPress={refresh.onPress} /> : null}
+    </>
+  );
 
   return (
     <View style={[styles.card, nightFrame && styles.cardNight]} testID="widget-card">
       {!suppressHeader && (
         <View style={styles.header} testID="widget-header">
           <Text style={[styles.title, nightFrame && styles.titleNight]} numberOfLines={1}>
-            {headerTitle}
+            {caption}
           </Text>
-          <View style={styles.cluster}>
-            {showStaleDot && <View style={[styles.dot, styles.dotWarning]} testID="widget-stale-dot" />}
-            {showErrorDot && <View style={[styles.dot, styles.dotError]} testID="widget-error-dot" />}
-            {refresh ? <RefreshControl state={refresh.state} onPress={refresh.onPress} /> : null}
-          </View>
+          <View style={styles.cluster}>{statusCluster}</View>
         </View>
       )}
 
@@ -193,6 +208,18 @@ export function WidgetHostView({
         )}
       </View>
 
+      {/* AOD-124 §3: on a HEADERLESS card (chromeless `hidden`, or a size-suppressed caption at S) the
+          stale/error mark + refresh have no header row to sit in, so they float to the top-trailing
+          corner. Rendered AFTER the body so it paints on top; absolute, so it never changes the AOD-123
+          body box (the 72×72 S invariant holds). Placement is design-silent — interpreted as a card badge
+          per Holding Course's "a card badge for one card's trouble". A never-fetching card (Clock) has no
+          dot and no refresh, so nothing shows. */}
+      {suppressHeader && hasStatusCluster && (
+        <View style={[styles.cluster, styles.cornerCluster]} testID="widget-corner-status">
+          {statusCluster}
+        </View>
+      )}
+
       {/* §7.1 global dim overlay: opacity dimLevel * overlay.maxDim, skipped for an opt-out widget. */}
       {overlayOpacity > 0 && (
         <View
@@ -243,6 +270,13 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing(2),
+  },
+  // AOD-124 §3: the headerless status cluster's corner berth. Absolute (out of flow, so it never resizes
+  // the AOD-123 body box), tucked at the top-trailing corner inside the card padding.
+  cornerCluster: {
+    position: 'absolute',
+    top: theme.spacing(2),
+    right: theme.spacing(2),
   },
   dot: {
     width: theme.dot.r * 2,

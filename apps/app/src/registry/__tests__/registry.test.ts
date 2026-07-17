@@ -82,6 +82,10 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
     const filter = fields.find((f) => f.key === 'filter')!;
     expect(filter.kind).toBe('enum');
     expect(filter.kind === 'enum' && filter.options.map((o) => o.value)).toEqual(['open', 'in_progress', 'all']);
+
+    // AOD-124: the caption is the PROJECT; projectId persists its chosen label under projectLabel.
+    expect(def.caption).toEqual({ kind: 'projectOrTeam', labelKey: 'projectLabel' });
+    expect(projectId.kind === 'remote-options' && projectId.labelKey).toBe('projectLabel');
   });
 
   it('Current Cycle declares the §4.2 sizes and the §5.2 teamId option source', () => {
@@ -92,6 +96,10 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
     const teamId = def.configSchema.fields[0];
     expect(teamId.key).toBe('teamId');
     expect(teamId.kind === 'remote-options' && teamId.source.optionSource).toBe('linear_teams');
+
+    // AOD-124: the caption is the TEAM; teamId persists its chosen label under teamLabel.
+    expect(def.caption).toEqual({ kind: 'projectOrTeam', labelKey: 'teamLabel' });
+    expect(teamId.kind === 'remote-options' && teamId.labelKey).toBe('teamLabel');
   });
 
   it('Linear widgets become addable only once Linear is connected (oauth2, not exempt)', () => {
@@ -122,6 +130,10 @@ describe('Google Calendar service registration (AOD-56, integration-calendar.md 
     expect(calendarId.kind).toBe('remote-options');
     expect(calendarId.required).toBe(true);
     expect(calendarId.kind === 'remote-options' && calendarId.source.optionSource).toBe('google_calendars');
+
+    // AOD-124: the caption is the CALENDAR, hidden at the self-evident S; calendarId persists its label.
+    expect(def.caption).toEqual({ kind: 'calendar', labelKey: 'calendarLabel', hideAtSizes: ['S'] });
+    expect(calendarId.kind === 'remote-options' && calendarId.labelKey).toBe('calendarLabel');
   });
 
   it("Today's Agenda declares the §4.2 sizes/TTLs and the §5.2 calendarId option source", () => {
@@ -135,6 +147,10 @@ describe('Google Calendar service registration (AOD-56, integration-calendar.md 
     const calendarId = def.configSchema.fields[0];
     expect(calendarId.key).toBe('calendarId');
     expect(calendarId.kind === 'remote-options' && calendarId.source.optionSource).toBe('google_calendars');
+
+    // AOD-124: the caption is the CALENDAR; Agenda is M/W (never S), so no size gate.
+    expect(def.caption).toEqual({ kind: 'calendar', labelKey: 'calendarLabel' });
+    expect(calendarId.kind === 'remote-options' && calendarId.labelKey).toBe('calendarLabel');
   });
 
   it('Calendar widgets become addable only once Google Calendar is connected (oauth2, not exempt)', () => {
@@ -162,9 +178,10 @@ describe('Clock service registration (AOD-60, integration-clock.md §8): the aut
     expect(def.cacheTtlSeconds).toBeUndefined();
     expect(def.minRefreshSeconds).toBeUndefined();
     // AOD-37 §8.5: the Clock is the deep-red useAmbient() opt-in, so it OPTS OUT of the global dim
-    // overlay (false), and §4.2 it suppresses the host header at S (a 1x1 glance is just the time).
+    // overlay (false). AOD-124: it is chromeless — caption { kind: 'hidden' } drops the header at EVERY
+    // size (a clock is self-evident), superseding the old hideHeaderAtSizes ['S'].
     expect(def.dimsWithAmbient).toBe(false);
-    expect(def.hideHeaderAtSizes).toEqual(['S']);
+    expect(def.caption).toEqual({ kind: 'hidden' });
   });
 
   it('declares the §5 static config: 12/24h, seconds, date + format, and a string timezone (no remote-options)', () => {

@@ -21,8 +21,10 @@ const nextEvent: WidgetDefinition = {
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices (AOD-10 §6.1)
   minRefreshSeconds: 120, // never poll Google faster than once every 2 min
   dimsWithAmbient: true,
-  // §7: the 1x1 glance is self-evident (when kicker over the title), so the host suppresses the header there.
-  hideHeaderAtSizes: ['S'],
+  // AOD-124: the caption is the CALENDAR (CALENDAR · <calendar>), never a pane. The events payload lacks
+  // the calendar's own name, so calendarId persists its chosen label under `calendarLabel` (below).
+  // hideAtSizes ['S']: the 1x1 glance is self-evident (when kicker over the title), so the header drops at S.
+  caption: { kind: 'calendar', labelKey: 'calendarLabel', hideAtSizes: ['S'] },
   configSchema: {
     fields: [
       {
@@ -31,6 +33,8 @@ const nextEvent: WidgetDefinition = {
         kind: 'remote-options',
         required: true,
         source: { optionSource: 'google_calendars' },
+        // AOD-124: persist the chosen calendar's display name for the caption (the payload never carries it).
+        labelKey: 'calendarLabel',
       },
     ],
   },
@@ -50,6 +54,8 @@ const agenda: WidgetDefinition = {
   cacheTtlSeconds: 600, // provider hit at most once per 10 min across devices
   minRefreshSeconds: 300,
   dimsWithAmbient: true,
+  // AOD-124: also the CALENDAR (CALENDAR · <calendar>). No size gate — Agenda is M/W only, never S.
+  caption: { kind: 'calendar', labelKey: 'calendarLabel' },
   configSchema: {
     fields: [
       {
@@ -58,6 +64,8 @@ const agenda: WidgetDefinition = {
         kind: 'remote-options',
         required: true,
         source: { optionSource: 'google_calendars' },
+        // AOD-124: persist the chosen calendar's display name for the caption (the payload never carries it).
+        labelKey: 'calendarLabel',
       },
     ],
   },

@@ -22,8 +22,11 @@ const current: WidgetDefinition = {
   cacheTtlSeconds: 900, // provider hit at most once / 15 min; matches Open-Meteo's update step (§7.2)
   minRefreshSeconds: 600,
   dimsWithAmbient: true,
-  // §5: the 1x1 glance is self-evident (icon over temperature), so the host suppresses the header there.
-  hideHeaderAtSizes: ['S'],
+  // AOD-124: the caption is the PLACE (WEATHER · QUITO), not "Current". The location lives on the
+  // connection, so the host reads it from the merged connection config (`name`); the payload's `place`
+  // takes precedence if a future server forwards it. hideAtSizes ['S']: the 1x1 glance is self-evident
+  // (icon over temperature), so the header drops at S (subsumes the old hideHeaderAtSizes ['S']).
+  caption: { kind: 'place', labelKey: 'name', hideAtSizes: ['S'] },
   configSchema: { fields: [] },
   render: CurrentWeatherCard,
 };
@@ -41,6 +44,8 @@ const forecast: WidgetDefinition = {
   cacheTtlSeconds: 900, // provider floor at the AOD-5 ceiling; conserves the shared budget (§7.2)
   minRefreshSeconds: 900,
   dimsWithAmbient: true,
+  // AOD-124: also the PLACE (WEATHER · QUITO). No size gate — Forecast is W/L only, never the self-evident S.
+  caption: { kind: 'place', labelKey: 'name' },
   configSchema: { fields: [] },
   render: ForecastCard,
 };

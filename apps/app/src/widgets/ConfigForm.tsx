@@ -24,7 +24,7 @@ import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { Choice, WidgetConfigField, WidgetConfigSchema } from '../registry/types';
 import { Button, Input, Pills, Segmented, Toggle } from '../ui';
-import { validateConfig } from './config';
+import { applyCaptionLabels, validateConfig } from './config';
 import type { ResolvedOptionsState } from './useOptionSources';
 
 export interface ConfigFormProps {
@@ -150,7 +150,10 @@ export function ConfigForm({
       return;
     }
     setErrors({});
-    onSubmit(result.values);
+    // AOD-124: persist the chosen choice's LABEL for any labelKey field so a per-widget caption can show a
+    // human name (the stored id and the payload both lack it). Written from the resolved choices at save;
+    // the host strips these keys from the fetch params. A schema with no labelKey field is untouched.
+    onSubmit(applyCaptionLabels(schema, result.values, resolvedOptions, initial));
   };
 
   return (
