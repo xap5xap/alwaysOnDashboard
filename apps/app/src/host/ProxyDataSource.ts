@@ -3,12 +3,14 @@
 // signed-in user's session drives the call. Typed proxy failures are mapped to the AOD-10 §6.4 ProxyError
 // the host lifecycle reacts to.
 //
-// AOD-127: the failure map splits by supabase-js error CLASS, not just status. functions.invoke throws a
-// FunctionsHttpError when Vela was reached and answered a non-2xx (its `context` is the HTTP Response), vs
-// a FunctionsFetchError / FunctionsRelayError when the request never got an answer (network-level). That
-// class is the seam between "our backend responded, one service failed" (service_error) and "couldn't
-// reach our backend at all" (device_offline vs vela_unreachable, disambiguated by netinfo). This is a
-// CLIENT-ONLY inference — no proxy/server change is required to tell self-vs-upstream apart.
+// AOD-127: the failure map splits by supabase-js error CLASS, not just status. functions.invoke throws:
+//   - FunctionsHttpError  — Vela was reached and answered a non-2xx (`context` is the HTTP Response) ->
+//     one upstream service failed (service_error), or 409/429.
+//   - FunctionsRelayError — Vela's edge relay could not reach the function -> OUR serving layer is down
+//     (vela_unreachable). It carries a Response too, so it is matched by NAME before the status branch.
+//   - FunctionsFetchError — the request never got an answer at all (network-level) -> device_offline vs
+//     vela_unreachable, disambiguated by netinfo at the moment of failure.
+// This is a CLIENT-ONLY inference — no proxy/server change is required to tell self-vs-upstream apart.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { onlineManager } from '@tanstack/react-query';
 import type { Choice } from '../registry/types';
@@ -52,8 +54,8 @@ export class ProxyDataSource implements WidgetDataSource {
 }
 
 /** A supabase-js FunctionsHttpError carries the HTTP Response on `context` (it has a numeric `status`); a
- *  FunctionsFetchError / FunctionsRelayError does not. That presence is the "Vela answered vs never reached
- *  Vela" discriminator. */
+ *  FunctionsFetchError does not. That presence is the "Vela answered vs never reached Vela" discriminator.
+ *  (FunctionsRelayError also carries a Response but is matched by name earlier — it is a Vela-side fault.) */
 function isHttpResponse(ctx: unknown): ctx is Response {
   return typeof ctx === 'object' && ctx !== null && typeof (ctx as { status?: unknown }).status === 'number';
 }
@@ -66,11 +68,19 @@ function isHttpResponse(ctx: unknown): ctx is Response {
  *   anything else (5xx, or a 4xx that isn't 409/429) -> service_error: our backend is up, so this is one
  *   upstream service's own trouble ("theirs" — the card-level error badge).
  *
- * If there is NO Response (FunctionsFetchError / FunctionsRelayError / timeout), the request never got an
- * answer — a network-level failure talking to Vela. netinfo at the moment of failure decides whose network
- * is at fault: offline -> device_offline (YOUR network, amber), online -> vela_unreachable (OUR server, red).
+ * A FunctionsRelayError (Vela's relay could not reach the function) is caught first by name -> vela_unreachable.
+ *
+ * If there is NO Response (FunctionsFetchError / timeout), the request never got an answer — a network-level
+ * failure talking to Vela. netinfo at the moment of failure decides whose network is at fault: offline ->
+ * device_offline (YOUR network, amber), online -> vela_unreachable (OUR server, red).
  */
 async function toProxyError(error: unknown, isOnline: () => boolean): Promise<ProxyError> {
+  // A FunctionsRelayError is Supabase's edge RELAY failing to reach the function. It carries an HTTP
+  // Response (so it would fall through to the isHttpResponse status branch below and read as a per-card
+  // service_error) — but the fault is Vela's own serving layer, not an upstream service, so it must be
+  // caught FIRST and mapped to vela_unreachable (OUR server, sky-wide). (AOD-127 review fix.)
+  if ((error as { name?: unknown }).name === 'FunctionsRelayError') return { kind: 'vela_unreachable' };
+
   const ctx = (error as { context?: unknown }).context;
 
   if (isHttpResponse(ctx)) {

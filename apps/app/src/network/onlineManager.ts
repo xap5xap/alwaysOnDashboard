@@ -32,8 +32,7 @@ export function isNetInfoOnline(state: OnlineSignal): boolean {
  * Wire onlineManager to netinfo. Call once at app root (app/_layout.tsx). onlineManager owns the
  * subscription lifecycle: setEventListener stores this setup and invokes the returned cleanup when a new
  * listener replaces it, so this is safe to call again (idempotent enough for a re-mount / Fast Refresh).
- * Returns onlineManager's setup so a caller can hand it to an effect if it wants, though onlineManager
- * itself manages teardown.
+ * Returns nothing — onlineManager owns the netinfo subscription and its teardown.
  */
 export function setupOnlineManager(): void {
   onlineManager.setEventListener((setOnline) =>

@@ -5,7 +5,7 @@
 //   FunctionsFetchError -> no Response reached us: netinfo at the moment of failure decides
 //                          offline -> device_offline · online -> vela_unreachable
 // The online state is injected (never native in the mapper), so these are pure and deterministic.
-import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
+import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { onlineManager } from '@tanstack/react-query';
 import { ProxyDataSource } from '../ProxyDataSource';
@@ -148,6 +148,21 @@ describe('toProxyError — the supabase-js class discriminator (empirical)', () 
     const fetchErr = new FunctionsFetchError({ requestId: 'abc' });
     expect(typeof (fetchErr.context as { status?: unknown }).status).not.toBe('number');
     expect(await fetchError({ data: null, error: fetchErr }, { isOnline: () => true })).toEqual({
+      kind: 'vela_unreachable',
+    });
+  });
+
+  it('a real FunctionsRelayError -> vela_unreachable, matched by NAME even though it carries a status Response', async () => {
+    // The relay (Vela's serving layer) failed to reach the function; supabase-js passes the Response, so
+    // isHttpResponse would misread it as a per-card service_error without the name branch (AOD-127 review fix).
+    const relayErr = new FunctionsRelayError(fakeResponse(502));
+    expect(relayErr.name).toBe('FunctionsRelayError');
+    expect(typeof (relayErr.context as Response).status).toBe('number'); // it DOES carry a status
+    // Online or offline, a relay fault is Vela's side -> vela_unreachable, never device_offline/service_error.
+    expect(await fetchError({ data: null, error: relayErr }, { isOnline: () => true })).toEqual({
+      kind: 'vela_unreachable',
+    });
+    expect(await fetchError({ data: null, error: relayErr }, { isOnline: () => false })).toEqual({
       kind: 'vela_unreachable',
     });
   });
