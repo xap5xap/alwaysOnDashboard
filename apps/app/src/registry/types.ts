@@ -12,8 +12,11 @@ export type WidgetTypeId = string;
 export type AuthClass = 'oauth2' | 'api_key' | 'admin_key' | 'platform_key' | 'none';
 export type IconRef = string;
 
-// AOD-10 §5.1 canonical size catalogue (role + aspect hint, not a pixel size).
-export type WidgetSize = 'small' | 'medium' | 'large' | 'wide' | 'tall';
+// The S/M/W/L slot catalogue (AOD-122, Many Skies §1c): S 1x1 / M 1x2 / W 2x1 / L 2x2 on a
+// two-column, 96px-row grid. Supersedes the AOD-10 §5.1 five-class set (small/medium/large/wide/tall);
+// the retired legacy ids survive only in the DB column vocabulary (layout/schema.ts DbWidgetSize) and
+// are coerced at the read boundary (layout/mapper.ts).
+export type WidgetSize = 'S' | 'M' | 'W' | 'L';
 
 // AOD-8 §6 refresh interval. Semantics (floors, effective interval) are AOD-10 §6.
 export type RefreshInterval = { seconds: number } | 'manual';
@@ -82,7 +85,7 @@ export interface WidgetDefinition {
   minRefreshSeconds?: number; // device-cadence floor the author asserts; default 0
   dimsWithAmbient?: boolean; // default true: host applies the global dim overlay (AOD-10 §8)
   // AOD-37 §4.2: sizes at which the host suppresses the quiet header for a self-evident card (Clock
-  // small declares ['small']). A generic host capability, not a per-service branch; default = show.
+  // declares ['S']). A generic host capability, not a per-service branch; default = show.
   hideHeaderAtSizes?: WidgetSize[];
 }
 

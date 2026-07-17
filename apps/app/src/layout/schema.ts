@@ -24,14 +24,16 @@ export const RefreshIntervalSchema: z.ZodType<RefreshInterval> = z.union([
   z.literal('manual'),
 ]);
 
-// AOD-10 §5.1 size catalogue. Mirrors the widget_instances size CHECK (data-model §5.5).
-export const WidgetSizeSchema: z.ZodType<WidgetSize> = z.enum([
-  'small',
-  'medium',
-  'large',
-  'wide',
-  'tall',
-]);
+// The AOD-122 S/M/W/L slot catalogue (Many Skies §1c): what the app-side layout engine speaks.
+export const WidgetSizeSchema: z.ZodType<WidgetSize> = z.enum(['S', 'M', 'W', 'L']);
+
+// The DB column vocabulary: the widget_instances size CHECK (data-model §5.5, migration
+// 20260623190259) is FROZEN on the pre-redesign five classes — AOD-122 ships with NO migration, so
+// writes serialize S/M/W/L into this set (mapper.ts SIZE_TO_DB, an exact geometric bijection) and
+// reads gate on it before the slot coercion. Retire this alongside a future CHECK migration.
+export const DB_WIDGET_SIZES = ['small', 'medium', 'large', 'wide', 'tall'] as const;
+export type DbWidgetSize = (typeof DB_WIDGET_SIZES)[number];
+export const DbWidgetSizeSchema = z.enum(DB_WIDGET_SIZES);
 
 // config is opaque per-instance values; structurally it is a JSON object (AOD-10 §4 owns its interior).
 export const WidgetConfigSchema = z.record(z.unknown());
