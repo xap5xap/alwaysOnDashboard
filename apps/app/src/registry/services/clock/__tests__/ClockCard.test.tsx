@@ -96,9 +96,9 @@ describe('WidgetHost authClass:none no-fetch + self-tick path (integration-clock
     };
     renderHost(source, clockInstance);
 
-    // Fresh on mount: the card is present and the loading skeleton never shows.
+    // Live on mount: the card is present and the connecting skeleton never shows.
     expect(screen.getByTestId('clock-card')).toBeTruthy();
-    expect(screen.queryByTestId('widget-loading')).toBeNull();
+    expect(screen.queryByTestId('widget-connecting')).toBeNull();
     // The leaf actually formatted the device clock (a time string is rendered).
     expect(screen.getByTestId('clock-time').props.children).toBeTruthy();
     // The defining proof: the proxy is never called for a none widget.

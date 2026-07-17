@@ -1,5 +1,5 @@
 // Container-band tests: the host resolving a stub instance through the registry + TanStack Query +
-// a mock WidgetDataSource, proving the end-to-end loading -> fresh happy path and the 409
+// a mock WidgetDataSource, proving the end-to-end connecting -> live happy path and the 409
 // needs_reconnect -> disconnected mapping the AOD-44 proxy produces when there is no connection
 // (testing-strategy §9). The flaky stale / error-with-data transitions are covered deterministically
 // by the deriveViewState and WidgetHostView unit/component tests.
@@ -42,14 +42,14 @@ function renderHost(source: WidgetDataSource) {
 }
 
 describe('WidgetHost container through the proxy data source (testing-strategy §9)', () => {
-  it('resolves loading -> fresh and mounts the stub renderer', async () => {
+  it('resolves connecting -> live and mounts the stub renderer', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { ok: true }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue([]),
     };
     renderHost(source);
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/stub payload/i)).toBeTruthy());
     expect(source.fetch).toHaveBeenCalledWith({ serviceId: 'stub', widgetType: 'placeholder', params: {} });
   });

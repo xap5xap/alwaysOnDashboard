@@ -147,10 +147,15 @@ export function WidgetHost({
   let snapshot: WidgetQuerySnapshot;
   if (isLocal) {
     // none (Clock): no proxy fetch, so synthesize a permanent Fresh snapshot with no proxy data. The leaf
-    // self-derives from the device clock (integration-clock.md §6.3); deriveViewState yields 'fresh'.
+    // self-derives from the device clock (integration-clock.md §6.3); deriveViewState yields 'live'.
     snapshot = { status: 'success', data: undefined, fetchedAt: now() };
   } else if (!hasData && !erroredNoData) {
-    snapshot = { status: 'pending' };
+    // AOD-125: split the pre-data case into the not-yet-lit GHOST vs the first-fetch CONNECTING skeleton.
+    // A pending query that is not actually fetching (fetchStatus 'idle' — enabled:false, or a first fetch
+    // not yet begun) is the not-yet-lit tile (ghost); an actively fetching or offline-paused query with
+    // nothing cached is the skeleton (connecting), per Holding Course's "skeletons only where nothing has
+    // ever lived". At runtime our queries auto-fetch, so 'idle' is rare (see the deriveViewState DESIGN FLAG).
+    snapshot = query.fetchStatus === 'idle' ? { status: 'idle' } : { status: 'pending' };
   } else if (erroredNoData) {
     snapshot = { status: 'error', error: latestError ?? { kind: 'provider_unavailable' } };
   } else if (refetchErrored) {
@@ -159,7 +164,9 @@ export function WidgetHost({
     snapshot = { status: 'success', data: query.data!.data, fetchedAt: query.data!.fetchedAt };
   }
 
-  const state = deriveViewState({ needsConfig, query: snapshot, staleAfterSeconds, now: now() });
+  // AOD-125: def.isEmpty is the per-widget emptiness predicate; deriveViewState uses it to promote an empty
+  // payload to the host-drawn `empty` phase (the leaf never receives empty data).
+  const state = deriveViewState({ needsConfig, query: snapshot, staleAfterSeconds, now: now(), isEmpty: def.isEmpty });
   const serviceName = service?.displayName ?? instance.serviceId;
 
   return (

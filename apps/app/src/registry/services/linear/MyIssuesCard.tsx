@@ -9,15 +9,15 @@
 // colour, §4), the identifier (muted tabular), and the title (bright, ellipsized); at L a due date sits
 // on the right ("Today"/overdue bright, §5.2). The card deliberately spends NO blue accent: a dense work
 // list reads calmest as neutral monochrome (§5.1). The density per slot is W 4 / L 7 / M 10 (the pre-slot
-// medium/large/tall counts, AOD-122; S is defensive, §8). An empty assigned set (totalCount === 0) is
-// the §5.1 EmptyBody, not a host state. Ad-hoc font sizes map onto theme.type.* (§3/§9).
+// medium/large/tall counts, AOD-122; S is defensive, §8). An empty assigned set (totalCount === 0) is now
+// the host-drawn `empty` lifecycle phase (AOD-125, isMyIssuesEmpty), not a leaf-drawn body. Ad-hoc font
+// sizes map onto theme.type.* (§3/§9).
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
 import { fitCount } from '../../../widgets/fitLadder';
-import { CheckboxGlyph, PriorityGlyph } from './glyphs';
+import { PriorityGlyph } from './glyphs';
 
 // The normalized payload the proxy delivers (integration-linear.md §4.1). This mirrors the server-side
 // operations.ts `normalizeMyIssues` output: it is the data contract between the broker's normalize step
@@ -95,23 +95,17 @@ function asMyIssuesData(data: unknown): MyIssuesData {
   };
 }
 
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): no assigned issues -> the host-drawn empty phase.
+ *  The leaf no longer self-draws the empty body; the host owns it, so this card is reached only with issues. */
+export function isMyIssuesEmpty(data: unknown): boolean {
+  return asMyIssuesData(data).totalCount === 0;
+}
+
 export function MyIssuesCard({ data, config, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { issues, totalCount } = asMyIssuesData(data);
-
-  if (totalCount === 0) {
-    // §5.3 empty body: a calm "No assigned issues" with the per-widget checkbox glyph, no action (nothing
-    // is wrong, the user simply has nothing assigned). Wrapped to keep the existing *-empty testID contract.
-    return (
-      <View style={styles.fill} testID="linear-myissues-empty">
-        <EmptyBody
-          line="No assigned issues"
-          subline="You're all caught up"
-          glyph={<CheckboxGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
+  // AOD-125: the empty case (totalCount === 0) is now the host-drawn `empty` phase (isMyIssuesEmpty), so the
+  // leaf is reached only with issues to draw. It no longer self-draws the §5.1 EmptyBody.
 
   // AOD-123: the visible-row count is HEIGHT-DRIVEN so a short cell never overflows — the rows shed into
   // "+N more" by what actually fits the host-passed box (the count line reserved as the lead). Falls back
@@ -179,7 +173,6 @@ export function MyIssuesCard({ data, config, size, box }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
   body: { gap: theme.spacing(2) },
   list: { gap: theme.spacing(1.5) },
 

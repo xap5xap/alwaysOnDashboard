@@ -9,16 +9,14 @@
 // RAIL + an accent time), so the list points at what is next. At M (1x2; the old tall) a deep column of
 // 2-line rows; at W (2x1; the banner layout the retired 3x1 wide slot wore pre-AOD-122) event cells laid
 // left to right; at L (a coerced class, §9) single-line rows with a location on a second line. Overflow
-// folds into "+N more". The empty render (no events left today, a normal state, not an error) is the
-// shared §5.1 EmptyBody with the per-widget calendar glyph, no action.
+// folds into "+N more". The empty render (no events left today, a normal state, not an error) is now the
+// host-drawn `empty` lifecycle phase (AOD-125, isAgendaEmpty), not a leaf body.
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { AgendaData, CalendarEvent } from './types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
 import { fitCount } from '../../../widgets/fitLadder';
-import { CalendarGlyph } from './glyphs';
 
 // The pre-AOD-123 fixed per-size counts. AOD-122 remap: M (1x2) kept the old tall 10; W (2x1) 5; L 8;
 // S 4. AOD-123 keeps these only as the no-box fallback: the VERTICAL layouts (M deep column, L rows) now
@@ -56,6 +54,15 @@ function startsToday(event: CalendarEvent, now: Date): boolean {
   );
 }
 
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): NO events start on the device-local day. `now` is
+ *  epoch ms (deriveViewState passes it so the predicate stays pure). Emptiness is the "today"-scoped count —
+ *  the same filter the render applies — never events.length, because the server's coarse now->now+~36h window
+ *  can still hold tomorrow's events. Empty "today" -> the host-drawn empty phase; the leaf no longer draws it. */
+export function isAgendaEmpty(data: unknown, now: number): boolean {
+  const today = new Date(now);
+  return !asAgendaData(data).events.some((e) => startsToday(e, today));
+}
+
 /** Clock time for a timed event, or "All day" for an all-day one. */
 function formatClock(event: CalendarEvent): string {
   if (event.allDay) return 'All day';
@@ -70,18 +77,9 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
   const now = new Date();
   const today = events.filter((e) => startsToday(e, now));
 
-  if (today.length === 0) {
-    // §5.1 empty body: a calm "Nothing left today" with the calendar glyph, no action.
-    return (
-      <View style={styles.fill} testID="gcal-agenda-empty">
-        <EmptyBody
-          line="Nothing left today"
-          subline="Enjoy the quiet"
-          glyph={<CalendarGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
+  // AOD-125: an empty "today" is now the host-drawn `empty` phase (isAgendaEmpty), so the leaf is reached
+  // only with events. The guard remains for crash-safety across a host/leaf now-skew and draws nothing.
+  if (today.length === 0) return null;
 
   // All-day grouped on top; timed sorted ascending below; the soonest upcoming timed event is "next".
   const allDay = today.filter((e) => e.allDay);
@@ -228,7 +226,6 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
   list: { gap: theme.spacing(1.5) },
 
   // the next-event accent left rail (3px); transparent on every other row so titles still align

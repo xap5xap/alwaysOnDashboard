@@ -6,8 +6,8 @@
 // server-side (operations.ts); the card receives an already-normalized payload, so these assert rendering.
 //
 // AOD-36 polish (design-claude-usage.md): the Spend MTD run-rate is W-only (§5 layout); $0.00 is a
-// valid hero, NOT the EmptyBody (§5.3); Daily Spend draws the sparkline at W/L with an L-only
-// today label, and an empty days[] is the §5.1 EmptyBody (§6.2).
+// valid hero, NOT an empty (§5.3, so Spend MTD declares no isEmpty); Daily Spend draws the sparkline at
+// W/L with an L-only today label, and an empty days[] is now the host-drawn `empty` phase (AOD-125).
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -131,7 +131,7 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
     // one run-rate line: the $/day value + the day count (§5.2), kept at W (not clipped, not dropped)
@@ -191,12 +191,13 @@ describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', (
     expect(screen.getByTestId('claude-daily-spend-today')).toHaveTextContent('today $2.50'); // last day's amount
   });
 
-  it('renders the §5.1 empty body for a month with no spend yet (never crashes, §6.2)', async () => {
+  it('resolves to the host-drawn empty phase for a month with no spend yet (AOD-125, §6.2)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(dailySource({ days: [], currency: 'USD', total: 0 }), dailyInstance);
 
-    await waitFor(() => expect(screen.getByTestId('claude-daily-spend-empty')).toBeTruthy());
-    expect(screen.getByTestId('widget-empty-body')).toBeTruthy(); // the shared EmptyBody convention
+    // AOD-125: an empty series is now the host-drawn `empty` phase (isDailySpendEmpty), the shared EmptyBody.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
     expect(screen.queryByTestId('claude-daily-spend')).toBeNull();
   });
 });

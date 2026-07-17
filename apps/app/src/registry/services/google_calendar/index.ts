@@ -7,8 +7,8 @@
 // widget host, the config form, and Settings are NOT edited (the §8 not-touched footprint). Calendar is
 // the second real service (after Linear) and the first REST one.
 import type { ServiceDefinition, WidgetDefinition } from '../../types';
-import { NextEventCard } from './NextEventCard';
-import { AgendaCard } from './AgendaCard';
+import { NextEventCard, isNextEventEmpty } from './NextEventCard';
+import { AgendaCard, isAgendaEmpty } from './AgendaCard';
 
 // Next Event (the most glanceable card). Sizes / cadence / TTLs are integration-calendar.md §4.1, §7.2;
 // the config schema is §5.1: calendarId (remote-options, required, the stable Google calendar id stored).
@@ -39,6 +39,8 @@ const nextEvent: WidgetDefinition = {
     ],
   },
   render: NextEventCard,
+  // AOD-125: nothing upcoming (hasEvent:false) -> the host-drawn `empty` phase.
+  isEmpty: isNextEventEmpty,
 };
 
 // Today's Agenda. Sizes / cadence / TTLs are §4.2, §7.2; config is §5.2 (identical: only calendarId).
@@ -70,6 +72,8 @@ const agenda: WidgetDefinition = {
     ],
   },
   render: AgendaCard,
+  // AOD-125: no events on the device-local day -> the host-drawn `empty` phase (time-scoped, uses `now`).
+  isEmpty: isAgendaEmpty,
 };
 
 export const googleCalendarService: ServiceDefinition = {

@@ -11,16 +11,16 @@ import type { WidgetViewState } from '../../widgets/lifecycle';
 
 const def = stubService.widgets[0];
 const base = { def, size: 'W' as const, config: {}, serviceName: 'Linear' }; // AOD-122 slot id
-const fresh: WidgetViewState = { phase: 'fresh', data: { hello: 'world' }, fetchedAt: 1 };
+const live: WidgetViewState = { phase: 'live', data: { hello: 'world' }, fetchedAt: 1 };
 
 describe('WidgetHostView quiet header (AOD-37 §4.2)', () => {
   it('renders the SERVICE · WIDGET title', () => {
-    render(<WidgetHostView {...base} state={fresh} />);
+    render(<WidgetHostView {...base} state={live} />);
     expect(screen.getByText(`Linear · ${def.title}`)).toBeTruthy();
   });
 
   it('collapses to one token when the widget title equals the service name (Clock)', () => {
-    render(<WidgetHostView {...base} serviceName="Clock" def={{ ...def, title: 'Clock' }} state={fresh} />);
+    render(<WidgetHostView {...base} serviceName="Clock" def={{ ...def, title: 'Clock' }} state={live} />);
     expect(screen.getByText('Clock')).toBeTruthy();
   });
 
@@ -30,7 +30,7 @@ describe('WidgetHostView quiet header (AOD-37 §4.2)', () => {
         {...base}
         size="S"
         def={{ ...def, caption: { kind: 'serviceWidget', hideAtSizes: ['S'] } }}
-        state={fresh}
+        state={live}
       />,
     );
     expect(screen.queryByTestId('widget-header')).toBeNull();
@@ -39,7 +39,7 @@ describe('WidgetHostView quiet header (AOD-37 §4.2)', () => {
   });
 
   it('a chromeless caption { kind: hidden } draws no header at any size', () => {
-    render(<WidgetHostView {...base} size="W" def={{ ...def, caption: { kind: 'hidden' } }} state={fresh} />);
+    render(<WidgetHostView {...base} size="W" def={{ ...def, caption: { kind: 'hidden' } }} state={live} />);
     expect(screen.queryByTestId('widget-header')).toBeNull();
     expect(screen.getByText(/stub payload/i)).toBeTruthy();
   });
@@ -47,9 +47,9 @@ describe('WidgetHostView quiet header (AOD-37 §4.2)', () => {
 
 describe('WidgetHostView status + refresh cluster (AOD-37 §5, §6)', () => {
   it('shows the refresh control when the host supplies it, hides it otherwise', () => {
-    const { rerender } = render(<WidgetHostView {...base} state={fresh} />);
+    const { rerender } = render(<WidgetHostView {...base} state={live} />);
     expect(screen.queryByTestId('widget-refresh')).toBeNull();
-    rerender(<WidgetHostView {...base} state={fresh} refresh={{ state: 'idle', onPress: () => {} }} />);
+    rerender(<WidgetHostView {...base} state={live} refresh={{ state: 'idle', onPress: () => {} }} />);
     expect(screen.getByTestId('widget-refresh')).toBeTruthy();
   });
 
@@ -93,14 +93,14 @@ describe('WidgetHostView headerless status relocation (AOD-124 §3)', () => {
 
   it('surfaces the refresh affordance in the corner on a headerless fetching card', () => {
     render(
-      <WidgetHostView {...base} def={headerless} state={fresh} refresh={{ state: 'idle', onPress: () => {} }} />,
+      <WidgetHostView {...base} def={headerless} state={live} refresh={{ state: 'idle', onPress: () => {} }} />,
     );
     const corner = screen.getByTestId('widget-corner-status');
     expect(within(corner).getByTestId('widget-refresh')).toBeTruthy();
   });
 
   it('draws NO corner cluster for a chromeless card with no fetch and no staleness (Clock)', () => {
-    render(<WidgetHostView {...base} def={headerless} state={fresh} />);
+    render(<WidgetHostView {...base} def={headerless} state={live} />);
     expect(screen.queryByTestId('widget-header')).toBeNull();
     expect(screen.queryByTestId('widget-corner-status')).toBeNull();
   });
@@ -117,21 +117,21 @@ describe('WidgetHostView dim / ambient (AOD-37 §7)', () => {
   it('paints the global dim overlay at night for a default (dimsWithAmbient) widget', () => {
     render(
       <AmbientProvider value={{ phase: 'night', dimLevel: 0.7 }}>
-        <WidgetHostView {...base} state={fresh} />
+        <WidgetHostView {...base} state={live} />
       </AmbientProvider>,
     );
     expect(screen.getByTestId('widget-dim-overlay')).toBeTruthy();
   });
 
   it('paints no overlay by day', () => {
-    render(<WidgetHostView {...base} state={fresh} />);
+    render(<WidgetHostView {...base} state={live} />);
     expect(screen.queryByTestId('widget-dim-overlay')).toBeNull();
   });
 
   it('an opt-out widget (dimsWithAmbient: false) gets NO overlay, even at night', () => {
     render(
       <AmbientProvider value={{ phase: 'night', dimLevel: 0.7 }}>
-        <WidgetHostView {...base} def={{ ...def, dimsWithAmbient: false }} state={fresh} />
+        <WidgetHostView {...base} def={{ ...def, dimsWithAmbient: false }} state={live} />
       </AmbientProvider>,
     );
     expect(screen.queryByTestId('widget-dim-overlay')).toBeNull();

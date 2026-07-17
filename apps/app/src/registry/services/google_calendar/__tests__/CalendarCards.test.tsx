@@ -1,8 +1,8 @@
 // NextEventCard + AgendaCard driven through the real WidgetHost + the registry + TanStack Query + a
 // mock WidgetDataSource (testing-strategy §9, mirroring services/linear/__tests__/MyIssuesCard.test.tsx).
-// Proves the Calendar paths end to end on the client: loading -> fresh renders the event(s), the empty
-// states (hasEvent:false / nothing-left-today), the 409 -> disconnected mapping, the AOD-10 §4.4
-// render-time calendarId membership re-check, and the §4.2 device-clock "today" scoping in the agenda.
+// Proves the Calendar paths end to end on the client: connecting -> live renders the event(s), the
+// host-drawn `empty` phase (hasEvent:false / nothing-left-today; AOD-125), the 409 -> disconnected mapping,
+// the AOD-10 §4.4 render-time calendarId membership re-check, and the §4.2 device-clock "today" scoping.
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -96,7 +96,7 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
     };
     renderHost(source, nextEventInstance);
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('gcal-next-event')).toBeTruthy());
     expect(screen.getByText('Standup')).toBeTruthy();
     expect(source.fetch).toHaveBeenCalledWith({
@@ -106,20 +106,21 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
     });
   });
 
-  it('renders the §5.1 empty body when nothing is upcoming: glyph + line + subline, and NO action', async () => {
+  it('resolves to the host-drawn empty phase when nothing is upcoming: plain words, NO action (AOD-125)', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { hasEvent: false }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
     renderHost(source, nextEventInstance); // S: caption hidden -> headerless card (AOD-124)
-    await waitFor(() => expect(screen.getByTestId('gcal-next-event-empty')).toBeTruthy());
+    // AOD-125: hasEvent:false is now the host-drawn `empty` phase (isNextEventEmpty), drawn as the shared
+    // EmptyBody with the design's plain words ("Nothing right now."); the leaf no longer self-draws it.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByTestId('gcal-next-event')).toBeNull();
-    expect(screen.getByText('Nothing next')).toBeTruthy();
-    expect(screen.getByText("You're clear")).toBeTruthy();
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
     // the empty BODY carries no action (the trait that separates it from the host error/needs_config
     // prompts). The host's on-demand refresh control is separate chrome — at S (headerless) it now rides
     // the AOD-124 corner cluster, so scope the "no action" check to the empty body itself.
-    expect(within(screen.getByTestId('gcal-next-event-empty')).queryByRole('button')).toBeNull();
+    expect(within(screen.getByTestId('widget-empty-body')).queryByRole('button')).toBeNull();
     expect(screen.getByTestId('widget-refresh')).toBeTruthy();
   });
 
@@ -194,16 +195,16 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
     expect(screen.queryByText('Tomorrow planning')).toBeNull();
   });
 
-  it('renders the §5.1 empty body when the agenda is empty: "Nothing left today" + subline', async () => {
+  it('resolves to the host-drawn empty phase when the agenda is empty: plain words (AOD-125)', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { events: [] }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
     renderHost(source, agendaInstance);
-    await waitFor(() => expect(screen.getByTestId('gcal-agenda-empty')).toBeTruthy());
+    // AOD-125: an empty agenda is now the host-drawn `empty` phase (isAgendaEmpty), the shared EmptyBody.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByTestId('gcal-agenda')).toBeNull();
-    expect(screen.getByText('Nothing left today')).toBeTruthy();
-    expect(screen.getByText('Enjoy the quiet')).toBeTruthy();
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
   });
 
   it('groups all-day on top under the ALL DAY kicker and marks the next event with the accent rail', async () => {
@@ -243,14 +244,16 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
     expect(screen.queryByText('Event 11')).toBeNull(); // the last event is folded, not overflowing
   });
 
-  it('falls to the empty state when only tomorrow has events (today filter applied)', async () => {
+  it('falls to the empty phase when only tomorrow has events (today filter in isAgendaEmpty, AOD-125)', async () => {
     const data: AgendaData = { events: [mkEvent('a3', 'Tomorrow planning', localAt(1, 9))] };
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
     renderHost(source, agendaInstance);
-    await waitFor(() => expect(screen.getByTestId('gcal-agenda-empty')).toBeTruthy());
+    // AOD-125: isAgendaEmpty is TODAY-scoped, not events.length — a tomorrow-only payload is empty today, so
+    // the host draws the empty phase even though the events array is non-empty.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByText('Tomorrow planning')).toBeNull();
   });
 });

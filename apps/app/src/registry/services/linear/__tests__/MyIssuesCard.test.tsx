@@ -1,7 +1,7 @@
 // MyIssuesCard driven through the real WidgetHost + the registry + TanStack Query + a mock
 // WidgetDataSource (testing-strategy §9, mirroring host/__tests__/WidgetHost.test.tsx). Proves the
-// Linear my_issues path end to end on the client: loading -> fresh renders the issues, the empty state,
-// the 409 -> disconnected mapping, and the AOD-10 §4.4 render-time projectId membership re-check.
+// Linear my_issues path end to end on the client: connecting -> live renders the issues, the host-drawn
+// empty phase (AOD-125), the 409 -> disconnected mapping, and the AOD-10 §4.4 render-time projectId re-check.
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -67,7 +67,7 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     // short W cell (48px) leads with the count and sheds the rows into "+N more" rather than overflowing.
     renderHost(source, baseInstance.config, largeInstance);
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.getByText('AOD-55')).toBeTruthy();
     expect(screen.getByText('Wire Linear My Issues')).toBeTruthy();
@@ -94,15 +94,16 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // no row overflow
   });
 
-  it('renders the empty state when there are no assigned issues', async () => {
+  it('resolves to the host-drawn empty phase when there are no assigned issues (AOD-125)', async () => {
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { issues: [], totalCount: 0 }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(projectChoices),
     };
     renderHost(source);
-    await waitFor(() => expect(screen.getByTestId('linear-myissues-empty')).toBeTruthy());
-    // AOD-30 §5.3: the empty is the shared §5.1 EmptyBody, wrapped to keep the *-empty testID contract.
-    expect(screen.getByTestId('widget-empty-body')).toBeTruthy();
+    // AOD-125: totalCount 0 is now the host-drawn `empty` phase (isMyIssuesEmpty), drawn as the shared
+    // EmptyBody ("Nothing right now."); the leaf no longer self-draws its own empty body.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
     expect(screen.queryByTestId('linear-myissues')).toBeNull();
   });
 

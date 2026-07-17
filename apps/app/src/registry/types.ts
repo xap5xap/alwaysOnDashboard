@@ -136,6 +136,13 @@ export interface WidgetDefinition {
   // headerless card). Replaces the AOD-37 hideHeaderAtSizes + the hardcoded SERVICE · WIDGET collapse.
   // Default (omitted) = { kind: 'serviceWidget' }. Resolved by widgets/caption.ts (pure).
   caption?: CaptionStrategy;
+  // AOD-125: the per-widget emptiness predicate. When a data-bearing fetch's CONTENT is legitimately empty
+  // (no assigned issues, no next event, no active cycle, no spend yet), the host derives the first-class
+  // `empty` lifecycle phase and draws the shared EmptyBody — the leaf no longer self-draws its "nothing".
+  // `now` (epoch ms) is passed so a time-scoped predicate (the Agenda's device-local "today" filter) is
+  // pure. Omitted = the widget is never empty-capable ($0.00 spend, a clock, the weather are valid values,
+  // not empties). Pure: no React, no I/O. Reached by deriveViewState (widgets/lifecycle.ts).
+  isEmpty?: (data: unknown, now: number) => boolean;
 }
 
 /** AOD-10 §3 names the AOD-8 widget + its additions WidgetModel; kept as an alias for traceability. */

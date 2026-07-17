@@ -5,8 +5,8 @@
 // entry plus its leaf renderers plus one registration line in the client index; the layout engine, the
 // widget host, the config form, and Settings are NOT edited (the §8 not-touched footprint).
 import type { ServiceDefinition, WidgetDefinition } from '../../types';
-import { MyIssuesCard } from './MyIssuesCard';
-import { CurrentCycleCard } from './CurrentCycleCard';
+import { MyIssuesCard, isMyIssuesEmpty } from './MyIssuesCard';
+import { CurrentCycleCard, isCurrentCycleEmpty } from './CurrentCycleCard';
 
 // My Issues (the PS-M3 flagship). Sizes / cadence / TTLs are integration-linear.md §4.1, §7.2; the
 // config schema is §5.1: projectId (remote-options, required, stable id stored) + filter (enum, offline).
@@ -48,6 +48,8 @@ const myIssues: WidgetDefinition = {
     ],
   },
   render: MyIssuesCard,
+  // AOD-125: no assigned issues -> the host-drawn `empty` phase.
+  isEmpty: isMyIssuesEmpty,
 };
 
 // Current Cycle (the fast-follow). Sizes / cadence / TTLs are §4.2, §7.2; config is §5.2: teamId
@@ -79,6 +81,8 @@ const currentCycle: WidgetDefinition = {
     ],
   },
   render: CurrentCycleCard,
+  // AOD-125: no live cycle (active:false) -> the host-drawn `empty` phase.
+  isEmpty: isCurrentCycleEmpty,
 };
 
 export const linearService: ServiceDefinition = {
