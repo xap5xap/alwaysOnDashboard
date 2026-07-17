@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { WidgetHostView } from '../WidgetHostView';
 import { AmbientProvider } from '../../ambient/AmbientContext';
-import { stubService } from '../../registry/services/stub';
+import { stubService } from '../../registry/__tests__/stubRegistry';
 import type { WidgetViewState } from '../../widgets/lifecycle';
 
 const def = stubService.widgets[0];

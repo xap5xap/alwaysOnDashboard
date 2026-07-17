@@ -37,7 +37,7 @@ export function useConnectionActions(): ConnectionActions {
     queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId) });
     // Widget host queries are keyed by requestKey ("serviceId:widgetType:params", scheduler.ts), so a
     // string key containing ":" is a widget query. Invalidating them re-runs the proxy, which is what
-    // flips the stub out of the disconnected state on connect (no longer 409) and clears it on disconnect.
+    // flips a widget out of the disconnected state on connect (no longer 409) and clears it on disconnect.
     queryClient.invalidateQueries({
       predicate: (query) => {
         const key = query.queryKey[0];

@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../WidgetDataSource';
 import { RegistryProvider } from '../../registry/RegistryProvider';
+import { stubRegistry } from '../../registry/__tests__/stubRegistry';
 import type { WidgetInstance } from '../../registry/types';
 
 // The host reads useConnections() for the generic platform_key params-seeding (integration-weather.md
@@ -31,7 +32,7 @@ function renderHost(source: WidgetDataSource) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <RegistryProvider>
+      <RegistryProvider registry={stubRegistry}>
         <WidgetDataSourceProvider source={source}>
           <WidgetHost instance={instance} maxRetries={0} />
         </WidgetDataSourceProvider>
@@ -76,7 +77,7 @@ describe('WidgetHost container through the proxy data source (testing-strategy �
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     render(
       <QueryClientProvider client={client}>
-        <RegistryProvider>
+        <RegistryProvider registry={stubRegistry}>
           <WidgetDataSourceProvider source={source}>
             <WidgetHost
               instance={{ ...instance, config: { density: 'bogus' } }}
@@ -96,10 +97,10 @@ describe('WidgetHost container through the proxy data source (testing-strategy �
   });
 });
 
-// The render-time remote-options membership re-check (AOD-10 §4.2 rule 2 / §4.4) on the real registry's
-// `placeholder_remote` widget. The host resolves the option set through the seam and feeds it into
-// needsConfig: a non-member stored value -> needs_config; an unresolved set (outage) keeps the
-// selection (unverified passes), so a provider blip never false-trips a placed widget.
+// The render-time remote-options membership re-check (AOD-10 §4.2 rule 2 / §4.4) on the test registry's
+// `placeholder_remote` widget (stubRegistry, injected below). The host resolves the option set through
+// the seam and feeds it into needsConfig: a non-member stored value -> needs_config; an unresolved set
+// (outage) keeps the selection (unverified passes), so a provider blip never false-trips a placed widget.
 const remoteInstance: WidgetInstance = {
   instanceId: 'i2',
   serviceId: 'stub',
@@ -114,7 +115,7 @@ function renderRemoteHost(source: WidgetDataSource, config: Record<string, unkno
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <RegistryProvider>
+      <RegistryProvider registry={stubRegistry}>
         <WidgetDataSourceProvider source={source}>
           <WidgetHost instance={{ ...remoteInstance, config }} maxRetries={0} />
         </WidgetDataSourceProvider>

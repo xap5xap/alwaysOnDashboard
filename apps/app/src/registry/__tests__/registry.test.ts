@@ -1,21 +1,20 @@
 // The registry seam (AOD-8 §9, §10) against the REAL SERVICE_REGISTRY. addableWidgets encodes
-// invariant 2 (connected-only); the stub is platform_key, so it is gated like any credentialed service
-// and offers nothing until connected. getWidgetDef/getService resolve an instance's references back to
-// its definition (invariant 1).
-import { addableWidgets, getService, getWidgetDef } from '../registry';
+// invariant 2 (connected-only): a credentialed service (oauth2 / admin_key / platform_key) is gated
+// and offers nothing until connected; authClass 'none' (Clock) is the sole exemption.
+// getWidgetDef/getService resolve an instance's references back to its definition (invariant 1).
+import { addableWidgets, getService, getWidgetDef, SERVICE_REGISTRY } from '../registry';
 
 describe('addableWidgets (AOD-8 §9 invariant 2: connected-only, with the authClass none exemption)', () => {
   it('offers only Clock (the sole none exemption) when nothing is connected', () => {
-    // The stub/Linear/Calendar/Weather/Claude services are all gated; Clock (authClass none) alone is
+    // The Linear/Calendar/Weather/Claude services are all gated; Clock (authClass none) alone is
     // exempt (integration-clock.md §3.1), so it is the only widget offered with no connection.
     expect(addableWidgets(new Set()).map((w) => w.serviceId)).toEqual(['clock']);
   });
 
   it("offers a connected service's widgets alongside the always-on Clock", () => {
-    const widgets = addableWidgets(new Set(['stub']));
-    // The stub service publishes the bootstrap widget plus the AOD-53 remote-options vehicle.
-    const stub = widgets.filter((w) => w.serviceId === 'stub');
-    expect(stub.map((w) => w.type)).toEqual(['placeholder', 'placeholder_remote']);
+    const widgets = addableWidgets(new Set(['linear']));
+    const linear = widgets.filter((w) => w.serviceId === 'linear');
+    expect(linear.map((w) => w.type)).toEqual(['my_issues', 'current_cycle']);
     // Clock is always addable, even when another service is connected.
     expect(widgets.some((w) => w.serviceId === 'clock')).toBe(true);
   });
@@ -27,10 +26,32 @@ describe('addableWidgets (AOD-8 §9 invariant 2: connected-only, with the authCl
 
 describe('definition resolution (AOD-8 §9 invariant 1)', () => {
   it('resolves a registered service and widget, and returns undefined otherwise', () => {
-    expect(getService('stub')?.displayName).toBe('Stub');
-    expect(getWidgetDef('stub', 'placeholder')?.title).toBe('Stub Widget');
+    expect(getService('clock')?.displayName).toBe('Clock');
+    expect(getWidgetDef('clock', 'clock')?.title).toBe('Clock');
     expect(getService('ghost')).toBeUndefined();
-    expect(getWidgetDef('stub', 'ghost')).toBeUndefined();
+    expect(getWidgetDef('clock', 'ghost')).toBeUndefined();
+  });
+});
+
+describe('walking-skeleton stub removal (AOD-126, resolves AOD-94)', () => {
+  it('the production registry carries exactly the v1 real services, and no stub', () => {
+    expect(SERVICE_REGISTRY.map((s) => s.id)).toEqual([
+      'linear',
+      'google_calendar',
+      'weather',
+      'anthropic_usage',
+      'clock',
+    ]);
+    expect(getService('stub')).toBeUndefined();
+    expect(getWidgetDef('stub', 'placeholder')).toBeUndefined();
+    // No registered service publishes the stub's widget types either.
+    const allTypes = SERVICE_REGISTRY.flatMap((s) => s.widgets.map((w) => w.type));
+    expect(allTypes).not.toContain('placeholder');
+    expect(allTypes).not.toContain('placeholder_remote');
+  });
+
+  it("a connected 'stub' id offers nothing (only the none-exempt Clock remains)", () => {
+    expect(addableWidgets(new Set(['stub'])).map((w) => w.serviceId)).toEqual(['clock']);
   });
 });
 

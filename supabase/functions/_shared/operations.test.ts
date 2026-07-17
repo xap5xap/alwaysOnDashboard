@@ -32,10 +32,11 @@ function bodyFor(params: Record<string, unknown>) {
 }
 
 describe("operation registry (integration-linear.md §6)", () => {
-  it("returns undefined for a service/widget with no operation (the stub keeps pass-through)", () => {
+  it("returns undefined for a service/widget with no registered operation (pass-through)", () => {
+    // The AOD-126-removed stub stays unregistered: no operation survives the lockstep removal.
     assertEquals(getOperation("stub", "placeholder"), undefined);
     assertEquals(getOperation("linear", "not_a_widget"), undefined);
-    // Weather now has current/forecast operations (below), but an unknown weather widget is still undefined.
+    // Weather has current/forecast operations (below), but an unknown weather widget is still undefined.
     assertEquals(getOperation("weather", "not_a_widget"), undefined);
   });
 
