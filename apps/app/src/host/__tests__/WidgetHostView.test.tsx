@@ -1,10 +1,10 @@
 // Component-band tests for the host chrome across every AOD-10 §7 lifecycle state, asserting the
 // AOD-10 §7.3 rule: the widget's own renderer is reached ONLY on data-bearing states (testing-
-// strategy §9). Uses the real stub widget definition (its StubCard renderer) as the leaf.
+// strategy §9). Uses the test-only stub widget definition (its StubCard renderer) as the leaf.
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { WidgetHostView } from '../WidgetHostView';
-import { stubService } from '../../registry/services/stub';
+import { stubService } from '../../registry/__tests__/stubRegistry';
 
 const def = stubService.widgets[0];
 const base = { def, size: 'medium' as const, config: {}, serviceName: 'Stub' };

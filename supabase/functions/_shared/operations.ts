@@ -14,9 +14,9 @@
 //   3. normalize  - the raw-provider -> normalized-payload mapping the renderer receives (AOD-8 §6.1),
 //      so the proxy caches small clean payloads (AOD-5: normalized data only). Required.
 //
-// Services with no operation (the stub, Weather's pass-through) keep the proxy's pass-through query and
-// raw body. This seam is additive and backward compatible: one generic lookup in the proxy
-// (proxy/handler.ts), no per-service engine edits (integration-linear.md §6.3, integration-calendar.md §6.3).
+// A service/widget with no registered operation keeps the proxy's pass-through query and raw body.
+// This seam is additive and backward compatible: one generic lookup in the proxy (proxy/handler.ts),
+// no per-service engine edits (integration-linear.md §6.3, integration-calendar.md §6.3).
 
 export interface WidgetOperation {
   /** Build the provider request BODY (a GraphQL POST). Optional: a REST GET carries no body (§6.3a). */
@@ -729,7 +729,7 @@ export const OPERATION_REGISTRY: WidgetOperationRegistry = {
   },
 };
 
-/** Resolve a widget's server-side operation, or undefined for a pass-through (REST/stub) widget. */
+/** Resolve a widget's server-side operation, or undefined for a pass-through widget. */
 export function getOperation(serviceId: string, widgetType: string): WidgetOperation | undefined {
   return OPERATION_REGISTRY[serviceId]?.[widgetType];
 }

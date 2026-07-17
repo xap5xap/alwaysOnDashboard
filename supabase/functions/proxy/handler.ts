@@ -62,8 +62,8 @@ export async function handler(req: Request): Promise<Response> {
 
     // The single generic operation seam (integration-linear.md §6.3, refined for REST by
     // integration-calendar.md §6.3): a GraphQL service (Linear) builds its provider body server-side; a
-    // REST service (Calendar) builds its time-derived URL query server-side via buildQuery; services with
-    // no operation (stub, Weather pass-through) keep the pass-through query below. One lookup serves all.
+    // REST service (Calendar) builds its time-derived URL query server-side via buildQuery; a widget
+    // with no registered operation keeps the pass-through query below. One lookup serves all.
     const op = getOperation(body.service, body.widget);
     const params = body.params ?? {};
 
@@ -75,7 +75,7 @@ export async function handler(req: Request): Promise<Response> {
       ? op.buildQuery(params)
       : { ...(conn.config as Record<string, unknown> | null ?? {}), ...params };
     // pathParams fills any {token} slot in the allow-listed registry path (Calendar's {calendarId});
-    // a token-free path is unchanged, so Linear/Weather/stub/Anthropic are untouched (§6.3c).
+    // a token-free path is unchanged, so Linear/Weather/Anthropic are untouched (§6.3c).
     const result = await callProviderApi(backend, endpoint, { secret, query: callQuery, body: callBody, pathParams: params });
 
     // Credential-death detector (integration-claude.md §3.3): a credentialed-class key that returns 401

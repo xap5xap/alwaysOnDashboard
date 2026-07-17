@@ -110,7 +110,7 @@ describe('requiresConfiguration (AOD-10 §4 configure-on-add predicate)', () => 
 });
 
 describe('defaultSeedFor', () => {
-  it('derives size, an origin rect, and empty config for an empty board (matches the bootstrap stub seed)', () => {
+  it('derives size, an origin rect, and empty config for an empty board (matches the bootstrap seed geometry)', () => {
     expect(defaultSeedFor(def(), [])).toEqual({
       serviceId: 'stub',
       widgetType: 'placeholder',

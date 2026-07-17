@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectionsList } from '../ConnectionsList';
 import { RegistryProvider, type Registry } from '../../registry/RegistryProvider';
 import { CustomerInfoProvider } from '../../entitlements/CustomerInfoContext';
-import { stubService } from '../../registry/services/stub';
+import { stubService } from '../../registry/__tests__/stubRegistry';
 import type { AuthClass, ServiceDefinition } from '../../registry/types';
 import type { ConnectionMap } from '../connectionsRepo';
 

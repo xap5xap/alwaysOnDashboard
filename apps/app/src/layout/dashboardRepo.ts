@@ -22,12 +22,17 @@ export interface LoadedDashboard {
   instances: WidgetInstance[];
 }
 
-// The first-run default. Replaced by real onboarding + an add-widget flow in PS-M3; the stub exercises
-// the AOD-8 seam and the AOD-10 host lifecycle without any real integration.
+// The first-run seed (AOD-126, resolves AOD-94): a fresh signup has no connections, so the seeded
+// widget must be the one that renders without any — Clock, the sole authClass 'none' service
+// (client-only, no fetch, self-ticks). Seeded `medium` on the seed's original 2x1 origin rect: a
+// supported Clock size whose nominal geometry matches; `small` (1x1) is supported but Clock is known
+// to overflow a 1x1 cell (hosted-dogfood finding), so the seed avoids it. config {} is valid (every
+// Clock field is optional/defaulted), keeping the bootstrap invariant that the seed is born valid.
+// Interim choice: the onboarding cold open / skip-seeds decision refines this in RB-36.
 const DEFAULT_DASHBOARD_NAME = 'Wall';
-const STUB_SEED: InstanceSeed = {
-  serviceId: 'stub',
-  widgetType: 'placeholder',
+const FIRST_RUN_SEED: InstanceSeed = {
+  serviceId: 'clock',
+  widgetType: 'clock',
   config: {},
   size: 'medium',
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
@@ -58,7 +63,7 @@ export async function loadDashboard(): Promise<LoadedDashboard | null> {
   return { dashboardId: dash.id, name: dash.name, instances };
 }
 
-/** Create the default dashboard + the stub instance for a user who has none (client-direct under RLS). */
+/** Create the default dashboard + the first-run Clock instance for a user who has none (client-direct under RLS). */
 export async function bootstrapDashboard(userId: string): Promise<LoadedDashboard> {
   const { data: dash, error } = await supabase
     .from('dashboards')
@@ -69,7 +74,7 @@ export async function bootstrapDashboard(userId: string): Promise<LoadedDashboar
 
   const { data: row, error: rowError } = await supabase
     .from('widget_instances')
-    .insert(instanceToInsert(STUB_SEED, dash.id, userId))
+    .insert(instanceToInsert(FIRST_RUN_SEED, dash.id, userId))
     .select('*')
     .single();
   if (rowError) throw rowError;

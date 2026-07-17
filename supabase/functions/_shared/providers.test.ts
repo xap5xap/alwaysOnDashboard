@@ -26,7 +26,7 @@ describe("applyPathParams (integration-calendar.md §6.3c)", () => {
     assertEquals(applyPathParams("/c/{id}/x", { id: "a/b?z=1#f" }), "/c/a%2Fb%3Fz%3D1%23f/x");
   });
 
-  it("leaves a token-free path unchanged (Linear / Weather / stub / Anthropic untouched)", () => {
+  it("leaves a token-free path unchanged (Linear / Weather / Anthropic untouched)", () => {
     assertEquals(applyPathParams("/graphql", { calendarId: "ignored" }), "/graphql");
     assertEquals(applyPathParams("/v1/forecast", {}), "/v1/forecast");
   });
