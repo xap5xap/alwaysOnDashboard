@@ -19,6 +19,9 @@ const myIssues: WidgetDefinition = {
   cacheTtlSeconds: 120, // provider hit at most once per 2 min across devices (AOD-10 §6.1)
   minRefreshSeconds: 60, // never poll Linear faster than once a minute
   dimsWithAmbient: true,
+  // AOD-124: the caption is the PROJECT (LINEAR · <project>). The id and payload lack the human name, so
+  // projectId persists its chosen label under `projectLabel` (below); absent (needs_config) → "My Issues".
+  caption: { kind: 'projectOrTeam', labelKey: 'projectLabel' },
   configSchema: {
     fields: [
       {
@@ -27,6 +30,8 @@ const myIssues: WidgetDefinition = {
         kind: 'remote-options',
         required: true,
         source: { optionSource: 'linear_projects' },
+        // AOD-124: persist the chosen project's name for the caption (the payload never carries it).
+        labelKey: 'projectLabel',
       },
       {
         key: 'filter',
@@ -57,6 +62,9 @@ const currentCycle: WidgetDefinition = {
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices
   minRefreshSeconds: 120,
   dimsWithAmbient: true,
+  // AOD-124: the caption is the TEAM (LINEAR · <team>). teamId persists its chosen label under `teamLabel`
+  // (below); absent (needs_config) → "Current Cycle".
+  caption: { kind: 'projectOrTeam', labelKey: 'teamLabel' },
   configSchema: {
     fields: [
       {
@@ -65,6 +73,8 @@ const currentCycle: WidgetDefinition = {
         kind: 'remote-options',
         required: true,
         source: { optionSource: 'linear_teams' },
+        // AOD-124: persist the chosen team's name for the caption (the payload never carries it).
+        labelKey: 'teamLabel',
       },
     ],
   },

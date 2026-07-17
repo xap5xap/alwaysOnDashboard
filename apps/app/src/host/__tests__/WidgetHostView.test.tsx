@@ -82,10 +82,25 @@ describe('WidgetHostView passes the computed body box to the renderer (AOD-123 ย
     expect(screen.getByTestId('echo-box')).toHaveTextContent('168x144');
   });
 
-  it('S (1x1) header suppressed via hideHeaderAtSizes: 72 x 72 (no header subtraction)', () => {
+  it('S (1x1) header size-suppressed via caption hideAtSizes: 72 x 72 (no header subtraction)', () => {
     render(
-      <WidgetHostView {...base} def={boxEchoDef({ hideHeaderAtSizes: ['S'] })} size="S" state={fresh} />,
+      <WidgetHostView
+        {...base}
+        def={boxEchoDef({ caption: { kind: 'serviceWidget', hideAtSizes: ['S'] } })}
+        size="S"
+        state={fresh}
+      />,
     );
     expect(screen.getByTestId('echo-box')).toHaveTextContent('72x72');
+  });
+
+  it('S (1x1) chromeless caption { kind: hidden }: 72 x 72 (no header subtraction, AOD-124 ยง2)', () => {
+    render(<WidgetHostView {...base} def={boxEchoDef({ caption: { kind: 'hidden' } })} size="S" state={fresh} />);
+    expect(screen.getByTestId('echo-box')).toHaveTextContent('72x72');
+  });
+
+  it('W (2x1) chromeless caption keeps the full width but drops the header row: 168 x 72', () => {
+    render(<WidgetHostView {...base} def={boxEchoDef({ caption: { kind: 'hidden' } })} size="W" state={fresh} />);
+    expect(screen.getByTestId('echo-box')).toHaveTextContent('168x72');
   });
 });

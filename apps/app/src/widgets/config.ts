@@ -2,7 +2,7 @@
 // WidgetConfigSchema. This is the client UX/render-time check (rule 1 and 2 of §4.2); the proxy is
 // the only line of trust (rule 3, server-side). The unverified allowance for remote-options is
 // deliberate: a provider outage must not block saving or erase a previously valid selection.
-import type { Choice, WidgetConfigSchema } from '../registry/types';
+import type { Choice, WidgetConfigField, WidgetConfigSchema } from '../registry/types';
 
 export type ConfigError = { key: string; message: string };
 export type ConfigValidation =
@@ -128,4 +128,57 @@ export function validateConfig(
   }
 
   return errors.length ? { ok: false, errors } : { ok: true, values };
+}
+
+// --- caption labels (AOD-124) --------------------------------------------------------------------
+// A single-select remote-options field may declare a `labelKey`: the config form persists the chosen
+// choice's LABEL under that key so a per-widget caption (place / project·team / calendar) can show a human
+// name the stored id and the payload both lack. These keys are DISPLAY-ONLY — not schema fields — so
+// validateConfig ignores them (they never appear in a field loop) and the host strips them from the fetch
+// params (WidgetHost, via configLabelKeys) so they never enter the requestKey or the provider request.
+
+/** Return every single-select remote-options field with a labelKey. */
+function labelFields(schema: WidgetConfigSchema): Extract<WidgetConfigField, { kind: 'remote-options' }>[] {
+  return schema.fields.filter(
+    (f): f is Extract<WidgetConfigField, { kind: 'remote-options' }> =>
+      f.kind === 'remote-options' && f.multiple !== true && typeof f.labelKey === 'string',
+  );
+}
+
+/** The config keys that hold a persisted display label. Used by the host to strip them from fetch params. */
+export function configLabelKeys(schema: WidgetConfigSchema): string[] {
+  return labelFields(schema).map((f) => f.labelKey as string);
+}
+
+/**
+ * Persist each labelKey field's chosen LABEL alongside the validated values (AOD-124). Pure: given the
+ * validated values, the ready choice sets, and the instance's previous config, it writes `labelKey` from
+ * the selected choice. When the choices are unavailable (a provider outage at save) but the selection is
+ * unchanged, the previous label is preserved so a valid caption survives the outage; when the selection is
+ * cleared or no label can be resolved, the key is left unset (the caption falls back to the widget name).
+ */
+export function applyCaptionLabels(
+  schema: WidgetConfigSchema,
+  values: Record<string, unknown>,
+  resolvedOptions: Record<string, Choice[]>,
+  previous: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...values };
+  for (const field of labelFields(schema)) {
+    const labelKey = field.labelKey as string;
+    const selected = values[field.key];
+    if (typeof selected !== 'string' || selected === '') {
+      delete out[labelKey]; // selection cleared: no caption label to carry
+      continue;
+    }
+    const match = resolvedOptions[field.key]?.find((c) => c.value === selected);
+    if (match) {
+      out[labelKey] = match.label;
+    } else if (selected === previous[field.key] && typeof previous[labelKey] === 'string') {
+      out[labelKey] = previous[labelKey]; // unchanged selection, choices unavailable: keep the last label
+    } else {
+      delete out[labelKey]; // no reliable label: leave unset (caption reverts to the widget name)
+    }
+  }
+  return out;
 }

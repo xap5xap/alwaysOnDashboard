@@ -4,7 +4,7 @@
 // states (hasEvent:false / nothing-left-today), the 409 -> disconnected mapping, the AOD-10 §4.4
 // render-time calendarId membership re-check, and the §4.2 device-clock "today" scoping in the agenda.
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../../../../host/WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../host/WidgetDataSource';
@@ -111,13 +111,16 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
       fetch: jest.fn().mockResolvedValue({ data: { hasEvent: false }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, nextEventInstance); // S: header (and its refresh button) suppressed
+    renderHost(source, nextEventInstance); // S: caption hidden -> headerless card (AOD-124)
     await waitFor(() => expect(screen.getByTestId('gcal-next-event-empty')).toBeTruthy());
     expect(screen.queryByTestId('gcal-next-event')).toBeNull();
     expect(screen.getByText('Nothing next')).toBeTruthy();
     expect(screen.getByText("You're clear")).toBeTruthy();
-    // the empty body carries no action (the trait that separates it from the host error/needs_config prompts)
-    expect(screen.queryByRole('button')).toBeNull();
+    // the empty BODY carries no action (the trait that separates it from the host error/needs_config
+    // prompts). The host's on-demand refresh control is separate chrome — at S (headerless) it now rides
+    // the AOD-124 corner cluster, so scope the "no action" check to the empty body itself.
+    expect(within(screen.getByTestId('gcal-next-event-empty')).queryByRole('button')).toBeNull();
+    expect(screen.getByTestId('widget-refresh')).toBeTruthy();
   });
 
   it('emphasizes the when: a timed event leads with the relative-time kicker', async () => {

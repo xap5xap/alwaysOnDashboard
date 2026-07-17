@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { WidgetConfigSchema, WidgetInstance } from '../registry/types';
 import { useConnections } from '../connections/useConnections';
-import { validateConfig } from '../widgets/config';
+import { configLabelKeys, validateConfig } from '../widgets/config';
 import { useOptionSources } from '../widgets/useOptionSources';
 import {
   deriveViewState,
@@ -56,10 +56,21 @@ export function WidgetHost({
   // oauth2 / api_key / admin_key widgets pass instance.config through byte-for-byte unchanged. This
   // delivers the location into the server buildQuery and keeps the cache key the stable location.
   const conn = connections.get(instance.serviceId);
-  const params =
+  // The config the host passes down for RENDER + CAPTION. For platform_key it folds in the connection
+  // config (the location lives there, not in the instance config), so the `place` caption reads the
+  // location name; every other class shows the instance config verbatim.
+  const displayConfig =
     service?.authClass === 'platform_key'
       ? { ...(conn?.config ?? {}), ...instance.config }
       : instance.config;
+  // AOD-124: the FETCH params are the display config MINUS the caption labelKeys (a remote-options field's
+  // persisted display label). Those keys are display-only, so they must never enter the requestKey or the
+  // provider request; stripping keeps the cross-device cache key stable when a card gains a caption label.
+  const labelKeys = configLabelKeys(def?.configSchema ?? EMPTY_SCHEMA);
+  const params =
+    labelKeys.length === 0
+      ? displayConfig
+      : Object.fromEntries(Object.entries(displayConfig).filter(([k]) => !labelKeys.includes(k)));
 
   // AOD-60 / integration-clock.md §6.3: the one-time generic authClass:'none' no-fetch + self-tick path.
   // A none widget (Clock) has no server half (no backend, no operation), so dataSource.fetch would proxy
@@ -156,7 +167,7 @@ export function WidgetHost({
       state={state}
       def={def}
       size={instance.size}
-      config={instance.config}
+      config={displayConfig}
       serviceName={serviceName}
       onReconnect={onReconnect}
       onReconfigure={onReconfigure}

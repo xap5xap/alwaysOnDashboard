@@ -106,6 +106,31 @@ describe('remote-options picker (AOD-10 §4.3), fed by the resolved Choice[]', (
     expect(onSubmit).toHaveBeenCalledWith({ project: 'bravo', tags: [] });
   });
 
+  it('persists the chosen choice label under a field labelKey on save (AOD-124)', () => {
+    const labelSchema: WidgetConfigSchema = {
+      fields: [
+        { key: 'project', label: 'Project', kind: 'remote-options', required: true, source: { optionSource: 'stub_options' }, labelKey: 'projectLabel' },
+      ],
+    };
+    const onSubmit = jest.fn();
+    render(
+      <ConfigForm
+        schema={labelSchema}
+        initial={{}}
+        title="t"
+        options={{ project: ready }}
+        serviceName="Stub"
+        onReconnect={jest.fn()}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(within(screen.getByTestId('config-remote-project')).getByTestId('pill-bravo'));
+    fireEvent.press(screen.getByTestId('config-submit'));
+    // the id AND the human label the caption needs are both handed back for persistence
+    expect(onSubmit).toHaveBeenCalledWith({ project: 'bravo', projectLabel: 'Bravo' });
+  });
+
   it('multi-select toggles store an array of stable ids', () => {
     const { onSubmit } = renderRemote({ initial: { project: 'alpha' }, options: { project: ready, tags: ready } });
     const tags = within(screen.getByTestId('config-remote-tags'));
