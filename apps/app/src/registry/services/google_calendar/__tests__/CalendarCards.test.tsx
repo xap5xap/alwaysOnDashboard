@@ -223,7 +223,10 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
     expect(screen.getByTestId('gcal-agenda-next-rail')).toBeTruthy();
   });
 
-  it('folds events beyond the visible count into "+N more" (M shows 10)', async () => {
+  it('folds events beyond the HEIGHT-driven visible count into "+N more" (AOD-123 no-overflow)', async () => {
+    // AOD-123: M (1x2, ~144px body) now seats as many 2-line rows as FIT, not the old fixed 10 (which
+    // stacked ~400px and clipped). The overflow folds into "+N more" — the exact N is height-driven, so
+    // this asserts the fold happens and the card does not render all 12 rows, without pinning the count.
     const data: AgendaData = {
       events: Array.from({ length: 12 }, (_, i) => mkEvent(`e${i}`, `Event ${i}`, localAt(0, i))),
     };
@@ -231,9 +234,10 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
       fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, agendaInstance); // M: VISIBLE_BY_SIZE.M = 10 (the ex-tall count, AOD-122)
+    renderHost(source, agendaInstance); // M (the deep column)
     await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
-    expect(screen.getByTestId('gcal-agenda-more')).toHaveTextContent('+2 more');
+    expect(screen.getByTestId('gcal-agenda-more')).toHaveTextContent(/^\+\d+ more$/); // some rows shed
+    expect(screen.queryByText('Event 11')).toBeNull(); // the last event is folded, not overflowing
   });
 
   it('falls to the empty state when only tomorrow has events (today filter applied)', async () => {

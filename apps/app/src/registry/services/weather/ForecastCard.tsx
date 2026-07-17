@@ -17,12 +17,18 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { ForecastData, ForecastDay, WeatherCondition } from './types';
 import { WeatherIcon } from './WeatherIcon';
+import { fitCount } from '../../../widgets/fitLadder';
 
-// How many days fit a glance at each slot. Forecast ships at W/L; S/M are defensive defaults so the
-// card never reads an undefined count if mounted at an unexpected size. AOD-122 remap: W (2x1) takes
-// the old 2x1 medium count (4 — the 3x1 banner's 5 columns don't fit a 2-unit width); L keeps the old
-// large 7; S the old small 3; M (1x2) the old tall 7.
+// How many days fit a glance at each slot. Forecast ships at W/L; S/M are defensive. AOD-122 remap: W 4,
+// L 7, S 3, M 7. AOD-123: the L ROW LIST now derives its day count from the box HEIGHT (fitCount) so a
+// short cell never overflows (7 rows was ~216px in a 144px body); these stay the no-box fallback. The W
+// BANNER STRIP is width-budgeted (columns across the width) and, being over-tall per column for a 48px
+// cell, is FLAGGED for an M4 wide-short face — the height fitCount cannot fix a horizontal strip.
 const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { S: 3, M: 7, W: 4, L: 7 };
+
+// The L row is a single line (weekday · icon · condition · hi-lo); conservative DP height so it never
+// under-counts and clips. No "+N more" footer — a forecast simply shows as many days as fit.
+const L_ROW_HEIGHT = 28;
 const FALLBACK_CONDITION: WeatherCondition = { code: -1, label: 'Unknown', group: 'cloudy', isDay: true };
 
 /** Defensive read: a partial payload renders as the empty card, never a crash (§4.2). */
@@ -57,12 +63,17 @@ function dayLabel(date: string, now: Date): string {
   return isToday(date, now) ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' });
 }
 
-export function ForecastCard({ data, size }: WidgetRenderProps) {
+export function ForecastCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { days, units } = asForecast(data);
   const unit = units.temperature ?? '°';
   const now = new Date();
-  const visible = days.slice(0, VISIBLE_BY_SIZE[size] ?? 5);
+  // AOD-123: the L row list counts by HEIGHT so it never overflows; other sizes keep the fixed fallback.
+  const visibleCount =
+    box && size === 'L'
+      ? fitCount(days.length, box.height, { rowHeight: L_ROW_HEIGHT, gap: theme.spacing(2) })
+      : (VISIBLE_BY_SIZE[size] ?? 5);
+  const visible = days.slice(0, visibleCount);
 
   if (visible.length === 0) {
     return (
