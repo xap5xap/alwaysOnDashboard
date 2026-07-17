@@ -14,6 +14,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../../../../host/WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../host/WidgetDataSource';
 import { RegistryProvider } from '../../../RegistryProvider';
+import { SpendMtdCard } from '../SpendMtdCard';
 import type { WidgetInstance } from '../../../types';
 import type { ConnectionMap, ConnectionView } from '../../../../connections/connectionsRepo';
 import type { DailySpendData, SpendMtdData } from '../types';
@@ -123,17 +124,19 @@ describe('admin_key host params (integration-claude.md §6.3): the host else-bra
 });
 
 describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
-  it('at W renders the MTD amount (cents-precision) + the emphasised run-rate', async () => {
+  // AOD-123: Spend MTD migrated onto the shared FitBody. Both the slots it ships (S 1x1, W 2x1) are one
+  // unit tall (~48px body), where the type.xl value already fills the height, so the run-rate SHEDS rather
+  // than clipping under the card — the AOD-95/97 fix (was: the run-rate was in the tree but chopped by the
+  // card's overflow:hidden). The run-rate's content is covered by the tall-box render below; it reappears
+  // automatically on any taller slot the widget gains.
+  it('at W renders the MTD amount; the run-rate sheds on the 1-unit body (AOD-123 fit-to-bounds)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
-    // one run-rate line: the $/day value + the day count (§5.2)
-    const runRate = screen.getByTestId('claude-spend-mtd-runrate');
-    expect(runRate).toHaveTextContent(/\$2\.00\/day avg/); // 4 / 2 days
-    expect(runRate).toHaveTextContent(/2 days this month/);
+    expect(screen.queryByTestId('claude-spend-mtd-runrate')).toBeNull();
   });
 
   it('at S renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
@@ -145,6 +148,16 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
     expect(screen.queryByTestId('claude-spend-mtd-runrate')).toBeNull();
   });
 
+  it('seats the run-rate when the box has the HEIGHT for it (§5.2 content preserved through the migration)', () => {
+    // A direct render with a 2-unit-tall box: the run-rate line is declared unconditionally, so FitBody
+    // seats it (with its $/day + day-count content) whenever there is vertical room — proving the migration
+    // did not drop the §5.2 feature, only its seat on the too-short 1-unit slots.
+    render(<SpendMtdCard data={SPEND_MTD_DATA} config={{}} size="W" box={{ width: 168, height: 144 }} />);
+    const runRate = screen.getByTestId('claude-spend-mtd-runrate');
+    expect(runRate).toHaveTextContent(/\$2\.00\/day avg/); // 4 / 2 days
+    expect(runRate).toHaveTextContent(/2 days this month/);
+  });
+
   it('renders a zero-spend org as the $0.00 hero (a valid figure, NOT the empty body, §5.3)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     const zero: SpendMtdData = { amount: 0, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-12', daysElapsed: 12 };
@@ -152,8 +165,7 @@ describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () 
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$0.00');
-    // $0.00 is the hero with a normal run-rate, not routed through the calm empty body Daily Spend uses.
-    expect(screen.getByTestId('claude-spend-mtd-runrate')).toHaveTextContent(/\$0\.00\/day avg/);
+    // $0.00 is the hero (a valid figure), NOT routed through the calm empty body Daily Spend uses.
     expect(screen.queryByTestId('widget-empty-body')).toBeNull();
   });
 });
