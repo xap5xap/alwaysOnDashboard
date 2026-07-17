@@ -26,7 +26,7 @@ import { useUnistyles } from 'react-native-unistyles';
 import type { WidgetSize } from '../registry/types';
 import { SIZE_CATALOGUE } from './sizes';
 import { UNIT_PX } from '../layout/geometry';
-import { bodyBox, fitBody, fitValueScale, type FitBox } from './fitLadder';
+import { bodyBox, DEFAULT_MIN_SCALE, fitBody, fitValueScale, type FitBox } from './fitLadder';
 
 /** The type steps a fit line may carry (mirrors unistyles.ts `TypeStep`); drives the line-height estimate. */
 export type FitRole =
@@ -95,12 +95,8 @@ export interface FitBodyProps {
 // badge). Slightly generous (RN's own default is ~1.2x) so the reserve never UNDER-counts a line.
 const LINE_HEIGHT_FACTOR = 1.25;
 const DEFAULT_VALUE_LINE_FACTOR = 1.18;
-// The legibility floor as a fraction of the value's per-size step. 0.35 keeps a 40px value at >=14px and a
-// 34px Clock at >=12px — glanceable — while being low enough that realistic worst-case content (4-figure
-// money, a seconds-time) still width-fits a 1-unit cell without clipping. Content that would need less than
-// the floor (5-figure money in a 1x1, say) is a slot-misconfiguration: it reaches the floor and the card's
-// overflow:hidden backstops it, which is rare and preferable to microscopic text.
-const DEFAULT_MIN_SCALE = 0.35;
+// The legibility floor is DEFAULT_MIN_SCALE, owned by fitLadder (the pure primitive) so the value scale
+// and this per-size floor can never drift apart. See its comment for why 0.35.
 
 export function FitBody({
   size,

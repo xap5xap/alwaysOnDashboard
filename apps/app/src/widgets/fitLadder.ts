@@ -139,14 +139,22 @@ export interface Intrinsic {
   height: number;
 }
 
+// The legibility floor as a fraction of the value's per-size step, shared by every caller so the policy
+// lives in ONE place. 0.35 keeps a 40px value at >=14px and a 34px Clock at >=12px — glanceable — while
+// being low enough that realistic worst-case content (4-figure money, a seconds-time) still width-fits a
+// 1-unit cell without clipping. Content that would need less than the floor (5-figure money in a 1x1, say)
+// is a slot-misconfiguration: it reaches the floor and the card's overflow:hidden backstops it.
+export const DEFAULT_MIN_SCALE = 0.35;
+
 /**
  * Pure, no measurement: the scale in [minScale, 1] that makes `intrinsic` fit `box` on BOTH axes —
  * min(1, box.width/intrinsic.width, box.height/intrinsic.height), floored at minScale. Never scales UP
  * past 1 (the value renders at its step or smaller, never larger). A non-positive intrinsic is treated as
  * "nothing to fit" -> 1. minScale is the legibility floor (a value that cannot reach its box even at the
- * floor is a slot-misconfiguration, not a real-content case — see the tabularWidth callers' tests).
+ * floor is a slot-misconfiguration, not a real-content case — see the tabularWidth callers' tests); it
+ * defaults to DEFAULT_MIN_SCALE so a direct caller can never get an invisible (scale 0) value by omission.
  */
-export function fitValueScale(intrinsic: Intrinsic, box: FitBox, minScale = 0): number {
+export function fitValueScale(intrinsic: Intrinsic, box: FitBox, minScale = DEFAULT_MIN_SCALE): number {
   if (intrinsic.width <= 0 || intrinsic.height <= 0) return 1;
   const raw = Math.min(1, box.width / intrinsic.width, box.height / intrinsic.height);
   return Math.max(minScale, raw);
