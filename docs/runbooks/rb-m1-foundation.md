@@ -97,6 +97,10 @@ anthropic.com/engineering/effective-harnesses-for-long-running-agents,
 ## 3. Xavier's flight check (do these before leaving)
 
 Machine:
+- Session model: **Fable 5**, and let every subagent (workers, reviewer, scouts) inherit it; do
+  not pass model overrides and do not use fast mode for this run. Fallback only if usage limits
+  bite mid-run: workers for the mechanical issues (AOD-126/127/128) may drop to Sonnet 5; the
+  reviewer and the workers for AOD-120/121/122/123 never downgrade.
 - Mac on power, sleep prevented (`caffeinate -dims` in a terminal, or Amphetamine).
 - `gh auth status` OK (push + PR rights on the repo).
 - `main` clean and up to date; baseline verified green (2026-07-16: tsc clean, jest 463/463 in ~7s).
