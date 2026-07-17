@@ -6,11 +6,14 @@
 // Pure and I/O-free; these functions back both the live gesture preview and the committed value.
 import type { LayoutRect } from '../registry/types';
 
-export const UNIT_PX = 80; // pixels per nominal layout unit
+// 96 DP per nominal layout unit: the Many Skies §1c card-grid row (AOD-122; was 80 pre-slot-grid).
+// DENSITY-INDEPENDENT pixels, never physical px — the AOD-81 lesson: rt.screen and this constant must
+// share the DP space or every derived scale is density-wrong.
+export const UNIT_PX = 96;
 export const MIN_W = 1; // smallest widget extent (nominal units)
 export const MIN_H = 1;
 
-// Hundredths of a unit (~0.8px at UNIT_PX): kills floating-point drift in persisted geometry.
+// Hundredths of a unit (~0.96px at UNIT_PX): kills floating-point drift in persisted geometry.
 export function snapUnit(n: number): number {
   return Math.round(n * 100) / 100;
 }

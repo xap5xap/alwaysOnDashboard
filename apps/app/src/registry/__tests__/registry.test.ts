@@ -66,7 +66,7 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
   it('My Issues declares the §4.1 sizes/TTLs and the §5.1 config schema (projectId + filter)', () => {
     const def = getWidgetDef('linear', 'my_issues')!;
     expect(def.title).toBe('My Issues');
-    expect(def.supportedSizes).toEqual(['medium', 'large', 'tall']);
+    expect(def.supportedSizes).toEqual(['W', 'L', 'M']); // AOD-122 slot ids (was ['medium','large','tall'])
     expect(def.defaultRefresh).toEqual({ seconds: 300 });
     expect(def.cacheTtlSeconds).toBe(120);
     expect(def.minRefreshSeconds).toBe(60);
@@ -86,7 +86,7 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
 
   it('Current Cycle declares the §4.2 sizes and the §5.2 teamId option source', () => {
     const def = getWidgetDef('linear', 'current_cycle')!;
-    expect(def.supportedSizes).toEqual(['medium', 'large']);
+    expect(def.supportedSizes).toEqual(['W', 'L']); // AOD-122 slot ids (was ['medium','large'])
     expect(def.cacheTtlSeconds).toBe(300);
 
     const teamId = def.configSchema.fields[0];
@@ -112,7 +112,7 @@ describe('Google Calendar service registration (AOD-56, integration-calendar.md 
   it('Next Event declares the §4.1 sizes/TTLs and the §5.1 calendarId option source', () => {
     const def = getWidgetDef('google_calendar', 'next_event')!;
     expect(def.title).toBe('Next Event');
-    expect(def.supportedSizes).toEqual(['small', 'medium']);
+    expect(def.supportedSizes).toEqual(['S', 'W']); // AOD-122 slot ids (was ['small','medium'])
     expect(def.defaultRefresh).toEqual({ seconds: 600 });
     expect(def.cacheTtlSeconds).toBe(300);
     expect(def.minRefreshSeconds).toBe(120);
@@ -127,7 +127,7 @@ describe('Google Calendar service registration (AOD-56, integration-calendar.md 
   it("Today's Agenda declares the §4.2 sizes/TTLs and the §5.2 calendarId option source", () => {
     const def = getWidgetDef('google_calendar', 'agenda')!;
     expect(def.title).toBe("Today's Agenda");
-    expect(def.supportedSizes).toEqual(['tall', 'wide']);
+    expect(def.supportedSizes).toEqual(['M', 'W']); // AOD-122 slot ids (was ['tall','wide']; wide 3x1 folds into W)
     expect(def.defaultRefresh).toEqual({ seconds: 900 });
     expect(def.cacheTtlSeconds).toBe(600);
     expect(def.minRefreshSeconds).toBe(300);
@@ -156,14 +156,15 @@ describe('Clock service registration (AOD-60, integration-clock.md §8): the aut
   it('Clock declares manual refresh and OMITS the provider cache knobs (no provider to protect, §7)', () => {
     const def = getWidgetDef('clock', 'clock')!;
     expect(def.title).toBe('Clock');
-    expect(def.supportedSizes).toEqual(['small', 'medium', 'wide', 'large']);
+    // AOD-122 slot ids (was ['small','medium','wide','large']; the retired 3x1 wide folds into W).
+    expect(def.supportedSizes).toEqual(['S', 'W', 'L']);
     expect(def.defaultRefresh).toBe('manual');
     expect(def.cacheTtlSeconds).toBeUndefined();
     expect(def.minRefreshSeconds).toBeUndefined();
     // AOD-37 §8.5: the Clock is the deep-red useAmbient() opt-in, so it OPTS OUT of the global dim
-    // overlay (false), and §4.2 it suppresses the host header at small (a 1x1 glance is just the time).
+    // overlay (false), and §4.2 it suppresses the host header at S (a 1x1 glance is just the time).
     expect(def.dimsWithAmbient).toBe(false);
-    expect(def.hideHeaderAtSizes).toEqual(['small']);
+    expect(def.hideHeaderAtSizes).toEqual(['S']);
   });
 
   it('declares the §5 static config: 12/24h, seconds, date + format, and a string timezone (no remote-options)', () => {

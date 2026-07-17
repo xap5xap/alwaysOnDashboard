@@ -16,14 +16,15 @@ import type {
 import type { InstanceSeed } from './mapper';
 
 /**
- * The size class a new placement uses (AOD-10 §5.2): the "default card" `medium` when the widget
- * supports it, otherwise the first declared size. Falls back to `medium` for a (malformed) empty set.
- * Preferring `medium` keeps an added widget aligned with the bootstrap first-run seed (dashboardRepo),
- * which is also `medium`.
+ * The size class a new placement uses (AOD-10 §5.2 rule over the AOD-122 slot grid): the "default
+ * card" `W` (2x1, the full-width row — the geometric successor of the pre-slot `medium`) when the
+ * widget supports it, otherwise the first declared size. Falls back to `W` for a (malformed) empty
+ * set. Preferring `W` keeps an added widget aligned with the bootstrap first-run seed (dashboardRepo),
+ * which is also `W`.
  */
 export function defaultPlacementSize(supported: WidgetSize[]): WidgetSize {
-  if (supported.includes('medium')) return 'medium';
-  return supported[0] ?? 'medium';
+  if (supported.includes('W')) return 'W';
+  return supported[0] ?? 'W';
 }
 
 /**

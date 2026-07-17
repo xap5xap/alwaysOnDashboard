@@ -7,7 +7,7 @@ import { WidgetHostView } from '../WidgetHostView';
 import { stubService } from '../../registry/__tests__/stubRegistry';
 
 const def = stubService.widgets[0];
-const base = { def, size: 'medium' as const, config: {}, serviceName: 'Stub' };
+const base = { def, size: 'W' as const, config: {}, serviceName: 'Stub' }; // AOD-122 slot id
 
 describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, testing-strategy §9)', () => {
   it('loading: host skeleton, renderer NOT invoked', () => {

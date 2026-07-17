@@ -27,7 +27,7 @@ const nextEventInstance: WidgetInstance = {
   serviceId: 'google_calendar',
   widgetType: 'next_event',
   config: { calendarId: 'me@example.com' },
-  size: 'small',
+  size: 'S', // AOD-122 slot id (was 'small')
   rect: { x: 0, y: 0, w: 1, h: 1, z: 0 },
 };
 
@@ -36,8 +36,8 @@ const agendaInstance: WidgetInstance = {
   serviceId: 'google_calendar',
   widgetType: 'agenda',
   config: { calendarId: 'me@example.com' },
-  size: 'tall',
-  rect: { x: 0, y: 0, w: 2, h: 3, z: 0 },
+  size: 'M', // AOD-122 slot id (was 'tall'; the deep-column layout), rect at M's 1x2 nominal
+  rect: { x: 0, y: 0, w: 1, h: 2, z: 0 },
 };
 
 function renderHost(
@@ -81,9 +81,9 @@ function lateTodayIso(): string {
   return d.toISOString();
 }
 
-const mediumNextEventInstance: WidgetInstance = {
+const wNextEventInstance: WidgetInstance = {
   ...nextEventInstance,
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
@@ -111,7 +111,7 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
       fetch: jest.fn().mockResolvedValue({ data: { hasEvent: false }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, nextEventInstance); // small: header (and its refresh button) suppressed
+    renderHost(source, nextEventInstance); // S: header (and its refresh button) suppressed
     await waitFor(() => expect(screen.getByTestId('gcal-next-event-empty')).toBeTruthy());
     expect(screen.queryByTestId('gcal-next-event')).toBeNull();
     expect(screen.getByText('Nothing next')).toBeTruthy();
@@ -133,13 +133,13 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
     expect(screen.getByText('Design review')).toBeTruthy();
   });
 
-  it('an all-day event shows the ALL DAY kicker and no clock, with the location at medium', async () => {
+  it('an all-day event shows the ALL DAY kicker and no clock, with the location at W', async () => {
     const event: CalendarEvent = { ...allDayToday('e-ad', "Carla's birthday"), location: 'Home' };
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { hasEvent: true, event }, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, mediumNextEventInstance);
+    renderHost(source, wNextEventInstance);
     await waitFor(() => expect(screen.getByTestId('gcal-next-event')).toBeTruthy());
     // the when reads exactly "All day" (no clock rides alongside; an all-day event has no time anchor)
     expect(screen.getByTestId('gcal-next-event-when')).toHaveTextContent('All day');
@@ -214,16 +214,16 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
       fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, agendaInstance); // tall
+    renderHost(source, agendaInstance); // M (the deep column, ex tall)
     await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
-    expect(screen.getByText('ALL DAY')).toBeTruthy(); // the all-day group kicker (tall density)
+    expect(screen.getByText('ALL DAY')).toBeTruthy(); // the all-day group kicker (M density)
     expect(screen.getByText("Carla's birthday")).toBeTruthy();
     expect(screen.getByText('Design review')).toBeTruthy();
     // the soonest upcoming event carries the accent left rail (the agenda points at what is next)
     expect(screen.getByTestId('gcal-agenda-next-rail')).toBeTruthy();
   });
 
-  it('folds events beyond the visible count into "+N more" (tall shows 10)', async () => {
+  it('folds events beyond the visible count into "+N more" (M shows 10)', async () => {
     const data: AgendaData = {
       events: Array.from({ length: 12 }, (_, i) => mkEvent(`e${i}`, `Event ${i}`, localAt(0, i))),
     };
@@ -231,7 +231,7 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
       fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
-    renderHost(source, agendaInstance); // tall: VISIBLE_BY_SIZE.tall = 10
+    renderHost(source, agendaInstance); // M: VISIBLE_BY_SIZE.M = 10 (the ex-tall count, AOD-122)
     await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
     expect(screen.getByTestId('gcal-agenda-more')).toHaveTextContent('+2 more');
   });

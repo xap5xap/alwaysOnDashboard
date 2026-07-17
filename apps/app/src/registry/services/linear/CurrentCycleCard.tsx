@@ -7,8 +7,8 @@
 // colors.accent (the completed fraction), the track is the same colors.accent at theme.progress.trackOpacity
 // (the remaining fraction), so the card spends no second colour. This FIXES the shipped token smell, which
 // filled the track with colors.skeleton (the loading-shimmer colour). The percent is colors.accent /
-// tabular-nums (big at large, small at medium); the "Cycle N: name" label is type.heading; the completed/
-// total counts read with completedCount bright; at large an "ends in N days" meta gives time remaining.
+// tabular-nums (big at L, small at W); the "Cycle N: name" label is type.heading; the completed/
+// total counts read with completedCount bright; at L an "ends in N days" meta gives time remaining.
 // active: false -> the §5.1 EmptyBody with the cycle-ring glyph, not a host state. Sizes map onto type.* (§9).
 import React from 'react';
 import { type DimensionValue, Text, View } from 'react-native';
@@ -79,7 +79,7 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  const isLarge = size === 'large';
+  const isLarge = size === 'L'; // AOD-122 slot id (was 'large'; same 2x2 geometry)
   const pct = clampPercent(cycle.progress);
   const label = cycle.name ? `Cycle ${cycle.number}: ${cycle.name}` : `Cycle ${cycle.number}`;
   const trackHeight = isLarge ? theme.progress.trackHeight.large : theme.progress.trackHeight.medium;
@@ -105,7 +105,7 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
     </Text>
   );
 
-  // large (2x2): a big percent hero; the bar; the label up top; the counts + the "ends in N days" meta.
+  // L (2x2): a big percent hero; the bar; the label up top; the counts + the "ends in N days" meta.
   if (isLarge) {
     return (
       <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
@@ -128,7 +128,8 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // medium (2x1): compact. label + percent on one line; the bar; the counts.
+  // W (2x1, and any other coerced slot): compact. label + percent on one line; the bar; the counts.
+  // (The pctMedium / trackHeight.medium token names are the pre-slot ramp keys, not WidgetSize ids.)
   return (
     <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
       <View style={styles.head}>

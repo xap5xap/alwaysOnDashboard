@@ -1,6 +1,6 @@
 // CurrentCycleCard driven through the real WidgetHost + the registry + TanStack Query + a mock
 // WidgetDataSource (testing-strategy §9, mirroring MyIssuesCard.test.tsx). Proves the Linear current_cycle
-// path on the client: loading -> fresh renders the progress bar / percent / counts (and the large-only
+// path on the client: loading -> fresh renders the progress bar / percent / counts (and the L-only
 // "ends in N days"), and active:false renders the shared §5.1 empty body. AOD-30 polish (design-linear.md
 // §6): the progress bar is the value, the percent the accent readout; the bar token is fixed off skeleton.
 import React from 'react';
@@ -23,10 +23,10 @@ const largeInstance: WidgetInstance = {
   serviceId: 'linear',
   widgetType: 'current_cycle',
   config: { teamId: 't1' },
-  size: 'large',
+  size: 'L', // AOD-122 slot id (was 'large')
   rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
 };
-const mediumInstance: WidgetInstance = { ...largeInstance, instanceId: 'cc-md', size: 'medium' };
+const wInstance: WidgetInstance = { ...largeInstance, instanceId: 'cc-md', size: 'W', rect: { x: 0, y: 0, w: 2, h: 1, z: 0 } };
 
 // The teamId picker resolves through the same seam; t1 is a member so the config validates (else needs_config).
 const teamChoices = [{ value: 't1', label: 'Platform & App Shell' }];
@@ -36,7 +36,7 @@ const ACTIVE: CurrentCycleData = {
   number: 8,
   name: 'Polish sprint',
   startsAt: '2026-06-20T00:00:00.000Z',
-  endsAt: '2099-12-31T00:00:00.000Z', // far future so "ends in N days" is always present at large
+  endsAt: '2099-12-31T00:00:00.000Z', // far future so "ends in N days" is always present at L
   progress: 0.67,
   completedCount: 16,
   totalCount: 24,
@@ -63,7 +63,7 @@ function source(data: CurrentCycleData): WidgetDataSource {
 }
 
 describe('Linear Current Cycle through the host lifecycle (AOD-30 polish)', () => {
-  it('at large renders the percent, the progress bar, the counts, and the "ends in N days" meta', async () => {
+  it('at L renders the percent, the progress bar, the counts, and the "ends in N days" meta', async () => {
     renderHost(source(ACTIVE), largeInstance);
 
     expect(screen.getByTestId('widget-loading')).toBeTruthy();
@@ -71,12 +71,12 @@ describe('Linear Current Cycle through the host lifecycle (AOD-30 polish)', () =
     expect(screen.getByTestId('linear-cycle-pct')).toHaveTextContent('67%');
     expect(screen.getByTestId('linear-cycle-bar')).toBeTruthy();
     expect(screen.getByTestId('linear-cycle-counts')).toHaveTextContent('16 / 24 issues');
-    expect(screen.getByTestId('linear-cycle-ends')).toBeTruthy(); // the large-only affordance (§6.2)
+    expect(screen.getByTestId('linear-cycle-ends')).toBeTruthy(); // the L-only affordance (§6.2)
     expect(screen.getByText('Cycle 8: Polish sprint')).toBeTruthy();
   });
 
-  it('at medium renders the bar + percent + counts but omits the "ends" meta (§6 layout)', async () => {
-    renderHost(source(ACTIVE), mediumInstance);
+  it('at W renders the bar + percent + counts but omits the "ends" meta (§6 layout)', async () => {
+    renderHost(source(ACTIVE), wInstance);
 
     await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
     expect(screen.getByTestId('linear-cycle-pct')).toHaveTextContent('67%');

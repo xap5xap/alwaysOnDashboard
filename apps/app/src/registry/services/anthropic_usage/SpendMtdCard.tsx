@@ -6,9 +6,9 @@
 //
 // AOD-36 polish: the value-first money body. The month-to-date total is the hero, drawn in the §5.1
 // cents-precision money typography (MoneyValue: type.xl tabular dollars, a reduced raised $, reduced
-// muted baseline-aligned cents). At medium the run-rate is the emphasised derived figure below it: a
+// muted baseline-aligned cents). At W the run-rate is the emphasised derived figure below it: a
 // type.meta line whose $/day VALUE is bright (colors.text) and whose label + day count recede
-// (colors.textMuted); perDay = amount / daysElapsed, derived here with no extra request (§5.2). At small
+// (colors.textMuted); perDay = amount / daysElapsed, derived here with no extra request (§5.2). At S
 // (the 1x1 glance) there is no room, so the body is just the amount, no run-rate (§5 layout). The leaf's
 // old hand-drawn "Claude Spend (MTD)" label is gone: the host owns the quiet SERVICE · WIDGET caption (§4).
 import React from 'react';
@@ -33,7 +33,7 @@ function asSpendMtd(data: unknown): SpendMtdData {
 export function SpendMtdCard({ data, size }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const d = asSpendMtd(data);
-  const isSmall = size === 'small';
+  const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
   // A run-rate the renderer derives from amount + daysElapsed with no extra request (§5.2); a literal
   // prior-month delta / projection are named future seams (§10). Suppressed before any day is covered.
   const perDay = d.daysElapsed > 0 ? d.amount / d.daysElapsed : null;
@@ -51,7 +51,7 @@ export function SpendMtdCard({ data, size }: WidgetRenderProps) {
         testID="claude-spend-mtd-amount"
       />
 
-      {/* medium: the run-rate, the emphasised derived figure ($/day bright, the rest muted). No room at small. */}
+      {/* W: the run-rate, the emphasised derived figure ($/day bright, the rest muted). No room at S. */}
       {!isSmall && perDay != null ? (
         <Text style={styles.runRate} numberOfLines={1} testID="claude-spend-mtd-runrate">
           <Text style={styles.runRateValue}>{formatPlainMoney(perDay, d.currency)}</Text>

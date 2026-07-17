@@ -5,7 +5,7 @@
 //
 // AOD-35 polish: the WHEN leads, the title is the value. The relative time is the emphasized figure (an
 // accent, uppercased kicker), with the clock time riding alongside it muted; the title is type.title. An
-// all-day event has no time anchor, so its kicker reads "ALL DAY" with no clock. At small (the 1x1 glance,
+// all-day event has no time anchor, so its kicker reads "ALL DAY" with no clock. At S (the 1x1 glance,
 // header suppressed by the host) the body is the kicker over a 2-line title, no clock, no location. The
 // empty render (hasEvent:false, a normal empty-window result, not an error) is the shared §5.1 EmptyBody
 // with the per-widget calendar glyph -- a calm "Nothing next", carrying NO action.
@@ -68,13 +68,13 @@ export function NextEventCard({ data, size }: WidgetRenderProps) {
   }
 
   const { event } = next;
-  const isSmall = size === 'small';
+  const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
   const when = formatWhen(event, new Date());
   const clock = formatClock(event);
 
   return (
     <View style={styles.body} accessibilityRole="summary" testID="gcal-next-event">
-      {/* The when emphasis: an accent uppercased kicker; at medium the muted clock rides alongside. */}
+      {/* The when emphasis: an accent uppercased kicker; at W the muted clock rides alongside. */}
       <View style={styles.whenLine}>
         <Text style={styles.when} testID="gcal-next-event-when">
           {when}

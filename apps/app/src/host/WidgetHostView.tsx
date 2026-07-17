@@ -98,7 +98,7 @@ export function WidgetHostView({
   const nightFrame = optOut && ambient.phase === 'night';
   const overlayOpacity = optOut ? 0 : ambient.dimLevel * theme.overlay.maxDim;
 
-  // §4.2 the header is suppressible for a self-evident card (Clock small declares it). Generic per the
+  // §4.2 the header is suppressible for a self-evident card (Clock S declares it). Generic per the
   // widget's hideHeaderAtSizes, not a Clock special case.
   const suppressHeader = !!def.hideHeaderAtSizes?.includes(size);
 

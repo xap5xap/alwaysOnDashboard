@@ -14,7 +14,7 @@ const myIssues: WidgetDefinition = {
   type: 'my_issues',
   serviceId: 'linear',
   title: 'My Issues',
-  supportedSizes: ['medium', 'large', 'tall'],
+  supportedSizes: ['W', 'L', 'M'], // AOD-122 slot remap: was ['medium','large','tall'] (same geometry, same order)
   defaultRefresh: { seconds: 300 }, // device asks every 5 min (AOD-10 §6.2)
   cacheTtlSeconds: 120, // provider hit at most once per 2 min across devices (AOD-10 §6.1)
   minRefreshSeconds: 60, // never poll Linear faster than once a minute
@@ -52,7 +52,7 @@ const currentCycle: WidgetDefinition = {
   type: 'current_cycle',
   serviceId: 'linear',
   title: 'Current Cycle',
-  supportedSizes: ['medium', 'large'],
+  supportedSizes: ['W', 'L'], // AOD-122 slot remap: was ['medium','large'] (same 2x1 / 2x2 geometry)
   defaultRefresh: { seconds: 600 }, // cycle data moves slowly; ask every 10 min
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices
   minRefreshSeconds: 120,

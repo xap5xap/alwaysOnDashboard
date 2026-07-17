@@ -1,6 +1,8 @@
 // The one validation layer (AOD-25) for the persisted layout jsonb (data-model §5.5). Valid blobs
 // pass; malformed ones are rejected before they reach the engine or the database.
 import {
+  DB_WIDGET_SIZES,
+  DbWidgetSizeSchema,
   LayoutRectSchema,
   RefreshIntervalSchema,
   WidgetConfigSchema,
@@ -46,15 +48,32 @@ describe('RefreshIntervalSchema', () => {
   });
 });
 
-describe('WidgetSizeSchema', () => {
-  it('accepts the five size classes', () => {
-    for (const size of ['small', 'medium', 'large', 'wide', 'tall']) {
+describe('WidgetSizeSchema (the AOD-122 S/M/W/L slot ids)', () => {
+  it('accepts the four slot ids', () => {
+    for (const size of ['S', 'M', 'W', 'L']) {
       expect(WidgetSizeSchema.parse(size)).toBe(size);
     }
   });
 
-  it('rejects an unknown class', () => {
-    expect(WidgetSizeSchema.safeParse('huge').success).toBe(false);
+  it('rejects unknown classes AND the retired legacy words (those live only in the DB vocabulary)', () => {
+    for (const bad of ['huge', 'small', 'medium', 'large', 'wide', 'tall']) {
+      expect(WidgetSizeSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe('DbWidgetSizeSchema (the frozen widget_instances CHECK vocabulary, data-model §5.5)', () => {
+  it('accepts exactly the five legacy words the DB CHECK allows', () => {
+    expect([...DB_WIDGET_SIZES]).toEqual(['small', 'medium', 'large', 'wide', 'tall']);
+    for (const size of DB_WIDGET_SIZES) {
+      expect(DbWidgetSizeSchema.parse(size)).toBe(size);
+    }
+  });
+
+  it('rejects the slot ids (the app vocabulary never reaches the column unserialized) and junk', () => {
+    for (const bad of ['S', 'M', 'W', 'L', 'huge']) {
+      expect(DbWidgetSizeSchema.safeParse(bad).success).toBe(false);
+    }
   });
 });
 

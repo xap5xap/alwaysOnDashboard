@@ -10,7 +10,7 @@ import { stubService } from '../../registry/__tests__/stubRegistry';
 import type { WidgetViewState } from '../../widgets/lifecycle';
 
 const def = stubService.widgets[0];
-const base = { def, size: 'medium' as const, config: {}, serviceName: 'Linear' };
+const base = { def, size: 'W' as const, config: {}, serviceName: 'Linear' }; // AOD-122 slot id
 const fresh: WidgetViewState = { phase: 'fresh', data: { hello: 'world' }, fetchedAt: 1 };
 
 describe('WidgetHostView quiet header (AOD-37 §4.2)', () => {
@@ -24,9 +24,9 @@ describe('WidgetHostView quiet header (AOD-37 §4.2)', () => {
     expect(screen.getByText('Clock')).toBeTruthy();
   });
 
-  it('suppresses the header at a size the widget declares (Clock small)', () => {
+  it('suppresses the header at a size the widget declares (Clock S)', () => {
     render(
-      <WidgetHostView {...base} size="small" def={{ ...def, hideHeaderAtSizes: ['small'] }} state={fresh} />,
+      <WidgetHostView {...base} size="S" def={{ ...def, hideHeaderAtSizes: ['S'] }} state={fresh} />,
     );
     expect(screen.queryByTestId('widget-header')).toBeNull();
     // the renderer still draws

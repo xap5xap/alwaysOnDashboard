@@ -24,17 +24,19 @@ export interface LoadedDashboard {
 
 // The first-run seed (AOD-126, resolves AOD-94): a fresh signup has no connections, so the seeded
 // widget must be the one that renders without any — Clock, the sole authClass 'none' service
-// (client-only, no fetch, self-ticks). Seeded `medium` on the seed's original 2x1 origin rect: a
-// supported Clock size whose nominal geometry matches; `small` (1x1) is supported but Clock is known
-// to overflow a 1x1 cell (hosted-dogfood finding), so the seed avoids it. config {} is valid (every
-// Clock field is optional/defaulted), keeping the bootstrap invariant that the seed is born valid.
-// Interim choice: the onboarding cold open / skip-seeds decision refines this in RB-36.
+// (client-only, no fetch, self-ticks). Seeded `W` (2x1, AOD-122 slot vocabulary; the same origin
+// rect the seed always had — pre-slot it was written `medium`, W's exact geometric twin, and the
+// mapper still stores that word under the frozen DB CHECK): a supported Clock size whose nominal
+// geometry matches; `S` (1x1) is supported but Clock is known to overflow a 1x1 cell (hosted-dogfood
+// finding), so the seed avoids it. config {} is valid (every Clock field is optional/defaulted),
+// keeping the bootstrap invariant that the seed is born valid. Interim choice: the onboarding cold
+// open / skip-seeds decision refines this in RB-36.
 const DEFAULT_DASHBOARD_NAME = 'Wall';
 const FIRST_RUN_SEED: InstanceSeed = {
   serviceId: 'clock',
   widgetType: 'clock',
   config: {},
-  size: 'medium',
+  size: 'W',
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 

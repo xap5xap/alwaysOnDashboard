@@ -23,11 +23,11 @@ const baseInstance: WidgetInstance = {
   serviceId: 'linear',
   widgetType: 'my_issues',
   config: { projectId: 'p1', filter: 'open' },
-  size: 'medium',
-  rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
+  size: 'W', // AOD-122 slot id (was 'medium')
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
-const largeInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-lg', size: 'large' };
+const largeInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-lg', size: 'L', rect: { x: 0, y: 0, w: 2, h: 2, z: 0 } };
 
 // The projectId picker resolves through the same seam; p1 is a member so the config validates.
 const projectChoices = [{ value: 'p1', label: 'Platform & App Shell' }];
@@ -122,7 +122,7 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     await waitFor(() => expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 assigned'));
   });
 
-  it('shows the due date on the right at large, omits it at medium (the §5.2 large affordance)', async () => {
+  it('shows the due date on the right at L, omits it at W (the §5.2 L affordance)', async () => {
     const dueData: MyIssuesData = {
       issues: [
         { id: 'd1', identifier: 'AOD-30', title: 'Linear widget visuals', url: 'u', stateName: 'In Progress', stateType: 'started', priority: 1, priorityLabel: 'Urgent', dueDate: '2026-12-31' },
@@ -139,7 +139,7 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     expect(screen.getByTestId('linear-myissues-due')).toBeTruthy();
     lg.unmount();
 
-    renderHost(mk()); // medium
+    renderHost(mk()); // W
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.queryByTestId('linear-myissues-due')).toBeNull();
   });
