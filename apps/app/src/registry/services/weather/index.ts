@@ -9,7 +9,7 @@
 // layout engine, the widget host, the config form, and Settings are NOT edited (the §8 footprint).
 import type { ServiceDefinition, WidgetDefinition } from '../../types';
 import { CurrentWeatherCard } from './CurrentWeatherCard';
-import { ForecastCard } from './ForecastCard';
+import { ForecastCard, isForecastEmpty } from './ForecastCard';
 
 // Current Weather (the most glanceable card). Sizes / cadence / TTLs are integration-weather.md §4.1,
 // §7.2. Zero-config: the location is on the connection (§5.1), so configSchema.fields is empty.
@@ -51,6 +51,9 @@ const forecast: WidgetDefinition = {
   caption: { kind: 'place', labelKey: 'name' },
   configSchema: { fields: [] },
   render: ForecastCard,
+  // AOD-133/AOD-125: an empty forecast (no days) → the host-drawn `empty` phase (was the leaf's self-drawn
+  // "No forecast"); the Range face is reached only with days.
+  isEmpty: isForecastEmpty,
 };
 
 export const weatherService: ServiceDefinition = {
