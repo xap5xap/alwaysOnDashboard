@@ -143,6 +143,12 @@ export interface WidgetDefinition {
   // pure. Omitted = the widget is never empty-capable ($0.00 spend, a clock, the weather are valid values,
   // not empties). Pure: no React, no I/O. Reached by deriveViewState (widgets/lifecycle.ts).
   isEmpty?: (data: unknown, now: number) => boolean;
+  // AOD-136: the per-widget EMPTY COPY the host passes to the shared EmptyBody for the `empty` phase. A
+  // small additive seam over the AOD-125 host-drawn empty: a widget names its own plain words (Calendar:
+  // "Nothing next" / "You're clear") instead of the generic line. Omitted = the host falls back to the
+  // generic `{ line: 'Nothing right now.' }`, so no widget without it regresses. Display-only copy, never
+  // an action (the empty phase is action-less by design); the glyph stays the shared EmptyBody default.
+  emptyCopy?: { line: string; subline?: string };
 }
 
 /** AOD-10 §3 names the AOD-8 widget + its additions WidgetModel; kept as an alias for traceability. */

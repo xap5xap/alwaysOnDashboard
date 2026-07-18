@@ -188,9 +188,15 @@ export function WidgetHostView({
 
         {/* AOD-125 `empty` (Many Skies §1c "EMPTY — PLAIN WORDS"): a data-bearing fetch whose content is
             legitimately empty, promoted from the leaf-drawn EmptyBody to a host-drawn phase. Plain words, no
-            action (nothing is wrong; the data simply says "nothing"). The per-widget copy/glyph the leaves
-            used pre-AOD-125 is retired here for the design's shared plain words (faces revisit it at M4+). */}
-        {state.phase === 'empty' && <EmptyBody line="Nothing right now." />}
+            action (nothing is wrong; the data simply says "nothing"). AOD-136: a widget may name its own
+            plain words via def.emptyCopy (Calendar: "Nothing next" / "Nothing left today"); absent, the host
+            falls back to the generic line, so a widget without emptyCopy keeps the shared "Nothing right now." */}
+        {state.phase === 'empty' && (
+          <EmptyBody
+            line={def.emptyCopy?.line ?? 'Nothing right now.'}
+            subline={def.emptyCopy?.subline}
+          />
+        )}
 
         {showData && <Renderer data={dataOf(state)} config={config} size={size} box={bodyPxBox} />}
 

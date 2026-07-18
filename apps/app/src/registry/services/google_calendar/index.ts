@@ -41,6 +41,8 @@ const nextEvent: WidgetDefinition = {
   render: NextEventCard,
   // AOD-125: nothing upcoming (hasEvent:false) -> the host-drawn `empty` phase.
   isEmpty: isNextEventEmpty,
+  // AOD-136: the Calendar's own plain words for that empty (the host passes them to the shared EmptyBody).
+  emptyCopy: { line: 'Nothing next', subline: "You're clear" },
 };
 
 // Today's Agenda. Sizes / cadence / TTLs are §4.2, §7.2; config is §5.2 (identical: only calendarId).
@@ -74,6 +76,8 @@ const agenda: WidgetDefinition = {
   render: AgendaCard,
   // AOD-125: no events on the device-local day -> the host-drawn `empty` phase (time-scoped, uses `now`).
   isEmpty: isAgendaEmpty,
+  // AOD-136: the Agenda's own plain words for that empty (nothing left today, all done).
+  emptyCopy: { line: 'Nothing left today', subline: 'Enjoy the quiet' },
 };
 
 export const googleCalendarService: ServiceDefinition = {

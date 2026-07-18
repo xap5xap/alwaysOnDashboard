@@ -4,9 +4,15 @@
 // to the current device-local day, because the "today" boundary depends on the device clock + timezone,
 // which live on the device (§4.2, §6.4).
 //
+// AOD-136 Dressed Overall: every TIMED event's time numeral wears its OWN imminence on the theme.when
+// ladder (dawn-cool far -> balmy at Now), so the list reads as a warmth spread — the soonest is warmest,
+// the far ones cool — and that warmth, not an accent, now points at "next" (the AOD-35 accent LEFT RAIL +
+// accent time are REMOVED; accent is reserved for repair chrome, drawn by the host). All-day events do NOT
+// ride the ladder: they group on top in a calm DAWN-WASH chip (theme.when.distant at low opacity + dawn
+// ink). Binds to ROLES only, so Monochrome collapses every time to bone (§8).
+//
 // AOD-35 polish: one event list, three densities. All-day events have no time anchor, so they group at the
-// top (separated by a hairline); the soonest upcoming event is the agenda's one emphasis (an accent LEFT
-// RAIL + an accent time), so the list points at what is next. At M (1x2; the old tall) a deep column of
+// top (separated by a hairline). At M (1x2; the old tall) a deep column of
 // 2-line rows; at W (2x1; the banner layout the retired 3x1 wide slot wore pre-AOD-122) event cells laid
 // left to right; at L (a coerced class, §9) single-line rows with a location on a second line. Overflow
 // folds into "+N more". The empty render (no events left today, a normal state, not an error) is now the
@@ -17,6 +23,14 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { AgendaData, CalendarEvent } from './types';
 import { fitCount } from '../../../widgets/fitLadder';
+import { imminenceStop } from './imminence';
+
+// AOD-136 Dressed Overall: the all-day DAWN-WASH chip intensity. The calm all-day band sits on a faint
+// wash of the dawn tone (theme.when.distant, the coolest imminence stop) laid as an absolute fill at this
+// opacity so the ink over it stays crisp. Leaf-scoped numbers-only constant (the reuse-the-role + inline-
+// opacity path, §new-token) — it adds NO theme token, and since it reuses theme.when.distant it collapses
+// to a faint bone wash in Monochrome for free.
+const DAWN_CHIP_OPACITY = 0.12;
 
 // The pre-AOD-123 fixed per-size counts. AOD-122 remap: M (1x2) kept the old tall 10; W (2x1) 5; L 8;
 // S 4. AOD-123 keeps these only as the no-box fallback: the VERTICAL layouts (M deep column, L rows) now
@@ -81,13 +95,17 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
   // only with events. The guard remains for crash-safety across a host/leaf now-skew and draws nothing.
   if (today.length === 0) return null;
 
-  // All-day grouped on top; timed sorted ascending below; the soonest upcoming timed event is "next".
+  // All-day grouped on top; timed sorted ascending below.
   const allDay = today.filter((e) => e.allDay);
   const timed = today
     .filter((e) => !e.allDay)
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-  const nowMs = now.getTime();
-  const nextId = timed.find((e) => new Date(e.start).getTime() >= nowMs)?.id;
+
+  // AOD-136: each TIMED event's time numeral wears its own imminence (theme.when[stop], bound to the ROLE);
+  // the all-day band parks at the calm dawn tone. `distant` (the coolest stop) is the dawn ink for the
+  // all-day label + "All day" time text and the tone of the all-day chip wash.
+  const timeColor = (e: CalendarEvent) => theme.when[imminenceStop(e, now)];
+  const dawnInk = theme.when.distant;
 
   const ordered = [...allDay, ...timed];
   // AOD-123: the vertical layouts (M / L) count by HEIGHT so a short cell never overflows; the W banner
@@ -103,29 +121,28 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
   const visibleTimed = visible.filter((e) => !e.allDay);
   const titleOf = (e: CalendarEvent) => e.summary || '(No title)';
 
-  // W (2x1): a banner of event cells laid left to right, time over title, hairline dividers between.
+  // W (2x1): a banner of event cells laid left to right, time over title, hairline dividers between. Each
+  // timed time wears its imminence; an all-day cell's "All day" reads in the calm dawn ink (no chip wash in
+  // the compact strip — the dawn ink is the calm signal). The next-event rail is gone (the warmth carries it).
   if (size === 'W') {
     return (
       <View style={styles.wideStrip} accessibilityRole="summary" testID="gcal-agenda">
-        {visible.map((e, i) => {
-          const isNext = e.id === nextId;
-          return (
-            <View key={e.id} style={[styles.wideCell, i > 0 && styles.cellBorder]}>
-              <View
-                style={[styles.rail, isNext && styles.railActive]}
-                testID={isNext ? 'gcal-agenda-next-rail' : undefined}
-              />
-              <View style={styles.cellText}>
-                <Text style={[styles.time, isNext && styles.timeNext]} numberOfLines={1}>
-                  {formatClock(e)}
-                </Text>
-                <Text style={styles.evt} numberOfLines={1}>
-                  {titleOf(e)}
-                </Text>
-              </View>
+        {visible.map((e, i) => (
+          <View key={e.id} style={[styles.wideCell, i > 0 && styles.cellBorder]}>
+            <View style={styles.cellText}>
+              <Text
+                style={[styles.time, { color: e.allDay ? dawnInk : timeColor(e) }]}
+                numberOfLines={1}
+                testID={e.allDay ? undefined : 'gcal-agenda-time'}
+              >
+                {formatClock(e)}
+              </Text>
+              <Text style={styles.evt} numberOfLines={1}>
+                {titleOf(e)}
+              </Text>
             </View>
-          );
-        })}
+          </View>
+        ))}
         {remaining > 0 ? (
           <View style={[styles.wideCell, styles.cellBorder, styles.moreCell]}>
             <Text style={styles.more} testID="gcal-agenda-more">
@@ -137,13 +154,17 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
     );
   }
 
-  // M (1x2): a deep column of 2-line rows (time over title); all-day grouped under a kicker on top.
+  // M (1x2): a deep column of 2-line rows (time over title); all-day grouped on top in the dawn-wash chip.
   if (size === 'M') {
     return (
       <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
         {visibleAllDay.length > 0 ? (
-          <View style={styles.allDayGroup}>
-            <Text style={styles.groupLabel}>ALL DAY</Text>
+          <View style={styles.allDayChip} testID="gcal-agenda-allday">
+            <View
+              style={[styles.chipWash, { backgroundColor: dawnInk, opacity: DAWN_CHIP_OPACITY, pointerEvents: 'none' }]}
+              testID="gcal-agenda-allday-wash"
+            />
+            <Text style={[styles.groupLabel, { color: dawnInk }]}>ALL DAY</Text>
             {visibleAllDay.map((e) => (
               <Text key={e.id} style={styles.evt} numberOfLines={1}>
                 {titleOf(e)}
@@ -152,25 +173,16 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
           </View>
         ) : null}
         {visibleAllDay.length > 0 && visibleTimed.length > 0 ? <View style={styles.divider} /> : null}
-        {visibleTimed.map((e) => {
-          const isNext = e.id === nextId;
-          return (
-            <View key={e.id} style={styles.tallRow}>
-              <View
-                style={[styles.rail, isNext && styles.railActive]}
-                testID={isNext ? 'gcal-agenda-next-rail' : undefined}
-              />
-              <View style={styles.tallRowText}>
-                <Text style={[styles.time, isNext && styles.timeNext]} numberOfLines={1}>
-                  {formatClock(e)}
-                </Text>
-                <Text style={styles.evt} numberOfLines={1}>
-                  {titleOf(e)}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
+        {visibleTimed.map((e) => (
+          <View key={e.id} style={styles.tallRowText}>
+            <Text style={[styles.time, { color: timeColor(e) }]} numberOfLines={1} testID="gcal-agenda-time">
+              {formatClock(e)}
+            </Text>
+            <Text style={styles.evt} numberOfLines={1}>
+              {titleOf(e)}
+            </Text>
+          </View>
+        ))}
         {remaining > 0 ? (
           <Text style={styles.more} testID="gcal-agenda-more">
             +{remaining} more
@@ -180,42 +192,46 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
     );
   }
 
-  // L (2x2, a coerced class) and any other size: single-line rows with a 2nd location line.
+  // L (2x2, a coerced class) and any other size: single-line rows with a 2nd location line. All-day rows
+  // sit in the dawn-wash chip on top (dawn-ink "All day"); each timed time wears its imminence. No rail.
   return (
     <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
-      {visibleAllDay.map((e) => (
-        <View key={e.id} style={styles.largeRow}>
-          <View style={styles.rail} />
-          <Text style={styles.timeCol} numberOfLines={1}>
-            {formatClock(e)}
-          </Text>
-          <Text style={[styles.evt, styles.largeEvt]} numberOfLines={1}>
-            {titleOf(e)}
-          </Text>
-        </View>
-      ))}
-      {visibleAllDay.length > 0 && visibleTimed.length > 0 ? <View style={styles.divider} /> : null}
-      {visibleTimed.map((e) => {
-        const isNext = e.id === nextId;
-        return (
-          <View key={e.id} style={styles.largeRow}>
-            <View style={[styles.rail, isNext && styles.railActive]} />
-            <Text style={[styles.timeCol, isNext && styles.timeNext]} numberOfLines={1}>
-              {formatClock(e)}
-            </Text>
-            <View style={styles.largeRowText}>
-              <Text style={styles.evt} numberOfLines={1}>
+      {visibleAllDay.length > 0 ? (
+        <View style={styles.allDayChip} testID="gcal-agenda-allday">
+          <View
+            style={[styles.chipWash, { backgroundColor: dawnInk, opacity: DAWN_CHIP_OPACITY, pointerEvents: 'none' }]}
+            testID="gcal-agenda-allday-wash"
+          />
+          {visibleAllDay.map((e) => (
+            <View key={e.id} style={styles.largeRow}>
+              <Text style={[styles.timeCol, { color: dawnInk }]} numberOfLines={1}>
+                {formatClock(e)}
+              </Text>
+              <Text style={[styles.evt, styles.largeEvt]} numberOfLines={1}>
                 {titleOf(e)}
               </Text>
-              {e.location ? (
-                <Text style={styles.loc} numberOfLines={1}>
-                  {e.location}
-                </Text>
-              ) : null}
             </View>
+          ))}
+        </View>
+      ) : null}
+      {visibleAllDay.length > 0 && visibleTimed.length > 0 ? <View style={styles.divider} /> : null}
+      {visibleTimed.map((e) => (
+        <View key={e.id} style={styles.largeRow}>
+          <Text style={[styles.timeCol, { color: timeColor(e) }]} numberOfLines={1} testID="gcal-agenda-time">
+            {formatClock(e)}
+          </Text>
+          <View style={styles.largeRowText}>
+            <Text style={styles.evt} numberOfLines={1}>
+              {titleOf(e)}
+            </Text>
+            {e.location ? (
+              <Text style={styles.loc} numberOfLines={1}>
+                {e.location}
+              </Text>
+            ) : null}
           </View>
-        );
-      })}
+        </View>
+      ))}
       {remaining > 0 ? (
         <Text style={styles.more} testID="gcal-agenda-more">
           +{remaining} more
@@ -228,35 +244,42 @@ export function AgendaCard({ data, size, box }: WidgetRenderProps) {
 const styles = StyleSheet.create((theme) => ({
   list: { gap: theme.spacing(1.5) },
 
-  // the next-event accent left rail (3px); transparent on every other row so titles still align
-  rail: { width: 3, borderRadius: 1.5, alignSelf: 'stretch', backgroundColor: 'transparent' },
-  railActive: { backgroundColor: theme.colors.accent },
+  // AOD-136 the all-day DAWN-WASH chip (M/L): the calm all-day band, grouped on top. The dawn tone
+  // (theme.when.distant) rides in as a faint absolute FILL (chipWash) under the group so the ink over it
+  // stays crisp; the container clips the wash to the rounded chip. Reuses existing tokens only (no colour).
+  allDayChip: {
+    position: 'relative',
+    gap: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    borderRadius: theme.radius.sm,
+    overflow: 'hidden',
+  },
+  chipWash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 
-  // all-day group (M): a quiet kicker over the all-day titles, then a hairline
-  allDayGroup: { gap: theme.spacing(1) },
-  groupLabel: { ...theme.type.badge, color: theme.colors.textMuted },
+  // the all-day group label (M): a quiet kicker; the dawn-ink COLOUR is applied inline.
+  groupLabel: { ...theme.type.badge },
   divider: { height: 1, backgroundColor: theme.colors.border },
 
-  // time + title shared steps; the next event's time is accent
-  time: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'] },
-  timeNext: { color: theme.colors.accent },
+  // time + title shared steps. AOD-136: the time numeral's COLOUR is applied INLINE per event — the
+  // theme.when[stop] imminence hue for a timed event, the dawn ink for an all-day "All day" — so it wears
+  // the Dressed Overall warmth (the old flat-muted base + accent `timeNext` override are gone).
+  time: { ...theme.type.meta, fontVariant: ['tabular-nums'] },
   evt: { ...theme.type.body, color: theme.colors.text },
   more: { ...theme.type.meta, color: theme.colors.textMuted, paddingTop: theme.spacing(0.5) },
 
-  // M: 2-line rows (style keys keep their pre-slot names; only the WidgetSize ids changed, AOD-122)
-  tallRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
+  // M: 2-line rows (time over title). AOD-136 removed the accent left rail, so the row is just the stack.
   tallRowText: { flexShrink: 1, gap: theme.spacing(0.25) },
 
   // W: event cells left to right
   wideStrip: { flexDirection: 'row', alignItems: 'stretch', flex: 1 },
-  wideCell: { flex: 1, flexDirection: 'row', gap: theme.spacing(1.5), paddingRight: theme.spacing(2) },
+  wideCell: { flex: 1, paddingRight: theme.spacing(2) },
   cellBorder: { borderLeftWidth: 1, borderLeftColor: theme.colors.border, paddingLeft: theme.spacing(2) },
   cellText: { flexShrink: 1, gap: theme.spacing(0.25) },
   moreCell: { alignItems: 'center', justifyContent: 'center', flexGrow: 0, flexBasis: 72 },
 
   // L: single-line rows, location on a 2nd line
   largeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
-  timeCol: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'], width: 64 },
+  timeCol: { ...theme.type.meta, fontVariant: ['tabular-nums'], width: 64 },
   largeRowText: { flexShrink: 1, gap: theme.spacing(0.25) },
   largeEvt: { flexShrink: 1 },
   loc: { ...theme.type.caption, letterSpacing: 0, color: theme.colors.textMuted },
