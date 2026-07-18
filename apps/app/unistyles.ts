@@ -9,8 +9,8 @@
 // StyleSheet.create runs, and again from jest setupFiles so themes exist under test. AOD-120 lands the
 // frozen data-hue colour-law families (design-color-law.md §4-6; the freeze: claude-design/Vela - Made
 // Fast.pdf 1a): the temp/ink/pane primitive ramps plus the semantic theme families temp/ink/pane/when.
-// Machinery only — no leaf consumes them yet — and every data hex is PROVISIONAL pending AOD-119 (the
-// Fire HD 8 dark-room re-tune).
+// Machinery only — no leaf consumes them yet. Every data hex is FROZEN: device-verified on the Fire HD 8
+// in a dark room and passed (AOD-119, GO 2026-07-18) — no re-tune needed, the render-frozen values stand.
 import { StyleSheet } from 'react-native-unistyles';
 import type { TextStyle } from 'react-native';
 
@@ -25,9 +25,9 @@ import type { TextStyle } from 'react-native';
 // claude-design/Vela - Made Fast.pdf 1a, names taken verbatim): for DATA the colour law supersedes the
 // §4.6 one-accent rule (design-color-law.md §9 records the revision) — a figure may wear the hue of what
 // it measures, while blue.400/600 stays the INTERACTION accent only (taps), never a data hue. EVERY data
-// hex is PROVISIONAL pending AOD-119 (the Fire HD 8 dark-room re-tune; web renders are density- and
-// brightness-blind): a re-tune lands as a deliberate re-freeze here + in __tests__/data-tokens.test.ts,
-// never a silent drift.
+// hex is FROZEN: device-verified on the Fire HD 8 in a dark room (AOD-119, GO 2026-07-18) — web renders
+// are density- and brightness-blind, so that on-panel pass was the gate. Any future change lands as a
+// deliberate re-freeze here + in __tests__/data-tokens.test.ts, never a silent drift.
 export const primitive = {
   neutral: {
     0: '#FFFFFF', 50: '#F6F6FA', 100: '#F4F4F8', 200: '#EEEEF3', 300: '#E4E4EC',
@@ -39,7 +39,7 @@ export const primitive = {
   red: { 400: '#FF6B6B', 600: '#D64545' }, // status: error
   green: { 400: '#4CB782', 600: '#2F8F63' }, // status: success
   ember: { 500: '#C2362B', 600: '#8A201B', 700: '#5E1714', 850: '#2E1214', 900: '#140709', 950: '#0A0506' }, // ambient-night reds
-  // --- AOD-120 data-hue ramps — ALL HEXES PROVISIONAL pending AOD-119 --------------------------------
+  // --- AOD-120 data-hue ramps — ALL HEXES FROZEN (device-verified AOD-119, GO 2026-07-18) -------------
   // The thermometer (--temp-*): 8 stops cold→hot, linear blend between neighbouring stops at the draw
   // site; lightness is pinned across the run so any temperature clears any pane at hero sizes. Vela blue
   // at the cold end, the sail's gold in the middle, ember only past real heat. °C anchors from the freeze.
@@ -144,7 +144,7 @@ export const night = {
 // per-service themes remap ROLES without touching primitives (§8: a theme is a role→colour remap, never
 // a redesign). Deliberately NOT inside `colors`: roleColor() and every §12 token-group alias assume
 // colors is a FLAT role→string map, so the structured families sit beside it as theme-level groups (the
-// `night` precedent). ALL VALUES PROVISIONAL pending AOD-119. Accent discipline (the Made Fast 1a
+// `night` precedent). ALL VALUES FROZEN (device-verified AOD-119, GO 2026-07-18). Accent discipline (the Made Fast 1a
 // freeze + the AOD-120 acceptance rule; the freeze moved the cold end OFF the accent that colour-law §4
 // nominally sketched onto it): blue.400/600 — the interaction accent — appears in NO family below.
 // bone is the freeze's "--ink-bone #F4F4F8 (= --text)": it aliases each theme's text step, so a figure
@@ -489,8 +489,8 @@ export const darkTheme = {
     // distinct from the per-widget DATA alphas (progress 0.18, sparkline 0.5). rgba, so no new hue.
     accentMuted: 'rgba(110, 139, 255, 0.14)',
   },
-  // AOD-120 data-hue families (PROVISIONAL pending AOD-119): the Signature (1C) mapping — the frozen
-  // ramps verbatim. See the block comment above inkDark for why they sit beside `colors`, not inside it.
+  // AOD-120 data-hue families (FROZEN, device-verified AOD-119 GO 2026-07-18): the Signature (1C) mapping
+  // — the frozen ramps verbatim. See the block comment above inkDark for why they sit beside `colors`.
   temp: primitive.temp,
   ink: inkDark,
   pane: primitive.pane,
@@ -519,8 +519,8 @@ export const lightTheme = {
     // (a touch lower than dark, for daylight contrast). Same shared-chrome-tint role; rgba, so no new hue.
     accentMuted: 'rgba(63, 91, 214, 0.12)',
   },
-  // AOD-120 data-hue families (PROVISIONAL pending AOD-119): the UNTUNED mirror of the dark/Signature
-  // freeze — the law is dark-first and wall-first, no light-tuned render exists yet, and no leaf consumes
+  // AOD-120 data-hue families (FROZEN dark-first via AOD-119 GO; light is the UNTUNED mirror of the dark/
+  // Signature freeze) — the law is dark-first and wall-first, no light-tuned render exists yet, and no leaf consumes
   // these in light. Only bone re-aliases (to the light text step) so "nothing to say" still draws as
   // plain text. A light re-tune lands as a deliberate re-freeze, never a silent drift.
   temp: primitive.temp,
@@ -535,8 +535,8 @@ export const lightTheme = {
 // way light/dark already remap `colors`. Monochrome is the SECOND v1 theme (Signature above is the
 // default; both ship free, per-service is a post-launch Pro lever, §96). It reuses each scheme's Signature
 // sibling VERBATIM and overrides ONLY the four data families temp/ink/pane/when, collapsing every
-// meaning-role onto the neutral ramp — so unlike the Signature families (PROVISIONAL pending AOD-119, the
-// Fire HD 8 re-tune) Monochrome is NOT provisional: it derives solely from primitive.neutral, read through
+// meaning-role onto the neutral ramp. The Signature families were the ones on trial at AOD-119 (now FROZEN,
+// GO); Monochrome never needed that exam: it derives solely from primitive.neutral, read through
 // each theme's own text/textMuted/surface/border roles (themselves neutral aliases), which are shipped-
 // frozen. The collapse rule, per §8 "today's build": a data FIGURE draws as bone (the `text` role), its
 // explicit dim variant recedes to `textMuted`; the Weather condition PANE loses its sky and becomes the

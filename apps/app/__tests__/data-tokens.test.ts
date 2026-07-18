@@ -3,10 +3,10 @@
 // shell-tokens.test.ts, arrange-tokens.test.ts, wall-tokens.test.ts): pin the four data-hue families —
 // temp (8 thermometer stops), ink (5 event inks, rain + sun each with a dim variant), pane (12 condition
 // × daylight swatches, each bg/line/ink), when (6 imminence stops cut from the thermometer) — so a
-// future edit cannot drift a frozen hex silently. Every hex here is PROVISIONAL pending AOD-119 (the
-// Fire HD 8 dark-room re-tune): a re-tune lands as a DELIBERATE re-freeze of these constants alongside
-// unistyles.ts, never a silent drift. The expected values are hard-coded (never sourced from `primitive`
-// — that would be circular), copied from the Made Fast 1a token table.
+// future edit cannot drift a frozen hex silently. Every hex here is FROZEN: device-verified on the Fire
+// HD 8 in a dark room and passed (AOD-119, GO 2026-07-18) — no re-tune. Any future change lands as a
+// DELIBERATE re-freeze of these constants alongside unistyles.ts, never a silent drift. The expected
+// values are hard-coded (never sourced from `primitive` — that would be circular), from the Made Fast 1a table.
 import { darkTheme, lightTheme, night, primitive } from '../unistyles';
 
 // The frozen thermometer (--temp-*), cold end to swelter (Made Fast 1a).
@@ -59,7 +59,7 @@ function dataHues(theme: typeof darkTheme | typeof lightTheme): string[] {
   ];
 }
 
-describe('1a the frozen primitive ramps: pinned byte-identical (PROVISIONAL pending AOD-119)', () => {
+describe('1a the frozen primitive ramps: pinned byte-identical (FROZEN, device-verified AOD-119 GO)', () => {
   it('the thermometer (--temp-*): 8 stops, ice through swelter', () => {
     expect(primitive.temp).toEqual(TEMP);
   });
@@ -119,7 +119,7 @@ describe('the semantic families on the theme (the three-tier seam, design-color-
   });
 });
 
-describe('light theme: the untuned mirror of the dark/Signature freeze (PROVISIONAL pending AOD-119)', () => {
+describe('light theme: the untuned mirror of the dark/Signature freeze (dark FROZEN via AOD-119 GO)', () => {
   it('temp / pane / when mirror dark exactly (no light-tuned render exists yet)', () => {
     expect(lightTheme.temp).toEqual(darkTheme.temp);
     expect(lightTheme.pane).toEqual(darkTheme.pane);
