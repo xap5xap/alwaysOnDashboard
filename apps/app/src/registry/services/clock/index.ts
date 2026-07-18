@@ -10,17 +10,18 @@
 import type { ServiceDefinition, WidgetDefinition } from '../../types';
 import { ClockCard } from './ClockCard';
 import { CLOCK_CONFIG_DEFAULTS } from './types';
-import { validateTimeZone } from './time';
 
-// Clock (the central ambient card, integration-clock.md §4.1). One widget: the time always shown, the date
-// optional (§4.0). defaultRefresh 'manual' (no provider to poll); liveness is the in-widget render tick
+// Clock (the central ambient card, integration-clock.md §4.1; RB-M2 AOD-130 Meridian). One widget: a single
+// centered time figure. defaultRefresh 'manual' (no provider to poll); liveness is the in-widget render tick
 // (§7.2). cacheTtlSeconds / minRefreshSeconds are OMITTED: there is no provider to protect and nothing is
 // cached (§7). dimsWithAmbient FALSE (AOD-37 §8.5): the Clock is the canonical useAmbient() opt-in, so it
 // skips the host's global dim overlay and recolours itself to the deep-red night palette instead. It also
 // declares caption { kind: 'hidden' } (AOD-124; claude-design "caption-less Clock"): a clock is self-evident,
-// so it wears NO SERVICE header at ANY size (superseding the old hideHeaderAtSizes ['S'] that hid it only at
-// S). Config (§5) is five static, client-validated fields; the timezone carries an Intl-based save-time
-// validator (validateTimeZone), not a remote-options source (§5.3), so there is no needs_config edge (§5.4).
+// so it wears NO SERVICE header at ANY size. AOD-130 (Meridian, subtractive) stripped the date line and the
+// timezone override (the "second clock"), so Config (§5) is now the TWO static, client-validated fields the
+// face still honours: the 12h/24h format and whether the seconds whisper is shown (which also drives the tick
+// cadence). No field is remote-options and none carries a save-time validator, so there is no needs_config
+// edge (§5.4). Values stored by a pre-Meridian instance (showDate/dateFormat/timezone) are simply ignored.
 const clock: WidgetDefinition = {
   type: 'clock',
   serviceId: 'clock',
@@ -45,47 +46,13 @@ const clock: WidgetDefinition = {
           { value: '12h', label: '12-hour' },
         ],
       },
-      // Show seconds. Also drives the TICK cadence: true -> 1s, false -> 60s (§7.2).
+      // Show the seconds whisper. Also drives the TICK cadence: true -> 1s, false -> 60s (§7.2).
       {
         key: 'showSeconds',
         label: 'Show seconds',
         kind: 'boolean',
         required: false,
         default: CLOCK_CONFIG_DEFAULTS.showSeconds,
-      },
-      // Show the date line at all.
-      {
-        key: 'showDate',
-        label: 'Show date',
-        kind: 'boolean',
-        required: false,
-        default: CLOCK_CONFIG_DEFAULTS.showDate,
-      },
-      // Date format. Maps to Intl.DateTimeFormat dateStyle (§12). A small closed set, no free text.
-      {
-        key: 'dateFormat',
-        label: 'Date format',
-        kind: 'enum',
-        required: false,
-        default: CLOCK_CONFIG_DEFAULTS.dateFormat,
-        options: [
-          { value: 'full', label: 'Monday, June 28' },
-          { value: 'long', label: 'June 28, 2026' },
-          { value: 'medium', label: 'Jun 28, 2026' },
-          { value: 'short', label: '6/28/26' },
-        ],
-      },
-      // Time zone (§5.2). Device-local by default; an optional IANA override for a second clock. A STATIC
-      // string validated CLIENT-SIDE via Intl (validateTimeZone), NOT a remote-options field, so there is
-      // no option source (§5.3) and no membership re-check / needs_config edge (§5.4). '' = device-local.
-      {
-        key: 'timezone',
-        label: 'Time zone',
-        kind: 'string',
-        required: false,
-        default: CLOCK_CONFIG_DEFAULTS.timezone,
-        placeholder: 'Device local (e.g. America/New_York)',
-        validate: validateTimeZone, // save-time only (config.ts runFieldValidators); render degrades (§7.3)
       },
     ],
   },

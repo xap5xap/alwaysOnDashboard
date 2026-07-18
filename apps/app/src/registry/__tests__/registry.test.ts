@@ -184,14 +184,16 @@ describe('Clock service registration (AOD-60, integration-clock.md §8): the aut
     expect(def.caption).toEqual({ kind: 'hidden' });
   });
 
-  it('declares the §5 static config: 12/24h, seconds, date + format, and a string timezone (no remote-options)', () => {
+  it('declares the §5 static config: the 12/24h format and the seconds whisper toggle (no remote-options)', () => {
+    // AOD-130 Meridian (subtractive): the date (showDate/dateFormat) and the timezone override (the "second
+    // clock") fields were stripped, so the schema is the two fields the single-figure face still honours.
     const fields = getWidgetDef('clock', 'clock')!.configSchema.fields;
-    expect(fields.map((f) => f.key)).toEqual(['clockFormat', 'showSeconds', 'showDate', 'dateFormat', 'timezone']);
+    // The timezone field (the only one that carried a save-time Intl validator) is gone with this list.
+    expect(fields.map((f) => f.key)).toEqual(['clockFormat', 'showSeconds']);
     // No field is required (ready on add, §9.1); none is remote-options (no option source / no needs_config
-    // edge, §5.3/§5.4); the timezone is a plain string validated client-side at save (§5.2).
+    // edge, §5.3/§5.4).
     expect(fields.every((f) => f.required === false)).toBe(true);
     expect(fields.every((f) => f.kind !== 'remote-options')).toBe(true);
-    expect(fields.find((f) => f.key === 'timezone')!.kind).toBe('string');
   });
 
   it('Clock is addable with NO connection (the sole none exemption, §3.1)', () => {
