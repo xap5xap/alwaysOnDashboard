@@ -175,8 +175,15 @@ export function CurrentWeatherCard({ data, size, box }: WidgetRenderProps) {
   // W (2×1): the banner. temp + glyph lead on the left; condition + meta alongside on the right; a flat
   // waterline runs along the bottom. The wide-short reflow the AOD-123 audit flagged as an M2/M4 decision.
   if (size === 'W') {
+    const glyphPx = theme.weatherIcon.currentSmall;
+    const gap = theme.spacing(2);
+    // Reserve a truncatable column for the detail (condition + meta); THAT column shrinks first, never the
+    // temperature (color-law / FitBody truncation order). The temp+glyph lead is flexShrink:0 below, so the
+    // font sized here to the ACTUAL remaining width (not a hardcoded half) is the temp's final width — the
+    // flex row can no longer squeeze it into a one-glyph clip.
+    const rightMin = 72;
     const bannerH = Math.max(24, contentH - theme.transit.waterlineHeight - theme.spacing(1));
-    const tempW = fitTempSize(tempText, heroSize, contentW * 0.5 - theme.weatherIcon.currentSmall - theme.spacing(2), bannerH);
+    const tempW = fitTempSize(tempText, heroSize, Math.max(1, contentW - glyphPx - rightMin - gap * 2), bannerH);
     return (
       <View style={[styles.root, styles.stack, { minHeight: contentH }]} testID="weather-current" accessibilityRole="summary">
         {paneBackground}
@@ -250,9 +257,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   heroGroup: { gap: theme.spacing(1) },
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },
-  bannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },
-  leftGroup: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2), flexShrink: 1 },
-  rightGroup: { flexShrink: 1, alignItems: 'flex-end', gap: theme.spacing(0.5) },
+  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2) },
+  // the temp+glyph lead NEVER shrinks (flexShrink 0), so the row can't squeeze the fitted temp into a clip;
+  // the detail column is the flexible one (flex 1 + minWidth 0) so condition/meta truncate first instead.
+  leftGroup: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2), flexShrink: 0 },
+  rightGroup: { flex: 1, minWidth: 0, alignItems: 'flex-end', gap: theme.spacing(0.5) },
   // the temperature: type.hero geometry; the colour is applied INLINE (the data hue / the tempColor blend).
   tempBase: { ...theme.type.hero },
   // the condition label stays bone (the glyph carries the condition by shape; no accent tint — colour-law).
