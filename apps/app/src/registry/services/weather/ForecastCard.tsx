@@ -230,7 +230,10 @@ const styles = StyleSheet.create((theme) => ({
   // bar takes the row remainder after the (legible) numerals; the min floor keeps it visible when the
   // remainder is tight (L, precip kept) and the wall auto-fit scales it up. flexShrink 0 on the numerals so
   // a tight row shrinks the BAR (which can spare it), never the numerals (which must never clip).
-  barArea: { flex: 1, minWidth: 16, position: 'relative' },
+  // overflow hidden clips the absolute segment to the track: a near-zero-width bar whose lo sits at the
+  // week's max (a warm-night low == the hottest high) would otherwise render its minWidth floor a few px
+  // past the right edge into the hi column (AOD-133 review). Contained here; the hi numeral stays clear.
+  barArea: { flex: 1, minWidth: 16, position: 'relative', overflow: 'hidden' },
   precipCol: { width: PRECIP_W, flexShrink: 0, alignItems: 'flex-end' },
   precip: { ...theme.type.caption, letterSpacing: 0, fontVariant: ['tabular-nums'] },
   // today full-bright + bold vs later days stepped back (weekday + hi share this; hi is already 700, so the
