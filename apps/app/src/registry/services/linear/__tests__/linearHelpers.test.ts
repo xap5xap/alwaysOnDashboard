@@ -38,7 +38,7 @@ describe('clampPercent (design-linear.md §6.1: Linear 0..1 progress -> an integ
   });
 });
 
-describe('formatDue (design-linear.md §5.2: "Today"/overdue bright, future muted)', () => {
+describe('formatDue (design-linear.md §5.2: Today bone-bright, overdue amber, future muted — AOD-134 tone)', () => {
   const now = new Date(2026, 5, 29, 10, 0, 0); // Jun 29 2026, local
 
   it('returns null for a missing or unparseable due date (the row omits it)', () => {
@@ -46,20 +46,20 @@ describe('formatDue (design-linear.md §5.2: "Today"/overdue bright, future mute
     expect(formatDue('not-a-date', now)).toBeNull();
   });
 
-  it('labels today as "Today" and emphasises it', () => {
-    expect(formatDue('2026-06-29', now)).toEqual({ label: 'Today', emphasized: true });
+  it('labels today as "Today" on the today tone (bone-bright)', () => {
+    expect(formatDue('2026-06-29', now)).toEqual({ label: 'Today', tone: 'today' });
   });
 
-  it('emphasises an overdue date (a past due steps up to bright)', () => {
+  it('flags an overdue date on the overdue tone (the amber breach ink), distinct from Today', () => {
     const due = formatDue('2026-06-25', now);
-    expect(due?.emphasized).toBe(true);
+    expect(due?.tone).toBe('overdue'); // Soundings splits overdue from Today (was the single `emphasized`)
     expect(due?.label).toBeTruthy();
     expect(due?.label).not.toBe('Today');
   });
 
-  it('keeps a future date muted (not emphasised)', () => {
+  it('keeps a future date on the future tone (muted)', () => {
     const due = formatDue('2026-07-02', now);
-    expect(due?.emphasized).toBe(false);
+    expect(due?.tone).toBe('future');
     expect(due?.label).toBeTruthy();
   });
 });

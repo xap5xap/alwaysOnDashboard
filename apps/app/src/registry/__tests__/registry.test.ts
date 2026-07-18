@@ -66,7 +66,7 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
   it('My Issues declares the §4.1 sizes/TTLs and the §5.1 config schema (projectId + filter)', () => {
     const def = getWidgetDef('linear', 'my_issues')!;
     expect(def.title).toBe('My Issues');
-    expect(def.supportedSizes).toEqual(['W', 'L', 'M']); // AOD-122 slot ids (was ['medium','large','tall'])
+    expect(def.supportedSizes).toEqual(['S', 'M', 'W', 'L']); // AOD-134 Soundings adds S (the glance); S/M/W/L order
     expect(def.defaultRefresh).toEqual({ seconds: 300 });
     expect(def.cacheTtlSeconds).toBe(120);
     expect(def.minRefreshSeconds).toBe(60);
