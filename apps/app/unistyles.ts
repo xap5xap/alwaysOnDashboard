@@ -196,6 +196,20 @@ const weatherIcon = {
   stroke: 2, // line weight, matching the AOD-37 chrome glyphs
 } as const;
 
+// AOD-132 §4/§7 transit: the Weather Transit sun-arc geometry (the analog of weatherIcon/sparkline — a
+// per-render-context NUMBERS-ONLY group; the colours arrive as ROLE values from the leaf: pane.line for the
+// arc, ink.sun for the sun-mark, pane.clearNight.moon / ink.moon for the moon). The arc is a full quadratic
+// CURVE (arcHeight tall) at L and a flat WATERLINE (waterlineHeight) at W/M; the sun-mark rides it, and at
+// night a moon crescent (moonRadius) sits below. Test-locked in __tests__/transit-tokens.test.ts.
+const transit = {
+  arcHeight: 46, // the curved sun-arc band height (L)
+  waterlineHeight: 22, // the flat waterline band height (W/M)
+  stroke: 2, // the arc/waterline line weight (matches the weatherIcon glyph stroke)
+  sunRadius: 5, // the gold sun-mark disc radius
+  moonRadius: 5, // the night moon crescent radius
+  inset: 10, // horizontal inset of the arc endpoints from the band edge
+} as const;
+
 // AOD-36 §9.1 sparkline: the Daily Spend chart's sizing + intensity (design-claude-usage.md §4, §9.1).
 // A per-context size/intensity ramp the way weatherIcon ramps the weather glyph. The bars draw in
 // colors.accent at two opacities and sit on a colors.border baseline, applied in the leaf; NO colour
@@ -434,6 +448,7 @@ const sharedTokens = {
   dot,
   elevation,
   weatherIcon,
+  transit,
   sparkline,
   money,
   priorityIcon,
