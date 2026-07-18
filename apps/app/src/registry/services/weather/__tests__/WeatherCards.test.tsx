@@ -52,6 +52,8 @@ const CURRENT_DATA: CurrentWeatherData = {
   humidityPct: 60,
   windSpeed: 7.1,
   windDirectionDeg: 120,
+  sunrise: '2026-06-27T06:13',
+  sunset: '2026-06-27T18:20',
   units: { temperature: '°C', windSpeed: 'km/h', humidity: '%' },
 };
 
