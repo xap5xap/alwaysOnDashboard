@@ -16,13 +16,15 @@ import type {
 import type { InstanceSeed } from './mapper';
 
 /**
- * The size class a new placement uses (AOD-10 §5.2): the "default card" `medium` when the widget
- * supports it, otherwise the first declared size. Falls back to `medium` for a (malformed) empty set.
- * Preferring `medium` keeps an added stub aligned with the bootstrap STUB_SEED, which is also `medium`.
+ * The size class a new placement uses (AOD-10 §5.2 rule over the AOD-122 slot grid): the "default
+ * card" `W` (2x1, the full-width row — the geometric successor of the pre-slot `medium`) when the
+ * widget supports it, otherwise the first declared size. Falls back to `W` for a (malformed) empty
+ * set. Preferring `W` keeps an added widget aligned with the bootstrap first-run seed (dashboardRepo),
+ * which is also `W`.
  */
 export function defaultPlacementSize(supported: WidgetSize[]): WidgetSize {
-  if (supported.includes('medium')) return 'medium';
-  return supported[0] ?? 'medium';
+  if (supported.includes('W')) return 'W';
+  return supported[0] ?? 'W';
 }
 
 /**
@@ -39,8 +41,8 @@ export function defaultPlacementRect(size: WidgetSize, existing: WidgetInstance[
 }
 
 /**
- * The schema's field defaults (AOD-10 §4.1), applied generically across field kinds. The stub declares
- * no fields, so this is `{}`. A required field with no default is left unset on purpose: the per-instance
+ * The schema's field defaults (AOD-10 §4.1), applied generically across field kinds. A schema with no
+ * defaulted fields yields `{}`. A required field with no default is left unset on purpose: the per-instance
  * config form (AOD-10 §4) owns collecting it, and the host renders needs_config until it is provided.
  */
 export function defaultConfig(schema: WidgetConfigSchema): Record<string, unknown> {
@@ -54,7 +56,7 @@ export function defaultConfig(schema: WidgetConfigSchema): Record<string, unknow
 /**
  * Whether adding `schema` needs the config form before insert (AOD-10 §4): true when the schema's
  * defaults alone do not validate, i.e. a required field has no default. Reuses validateConfig and
- * defaultConfig, no new logic: a widget whose fields are all optional/defaulted (like the stub) keeps
+ * defaultConfig, no new logic: a widget whose fields are all optional/defaulted (like the Clock) keeps
  * the AOD-51 add-with-defaults path; a required-no-default field routes through the form first so the
  * instance is born valid. Generic over the registry; never per-service.
  */

@@ -4,22 +4,31 @@
 // card lays them out today first, scoped to the widget size. The weekday label is computed against the
 // DEVICE clock (the date strings are local, §4.2).
 //
-// AOD-35 polish: one payload, two layouts. At wide a banner STRIP of day columns (weekday / day-form icon
-// / hi over lo / precip); at large a row LIST under the quiet header (weekday / icon / condition + precip
-// / right-aligned hi-lo). The high is the bright figure (colors.text), the low recedes (colors.textMuted),
-// both tabular so the column aligns; Today is bright and later weekdays recede (the relative-time
-// emphasis). Forecast days always use the day form (§4.2). Precip shows in accent at wide, muted at large,
-// and is omitted when null. The degree string is echoed from the payload units (§6.2).
+// AOD-35 polish: one payload, two layouts. At W (2x1; the banner layout the retired 3x1 wide slot wore
+// pre-AOD-122) a STRIP of day columns (weekday / day-form icon / hi over lo / precip); at L a row LIST
+// under the quiet header (weekday / icon / condition + precip / right-aligned hi-lo). The high is the
+// bright figure (colors.text), the low recedes (colors.textMuted), both tabular so the column aligns;
+// Today is bright and later weekdays recede (the relative-time emphasis). Forecast days always use the
+// day form (§4.2). Precip shows in accent at W, muted at L, and is omitted when null. The degree string
+// is echoed from the payload units (§6.2).
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { ForecastData, ForecastDay, WeatherCondition } from './types';
 import { WeatherIcon } from './WeatherIcon';
+import { fitCount } from '../../../widgets/fitLadder';
 
-// How many days fit a glance at each size. Forecast ships at wide/large; the others are defensive
-// defaults so the card never reads an undefined count if mounted at an unexpected size.
-const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { small: 3, medium: 4, wide: 5, large: 7, tall: 7 };
+// How many days fit a glance at each slot. Forecast ships at W/L; S/M are defensive. AOD-122 remap: W 4,
+// L 7, S 3, M 7. AOD-123: the L ROW LIST now derives its day count from the box HEIGHT (fitCount) so a
+// short cell never overflows (7 rows was ~216px in a 144px body); these stay the no-box fallback. The W
+// BANNER STRIP is width-budgeted (columns across the width) and, being over-tall per column for a 48px
+// cell, is FLAGGED for an M4 wide-short face — the height fitCount cannot fix a horizontal strip.
+const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { S: 3, M: 7, W: 4, L: 7 };
+
+// The L row is a single line (weekday · icon · condition · hi-lo); conservative DP height so it never
+// under-counts and clips. No "+N more" footer — a forecast simply shows as many days as fit.
+const L_ROW_HEIGHT = 28;
 const FALLBACK_CONDITION: WeatherCondition = { code: -1, label: 'Unknown', group: 'cloudy', isDay: true };
 
 /** Defensive read: a partial payload renders as the empty card, never a crash (§4.2). */
@@ -54,12 +63,17 @@ function dayLabel(date: string, now: Date): string {
   return isToday(date, now) ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' });
 }
 
-export function ForecastCard({ data, size }: WidgetRenderProps) {
+export function ForecastCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { days, units } = asForecast(data);
   const unit = units.temperature ?? '°';
   const now = new Date();
-  const visible = days.slice(0, VISIBLE_BY_SIZE[size] ?? 5);
+  // AOD-123: the L row list counts by HEIGHT so it never overflows; other sizes keep the fixed fallback.
+  const visibleCount =
+    box && size === 'L'
+      ? fitCount(days.length, box.height, { rowHeight: L_ROW_HEIGHT, gap: theme.spacing(2) })
+      : (VISIBLE_BY_SIZE[size] ?? 5);
+  const visible = days.slice(0, visibleCount);
 
   if (visible.length === 0) {
     return (
@@ -83,8 +97,8 @@ export function ForecastCard({ data, size }: WidgetRenderProps) {
     />
   );
 
-  // wide (3x1): the banner strip. Day columns left to right; weekday / icon / hi-lo / precip stacked.
-  if (size === 'wide') {
+  // W (2x1): the banner strip. Day columns left to right; weekday / icon / hi-lo / precip stacked.
+  if (size === 'W') {
     return (
       <View style={styles.strip} accessibilityRole="summary" testID="weather-forecast">
         {visible.map((day) => {
@@ -113,7 +127,7 @@ export function ForecastCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // large (and any other reconciled size): the row list under the quiet header.
+  // L (and any other coerced slot): the row list under the quiet header.
   return (
     <View style={styles.list} accessibilityRole="summary" testID="weather-forecast">
       {visible.map((day) => {
@@ -146,17 +160,17 @@ const styles = StyleSheet.create((theme) => ({
   empty: { paddingVertical: theme.spacing(2) },
   emptyText: { ...theme.type.body, color: theme.colors.textMuted },
 
-  // wide banner strip
+  // W banner strip
   strip: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flex: 1 },
   col: { flex: 1, alignItems: 'center', gap: theme.spacing(1.5) },
 
-  // large row list
+  // L row list
   list: { gap: theme.spacing(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2) },
 
   // weekday: Today bright, later days recede (the relative-time emphasis)
   day: { ...theme.type.label },
-  dayRow: { width: 52 }, // fixed-width left column for the large row list; the wide column centres instead
+  dayRow: { width: 52 }, // fixed-width left column for the L row list; the strip column centres instead
   dayToday: { color: theme.colors.text },
   dayMuted: { color: theme.colors.textMuted },
 
@@ -166,10 +180,10 @@ const styles = StyleSheet.create((theme) => ({
   hi: { color: theme.colors.text },
   lo: { color: theme.colors.textMuted },
 
-  // condition label (large only), with precip appended muted
+  // condition label (L only), with precip appended muted
   condRow: { ...theme.type.meta, color: theme.colors.textMuted, flexShrink: 1, flexGrow: 1 },
 
-  // precip: accent at wide (its own line), muted-appended at large (above)
+  // precip: accent at W (its own line), muted-appended at L (above)
   precipWide: {
     ...theme.type.caption,
     letterSpacing: 0,

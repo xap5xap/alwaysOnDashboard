@@ -17,17 +17,20 @@ import { validateTimeZone } from './time';
 // (§7.2). cacheTtlSeconds / minRefreshSeconds are OMITTED: there is no provider to protect and nothing is
 // cached (§7). dimsWithAmbient FALSE (AOD-37 §8.5): the Clock is the canonical useAmbient() opt-in, so it
 // skips the host's global dim overlay and recolours itself to the deep-red night palette instead. It also
-// declares hideHeaderAtSizes ['small'] (§4.2): a 1x1 glance is just the time, no SERVICE header. Config
-// (§5) is five static, client-validated fields; the timezone carries an Intl-based save-time validator
-// (validateTimeZone), not a remote-options source (§5.3), so there is no needs_config edge (§5.4).
+// declares caption { kind: 'hidden' } (AOD-124; claude-design "caption-less Clock"): a clock is self-evident,
+// so it wears NO SERVICE header at ANY size (superseding the old hideHeaderAtSizes ['S'] that hid it only at
+// S). Config (§5) is five static, client-validated fields; the timezone carries an Intl-based save-time
+// validator (validateTimeZone), not a remote-options source (§5.3), so there is no needs_config edge (§5.4).
 const clock: WidgetDefinition = {
   type: 'clock',
   serviceId: 'clock',
   title: 'Clock',
-  supportedSizes: ['small', 'medium', 'wide', 'large'],
+  // AOD-122 slot remap: was ['small','medium','wide','large']; small->S, medium(2x1)->W, large->L,
+  // and the retired wide (3x1) folds into W — its banner layout retired with the slot (ClockCard).
+  supportedSizes: ['S', 'W', 'L'],
   defaultRefresh: 'manual',
   dimsWithAmbient: false,
-  hideHeaderAtSizes: ['small'],
+  caption: { kind: 'hidden' }, // AOD-124: chromeless at every size (self-evident; no fetch → no dot/refresh)
   configSchema: {
     fields: [
       // 12h / 24h. Maps to Intl.DateTimeFormat hour12 (§12).

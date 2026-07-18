@@ -8,31 +8,28 @@ import {
   getOptionSource,
   type OptionSourceContext,
   providerBackedSource,
-  STUB_OPTION_CHOICES,
 } from "./option-sources.ts";
 import { providerErrorResponse } from "./providers.ts";
 import { HttpError } from "./http.ts";
 
-const failingCaller: OptionSourceContext["callProvider"] = () => {
-  throw new Error("a static option source must not call the provider");
-};
+function assertUnknownOptionSource(serviceId: string, optionSource: string) {
+  try {
+    getOptionSource(serviceId, optionSource);
+    throw new Error("expected getOptionSource to throw");
+  } catch (e) {
+    assert(e instanceof HttpError, "is an HttpError");
+    assertEquals((e as HttpError).status, 400);
+    assertEquals((e as HttpError).code, "unknown_option_source");
+  }
+}
 
 describe("option-source registry (AOD-10 §4.3)", () => {
-  it("resolves the stub static source to its fixed choices without touching the provider", async () => {
-    const resolver = getOptionSource("stub", "stub_options");
-    const choices = await resolver({ params: {}, callProvider: failingCaller });
-    assertEquals(choices, STUB_OPTION_CHOICES);
+  it("the removed walking-skeleton stub source is no longer allow-listed (AOD-126, lockstep with the registries)", () => {
+    assertUnknownOptionSource("stub", "stub_options");
   });
 
-  it("throws a 400 unknown_option_source for an unregistered id", () => {
-    try {
-      getOptionSource("stub", "not_a_source");
-      throw new Error("expected getOptionSource to throw");
-    } catch (e) {
-      assert(e instanceof HttpError, "is an HttpError");
-      assertEquals((e as HttpError).status, 400);
-      assertEquals((e as HttpError).code, "unknown_option_source");
-    }
+  it("throws a 400 unknown_option_source for an unregistered id on a real service", () => {
+    assertUnknownOptionSource("linear", "not_a_source");
   });
 
   it("providerBackedSource calls the allow-listed endpoint with the field params and maps to Choice[]", async () => {

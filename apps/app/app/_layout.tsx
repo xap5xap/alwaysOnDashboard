@@ -7,7 +7,7 @@
 // dashboard layout (AOD-7) paints on cold start. GestureHandlerRootView is required by the AOD-25
 // gesture stack that the free-form layout engine uses for drag/resize.
 import '../unistyles';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,6 +22,7 @@ import { WidgetDataSourceProvider } from '../src/host/WidgetDataSource';
 import { ProxyDataSource } from '../src/host/ProxyDataSource';
 import { supabase } from '../src/supabase/client';
 import { queryPersister } from '../src/storage/queryPersister';
+import { setupOnlineManager } from '../src/network/onlineManager';
 
 // gcTime must outlive the persister maxAge or restored queries are dropped as stale on rehydrate.
 const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24; // 24h
@@ -35,6 +36,12 @@ export default function RootLayout() {
     [],
   );
   const dataSource = useMemo(() => new ProxyDataSource(supabase), []);
+
+  // AOD-127: teach onlineManager the device's real connectivity (via netinfo) so queries pause offline and
+  // last-known data holds instead of erroring. onlineManager owns the subscription teardown internally.
+  useEffect(() => {
+    setupOnlineManager();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

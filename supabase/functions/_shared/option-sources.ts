@@ -4,9 +4,9 @@
 //
 // Each option source is a RESOLVER FUNCTION (code, not a table, like the client `render` component):
 // it receives a context exposing the static params and a bound provider caller, and returns Choice[].
-// A static source (the stub) returns fixed choices and never touches the provider or a secret; a
-// provider-backed source (PS-M3: Linear projects, etc.) calls the allow-listed endpoint and maps the
-// response. The config-time handler invokes resolvers identically; there is no per-service branch.
+// A static source returns fixed choices and never touches the provider or a secret (the caller is
+// lazy); a provider-backed source (Linear projects, Google calendars) calls the allow-listed endpoint
+// and maps the response. The config-time handler invokes resolvers identically; no per-service branch.
 
 import { HttpError } from "./http.ts";
 import type { ProviderCaller } from "./connection.ts";
@@ -25,18 +25,6 @@ export interface OptionSourceContext {
 export type OptionSourceResolver = (ctx: OptionSourceContext) => Promise<Choice[]>;
 
 export type OptionSourceRegistry = Record<string, Record<string, OptionSourceResolver>>;
-
-/**
- * The fixed choice set the stub option source returns. The stub has no real provider (apiBase
- * stub.invalid), so a STATIC resolver is the only way it can resolve real choices end to end, exactly
- * as the stub exercised host/add/config in AOD-47/51/52. Exported so the deno test asserts the
- * round-trip without faking a provider.
- */
-export const STUB_OPTION_CHOICES: Choice[] = [
-  { value: "alpha", label: "Alpha Source" },
-  { value: "bravo", label: "Bravo Source" },
-  { value: "charlie", label: "Charlie Source" },
-];
 
 // --- Linear option sources (integration-linear.md §5.3 / §5.4) -----------------------------------
 // Direct GraphQL resolvers, not providerBackedSource: the shipped helper maps the field's params to
@@ -113,11 +101,8 @@ const google_calendars: OptionSourceResolver = providerBackedSource(
 );
 
 export const OPTION_SOURCE_REGISTRY: OptionSourceRegistry = {
-  // App-shell walking-skeleton stub (AOD-53), mirroring the client `stub` service. A STATIC source:
-  // no provider, no secret. Remove or replace when real provider-backed sources land in PS-M3.
-  stub: {
-    stub_options: () => Promise.resolve(STUB_OPTION_CHOICES),
-  },
+  // The AOD-53 walking-skeleton stub source is GONE (AOD-126), removed in lockstep with the client
+  // and server stub registry entries: only real services allow-list option sources now.
   // Linear: provider-backed GraphQL resolvers (§5.3 / §5.4). The projectId / teamId pickers.
   linear: {
     linear_projects,

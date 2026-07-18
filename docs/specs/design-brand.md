@@ -4,9 +4,11 @@
 >
 > **It supersedes the issue's original "Produce (Figma)" wording.** AOD-18 was written before [AOD-37](https://linear.app/thexap/issue/AOD-37) set the repo's `type:design` convention (a `design-` doc + rendered SVGs in-repo, not a Figma file). This deliverable follows that established convention, the same one all four widget designs used; Figma is not part of this repo's design flow. No scope changes, only the medium.
 >
-> **Design-first, surfaced for approval.** Brand is subjective and Xavier's call, so three identity directions (Star, Sail, Vigil) were surfaced before anything was finalized. **Direction A, Star, was approved** (2026-06-29). This doc builds that direction. The two alternates are recorded in section 3 for the audit trail.
+> **Design-first, surfaced for approval.** Brand is subjective and Xavier's call, so three identity directions (Star, Sail, Vigil) were surfaced before anything was finalized. **Direction B, Sail, is the approved mark** — the warm gold "Ambient Sail". The two alternates (Star, Vigil) are recorded in section 3 for the audit trail.
 >
-> **Consistency is the hard constraint.** The app already ships a calm dark ambient look that users see (the [AOD-37](https://linear.app/thexap/issue/AOD-37) / [AOD-62](https://linear.app/thexap/issue/AOD-62) widget visual system: background `#0B0B0F`, surface `#16161D`, text `#F4F4F8`, the single accent `#6E8BFF`, the `type.*` scale, in [`unistyles.ts`](../../apps/app/unistyles.ts) and [`design-widget-system.md`](design-widget-system.md) §3). The brand identity is **consistent with and justifies** that shipped palette and its one-accent discipline; it does not invent a clashing one. Where a direction would have evolved the palette it is **named explicitly and handed to [AOD-19](https://linear.app/thexap/issue/AOD-19)** (section 8); the approved Star direction evolves it in **zero** ways.
+> **Revision (2026-07-17): the mark is now the gold Ambient Sail, superseding the Star.** [AOD-128](https://linear.app/thexap/issue/AOD-128) replaced the four-point star with the warm gold **Ambient Sail** (a gold sail and two small cream star accents on a deep navy tile), drawn in [`vela-sail-mark.svg`](assets/vela-sail-mark.svg) and propagated to the app icons in [`apps/app/assets/`](../../apps/app/assets/) (`icon.png`, the adaptive `android-icon-*`, `splash-icon.png`, `favicon.png`). The four-point star was originally approved 2026-06-29; it is now retired to historical lineage (section 3). Its construction sheet `design-brand-mark.svg` and the leading glyph in `design-brand-wordmark.svg` predate this change and still depict the Star; they are kept for the audit trail, and re-rendering them is not part of this change. The palette, type, and voice (sections 5 to 7) are unchanged; the mark's own warm gold/navy is described in section 4, and any broader warming of the app palette is tracked separately, not settled here.
+>
+> **Consistency is the hard constraint.** The app already ships a calm dark ambient look that users see (the [AOD-37](https://linear.app/thexap/issue/AOD-37) / [AOD-62](https://linear.app/thexap/issue/AOD-62) widget visual system: background `#0B0B0F`, surface `#16161D`, text `#F4F4F8`, the single accent `#6E8BFF`, the `type.*` scale, in [`unistyles.ts`](../../apps/app/unistyles.ts) and [`design-widget-system.md`](design-widget-system.md) §3). The brand identity is **consistent with and justifies** that shipped palette and its one-accent discipline; it does not invent a clashing one. Where a direction would have evolved the palette it is **named explicitly and handed to [AOD-19](https://linear.app/thexap/issue/AOD-19)** (section 8); the approved Sail direction keeps the shipped **app** palette and its one-accent discipline unchanged. The mark itself is drawn in its own warm gold on navy (section 4); any broader warming of the app palette is tracked separately, not settled here.
 >
 > **What this fixes, and what it must not touch.** It fixes the **brand visual identity**: the wordmark and logomark (the compact app-icon mark), the brand color system, the typographic voice, and the voice and tone. It expresses every value as a **design token** already present in (or adopted verbatim from) the shipped theme; it does **not** edit [`unistyles.ts`](../../apps/app/unistyles.ts) (that is [AOD-19](https://linear.app/thexap/issue/AOD-19)'s job and a later `type:tech-task`, the way a spec does not write its code). It does **not** build the design-token artifact ([AOD-19](https://linear.app/thexap/issue/AOD-19)), the component library ([AOD-20](https://linear.app/thexap/issue/AOD-20)), app screens ([AOD-21](https://linear.app/thexap/issue/AOD-21) / [AOD-27](https://linear.app/thexap/issue/AOD-27) / [AOD-28](https://linear.app/thexap/issue/AOD-28) / [AOD-29](https://linear.app/thexap/issue/AOD-29)), or store listing assets ([AOD-42](https://linear.app/thexap/issue/AOD-42)).
 
@@ -16,7 +18,7 @@
 
 It fixes exactly four things:
 
-1. **The logomark and wordmark** (section 4): an **ambient star** as the compact mark (the app-icon glyph) and a lowercase **vela** wordmark, with light and dark lockups, clear-space and minimum-size rules, and the app icon.
+1. **The logomark and wordmark** (section 4): the **Ambient Sail** (a warm gold sail with two small cream star accents on a deep navy tile) as the compact mark (the app-icon glyph) and a lowercase **vela** wordmark, with light and dark lockups, clear-space and minimum-size rules, and the app icon.
 2. **The palette** (section 5): the brand color system, anchored verbatim on the shipped dark ambient palette and the **single accent** `#6E8BFF`, with each role justified, the dark (primary) and light themes, the reserved status hues, and the ambient-night extension, handed to [AOD-19](https://linear.app/thexap/issue/AOD-19).
 3. **Typography** (section 6): the brand type voice (a humanist geometric sans) and how the wordmark relates to the in-app `type.*` scale.
 4. **Voice and tone** (section 7): the brand voice (calm, ambient, glanceable, not busy or corporate) with do and don't copy examples, matching the "looked at, not interacted with" ethos.
@@ -29,7 +31,7 @@ It fixes exactly four things:
 
 | Source | What it locks | How this design uses it |
 |---|---|---|
-| [AOD-1](https://linear.app/thexap/issue/AOD-1) | The brand **name** Vela, its rationale (sail / star / candle; *velar* = keep vigil), the `velaglance.com` domain, and that AOD-18 turns the name into a visual identity. | Section 3 picks the **star** motif (which, as the constellation "the sails", folds in the sail); the whole doc realizes the name. |
+| [AOD-1](https://linear.app/thexap/issue/AOD-1) | The brand **name** Vela, its rationale (sail / star / candle; *velar* = keep vigil), the `velaglance.com` domain, and that AOD-18 turns the name into a visual identity. | Section 3 picks the **sail** motif (Vela is Latin/nautical for "the sails"), with two small star accents that keep the constellation hint; the whole doc realizes the name. |
 | [`unistyles.ts`](../../apps/app/unistyles.ts) §3.1 / §3.2 / §3.3 | The shipped dark + light color themes, the deep-red `night.*` palette, and the `type.*` scale. | Section 5 adopts the colors **verbatim** as the brand palette; section 6 adopts `type.*` as the brand type scale. No new token is invented. |
 | [`design-widget-system.md`](design-widget-system.md) §3 | The three visual rules (**the value dominates, the chrome recedes, night is first-class**) and the **one-accent rule** (one accent carries actions, the in-flight refresh, a card's one highlighted figure; status hues are reserved). | Sections 4 to 7 obey these rules: the mark is one accent on dark, the palette keeps one accent per theme, the voice keeps the chrome quiet. |
 | [`design-widget-system.md`](design-widget-system.md) §3.1 | The status-hue reservation (`warning` / `error` / `success` carry the dot and badge, not brand). | Section 5 keeps the status hues out of the brand palette (the swatch sheet labels them "reserved"). |
@@ -38,58 +40,63 @@ It fixes exactly four things:
 
 What is already true, and what this adds: the product already **looks** like Vela should (a dark field of glowing cards). This design does not restyle the app. It names the identity that the shipped look already implies, draws the mark and wordmark that did not exist yet, and writes the palette, type, and voice down once so [AOD-19](https://linear.app/thexap/issue/AOD-19) can formalize them and [AOD-42](https://linear.app/thexap/issue/AOD-42) can apply them to the store.
 
-## 3. The chosen direction: Star
+## 3. The chosen direction: Sail
 
-Three directions were surfaced for approval, each on the shipped surface and obeying the one-accent rule, differing only in motif and voice:
+Three directions were surfaced for approval, each on the shipped dark surface, differing in motif, voice, and palette stance:
 
 | Direction | Motif | Concept | Voice | Palette stance |
 |---|---|---|---|---|
-| **A · Star** ✅ | A four-point point of light + a constellation hint | The dashboard is a night sky; a lit widget is a point of light. The constellation **Vela** literally means "the sails", so the star **folds in the sail**. | Quiet, celestial, still | **Zero** change |
-| B · Sail | A single billowed sail on a mast | A calm surface that carries you; nautical glide. | Steady, directional, easy | Zero change |
-| C · Vigil | A candle with a soft halo | The one light left on; *vela* = candle, *velar* = keep vigil. The most literal "always on". | Warm, watchful, intimate | Optional future warm-glow accent (would be handed to [AOD-19](https://linear.app/thexap/issue/AOD-19), not invented here) |
+| A · Star *(retired)* | A four-point point of light + a constellation hint | The dashboard is a night sky; a lit widget is a point of light. The constellation **Vela** literally means "the sails". Originally approved 2026-06-29, since superseded by the Sail. | Quiet, celestial, still | Zero change |
+| **B · Sail** ✅ | A single warm gold billowed sail + two small cream star accents | A calm surface that carries you; nautical glide. **Vela** is Latin/nautical for "the sails", so the sail is the literal reading of the name; the star accents keep the constellation hint. | Steady, directional, easy | Warm gold sail on a deep navy tile (the mark's own palette; broader app-palette warming tracked separately) |
+| C · Vigil *(retired)* | A candle with a soft halo | The one light left on; *vela* = candle, *velar* = keep vigil. The most literal "always on". | Warm, watchful, intimate | Optional future warm-glow accent (would be handed to [AOD-19](https://linear.app/thexap/issue/AOD-19), not invented here) |
 
-**Star was approved.** It is the most consistent with the shipped ambient look (the accent `#6E8BFF` on `#0B0B0F` already reads as starlight, so the brand mark is the product distilled: one glowing point on a dark field, the same thing a lit widget is), the richest concept (the constellation absorbs the sail motif, and "keep vigil" reads as watching the night sky), and the cleanest app-icon glyph at small sizes. The two alternates are recorded here for the audit trail and are not built.
+**The Sail was approved** (superseding the Star, which was approved 2026-06-29; see the revision note at the top). The mark is the **Ambient Sail**: a single warm gold sail on a deep navy tile, with two small cream star accents that keep the constellation hint (**Vela** = "the sails", so the sail is the literal reading of the name, and the star accents fold the constellation back in). It reads cleanly as an app-icon glyph at small sizes, and its calm nautical motif matches an ambient surface that just carries on. The two alternates (Star, Vigil) are recorded here for the audit trail and are not built; the Star's original construction mockup (`design-brand-mark.svg`) is retained as historical lineage (section 4).
 
 ## 4. The logomark and wordmark
 
-The mark is a **four-point ambient star**: a single point of light, drawn in the one accent, on the dark surface the product already is. A small secondary star sits off one tip to hint the **Vela constellation** (and to read as a tiny dashboard of two lit points); it drops away at small sizes. The wordmark sets **vela** in lowercase, calm and unhurried, with the star leading it.
+The mark is the **Ambient Sail**: a single warm gold sail on a deep navy tile, with two small cream star accents that hint the **Vela constellation** ("the sails") and read as a tiny dashboard of two lit points. The star accents drop away at small sizes, leaving the sail to carry the mark. The wordmark sets **vela** in lowercase, calm and unhurried, with the sail mark leading it.
 
 ### 4.1 The compact mark (the app-icon glyph)
 
-![The Vela mark: the four-point ambient star shown as the dark app icon, the light app icon, a monochrome knockout, its construction on a square keyline with concave edges curving to the optical center, the clear-space rule of one half mark-height, and a minimum-size row from 48 to 16 pixels where the secondary constellation star drops below 24 pixels.](assets/design-brand-mark.svg)
+![The Vela app icon: a warm gold abstract sail with two small cream star accents on a deep navy rounded square, the approved "Ambient Sail" direction.](assets/vela-sail-mark.svg)
 
 <details>
 <summary>Mark tokens &amp; construction</summary>
 
 ```
-glyph     : a 4-point star with concave edges curving to the optical center (radius : waist = 1 : 0).
-            Built on a square keyline; the four tips touch the keyline edges. Filled, no stroke.
-constell. : a small secondary star off the upper-right tip + a faint connector (opacity ~0.3).
-            A constellation hint; drops below 24px so the single star carries small sizes.
-color     : colors.accent #6E8BFF (dark) / #3F5BD6 (light). Monochrome knockout for 1-color contexts.
-app icon  : a near-black tile (#121218) with the star centered; OS-rounded (radius ~22% of edge).
+glyph     : a single abstract sail — one filled path, no stroke — billowed toward the leech,
+            drawn in warm gold. It sits slightly right and low of optical center on the tile.
+accents   : two small cream four-point star accents (one off the sail's peak, one lower-left).
+            A constellation hint; they drop below 24px so the sail alone carries small sizes.
+color     : sail #E2A94E (warm gold) · stars #EFE7D4 (cream) · tile #101E3B (deep navy).
+            Monochrome knockout = sail + stars in solid #FFFFFF, tile dropped (1-color / themed icon).
+app icon  : the deep navy tile with the sail. The source SVG rounds the tile (rx 62 on a 280 square);
+            the shipped app icon is full-bleed square (no rx) because iOS and Android mask their own corners.
 clear sp. : ½ the mark height (x) on every side.
-min size  : >= 16px digital (the single star); the full mark + constellation >= 24px.
+min size  : >= 16px digital (the sail alone); the full mark + star accents >= 24px.
+source    : assets/vela-sail-mark.svg (280×280) -> apps/app/assets/ (icon, adaptive, splash, favicon).
 ```
 </details>
 
-The mark never appears in a second hue. On a light surface it uses the light-theme accent `#3F5BD6`; for one-color print or an embossed stamp it knocks out solid (and the secondary star is dropped). The app icon is a dark tile with the glowing star, which is deliberately the same picture as a single lit widget on the dashboard.
+The mark's warm gold sail and cream stars on the deep navy tile are the sail's own palette, as drawn in `vela-sail-mark.svg`. For one-color print, an embossed stamp, or the Android 13+ themed icon, the sail and stars knock out solid white and the navy tile is dropped (the star accents may also drop at the smallest sizes). The app icon is the deep navy tile with the gold sail, propagated from the source SVG to `apps/app/assets/icon.png` and the adaptive, splash, and favicon variants.
 
 ### 4.2 The wordmark and lockups
 
-![The Vela wordmark: the primary lockup on the dark surface with the accent star leading lowercase vela in near-white, the same lockup on the light surface with the deeper accent and ink text, the wordmark standing alone, the clear-space rule of one x-height, and the minimum lockup width of 88 pixels.](assets/design-brand-wordmark.svg)
+![The Vela wordmark: the primary lockup on the dark surface with the mark leading lowercase vela in near-white, the same lockup on the light surface with ink text, the wordmark standing alone, the clear-space rule of one x-height, and the minimum lockup width of 88 pixels.](assets/design-brand-wordmark.svg)
+
+*(The lockup mockup above predates the mark change and still shows the retired four-point star as the leading glyph; the current lockup leads with the Ambient Sail. A wordmark re-render is tracked separately.)*
 
 <details>
 <summary>Wordmark tokens &amp; rules</summary>
 
 ```
 wordmark  : "vela", lowercase, a humanist geometric sans (the in-app system stack), weight 500, tracking +0.5.
-lockup    : [ star mark ] + [ ½x gap ] + [ vela ]. The horizontal lockup is the default.
+lockup    : [ sail mark ] + [ ½x gap ] + [ vela ]. The horizontal lockup is the default.
             The mark may stand alone (the app icon); the wordmark may stand alone where the mark is present.
-color     : text #F4F4F8 (dark) / ink #16161D (light); star = accent #6E8BFF / #3F5BD6.
+color     : text #F4F4F8 (dark) / ink #16161D (light); sail mark = warm gold #E2A94E on its navy tile.
 clear sp. : one lowercase x-height around the lockup.
 min size  : full lockup >= 88px wide.
-never     : no italic, no all-caps wordmark, no second hue, no outline, no drop shadow (shadows read as glare).
+never     : no italic, no all-caps wordmark, no outline, no drop shadow (shadows read as glare).
 ```
 </details>
 
@@ -97,7 +104,7 @@ Lowercase is deliberate: the wordmark sits quietly and never shouts, matching an
 
 ### 4.3 Misuse
 
-The mark and wordmark do not: change color (only the two theme accents are allowed), gain a gradient or glow fill (the surface is flat; shadows and glows read as glare on an ambient display), get outlined, get set in italic or all-caps, or get crowded inside the clear-space. The secondary constellation star is decorative and is dropped whenever it would not read (below 24px, or in a one-color knockout).
+The mark and wordmark do not: recolor the sail or stars away from the mark's gold/cream/navy (or the solid-white knockout), gain a gradient or glow fill (the surface is flat; shadows and glows read as glare on an ambient display), get outlined, get set in italic or all-caps, or get crowded inside the clear-space. The two cream star accents are decorative and are dropped whenever they would not read (below 24px, or in a one-color knockout).
 
 ## 5. The palette
 
@@ -206,7 +213,7 @@ This is the constraint the brief set, so it is called out explicitly. The brand 
 - **Palette:** adopted verbatim (section 5). The brand changes **no** shipped color and invents **no** new one. The mark and wordmark introduce no color beyond the two theme accents.
 - **One accent:** honored (section 5.1). The brand has no secondary brand color; the single accent is the identity.
 - **Type:** adopted verbatim (section 6). One family for the wordmark and the in-app text.
-- **The mark justifies the surface:** the Star direction was chosen precisely because the accent on near-black already reads as starlight, so the mark is the shipped look distilled rather than a new look bolted on.
+- **The mark sits on the surface:** the Ambient Sail is drawn on the same deep, dark field the product already is; the sail's warm gold is the mark's own accent (the broader warming of the app palette is tracked separately, not settled here), and the two cream star accents keep the constellation tie to the shipped ambient look.
 
 **Where it evolves the palette:** nowhere. The only candidate evolution (the Vigil direction's warm glow) was not the approved direction and is not taken. If brand work ever wants to evolve a color, this doc's rule is that it is specified in a design, handed to [AOD-19](https://linear.app/thexap/issue/AOD-19), and weighed against the one-accent rule, never slipped into code.
 
@@ -229,7 +236,7 @@ This is the constraint the brief set, so it is called out explicitly. The brand 
 | **Store listing assets** (screenshots, feature graphic, icon export, listing copy) | [AOD-42](https://linear.app/thexap/issue/AOD-42) | The mark, app icon, palette, type, and voice are fixed; AOD-42 produces the store renders. The app-icon construction (section 4.1) is the source for the icon export. |
 | **Production logo files** (SVG/PNG exports at icon sizes, the `.icon`/adaptive-icon assets) | [AOD-42](https://linear.app/thexap/issue/AOD-42) build | The mark geometry is fixed here as repo SVGs; production export is a build step. |
 | **A warm "glow" accent evolution** (the Vigil direction's option) | future design -> [AOD-19](https://linear.app/thexap/issue/AOD-19) | Not taken; if ever revisited it is specified in a design and weighed against the one-accent rule, not slipped into code (section 8). |
-| **Motion / brand animation** (a star-twinkle, the splash) | future | Named, not designed; the surface is otherwise still and flat. |
+| **Motion / brand animation** (a star-accent twinkle, the splash) | future | Named, not designed; the surface is otherwise still and flat. |
 | **An illustration / empty-marketing style and social templates** | future | The mark and palette set the constraints; the system is later. |
 | **Trademark clearance** in the software class | Xavier (pre-launch) | Named in [AOD-1](https://linear.app/thexap/issue/AOD-1); a launch prerequisite, not a design task. |
 
@@ -237,8 +244,8 @@ This is the constraint the brief set, so it is called out explicitly. The brand 
 
 Proposed acceptance for this design (call out for confirmation):
 
-> 1. The **direction is chosen and recorded**: three identity directions (Star, Sail, Vigil) were surfaced for approval; **Star** was approved and is the one built; the alternates are recorded for the audit trail (section 3).
-> 2. The **logomark and wordmark** are fixed: the four-point **ambient star** compact mark (with the secondary constellation star and its drop rule), the lowercase **vela** wordmark, the light and dark lockups, the **clear-space** (½x mark / 1 x-height wordmark) and **minimum-size** (16px mark / 88px lockup) rules, the **app icon**, and the misuse list, all in one accent on the dark surface (section 4; `design-brand-mark.svg`, `design-brand-wordmark.svg`).
+> 1. The **direction is chosen and recorded**: three identity directions (Star, Sail, Vigil) were surfaced for approval; the **Sail** ("Ambient Sail") is the approved and built mark (superseding the Star, which was approved 2026-06-29); the alternates are recorded for the audit trail (section 3).
+> 2. The **logomark and wordmark** are fixed: the **Ambient Sail** compact mark (a warm gold sail with two cream star accents on a deep navy tile, the accents dropping at small sizes), the lowercase **vela** wordmark, the light and dark lockups, the **clear-space** (½x mark / 1 x-height wordmark) and **minimum-size** (16px mark / 88px lockup) rules, the **app icon**, and the misuse list (section 4; `assets/vela-sail-mark.svg`, propagated to `apps/app/assets/`).
 > 3. The **palette** is fixed as the **shipped set adopted verbatim**: the dark (primary) and light themes, the reserved status hues, and the ambient-night extension, with the **one-accent rule** kept as the identity and **no new base color** (section 5; `design-brand-palette.svg`), handed to [AOD-19](https://linear.app/thexap/issue/AOD-19).
 > 4. The **typography** is fixed: a humanist geometric sans (the in-app system stack), the wordmark at weight 500 of it, and the in-app `type.*` scale adopted **verbatim** as the brand type system with tabular numeric steps, **no new type token** (section 6; `design-brand-type.svg`), handed to [AOD-19](https://linear.app/thexap/issue/AOD-19).
 > 5. The **voice and tone** are fixed: calm, glanceable, present, plain, honest, with a do/don't copy table and the name-writing rule (section 7).
@@ -248,8 +255,8 @@ Proposed acceptance for this design (call out for confirmation):
 
 | Acceptance clause | Where |
 |---|---|
-| Direction chosen (Star) + alternates recorded | Section 3 |
-| Logomark + wordmark: mark, wordmark, lockups, clear-space, min-size, app icon, misuse | Section 4; `design-brand-mark.svg`, `design-brand-wordmark.svg` |
+| Direction chosen (Sail, superseding Star) + alternates recorded | Section 3 |
+| Logomark + wordmark: mark, wordmark, lockups, clear-space, min-size, app icon, misuse | Section 4; `assets/vela-sail-mark.svg` (mark), `design-brand-wordmark.svg` (star-era lockup) |
 | Palette: dark primary + light + reserved status + ambient night, one accent, no new color | Section 5; `design-brand-palette.svg` |
 | Typography: one family, the wordmark, the in-app scale verbatim | Section 6; `design-brand-type.svg` |
 | Voice and tone: principles + do/don't + name-writing | Section 7 |
@@ -268,4 +275,4 @@ Proposed acceptance for this design (call out for confirmation):
 - [`product-vision.md`](product-vision.md): the "calm ambient surface" pitch, the positioning, and the "glanced at, not interacted with" ethos the voice derives from.
 - [AOD-5](https://linear.app/thexap/issue/AOD-5): the privacy posture the voice states plainly (section 7.1).
 - [`engineering-process.md`](../engineering-process.md): the `type:design` lifecycle and deliverable convention this follows.
-- Assets: [`design-brand-mark.svg`](assets/design-brand-mark.svg), [`design-brand-wordmark.svg`](assets/design-brand-wordmark.svg), [`design-brand-palette.svg`](assets/design-brand-palette.svg), [`design-brand-type.svg`](assets/design-brand-type.svg).
+- Assets: [`vela-sail-mark.svg`](assets/vela-sail-mark.svg) — the approved Ambient Sail mark, propagated to the app icons in [`apps/app/assets/`](../../apps/app/assets/). The earlier star-era mockups [`design-brand-mark.svg`](assets/design-brand-mark.svg) and [`design-brand-wordmark.svg`](assets/design-brand-wordmark.svg) are retained as historical lineage (section 4); [`design-brand-palette.svg`](assets/design-brand-palette.svg) and [`design-brand-type.svg`](assets/design-brand-type.svg) remain current for the palette and type.

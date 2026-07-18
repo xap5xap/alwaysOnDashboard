@@ -14,6 +14,7 @@ import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../hos
 import { RegistryProvider } from '../../../RegistryProvider';
 import type { WidgetInstance } from '../../../types';
 import { validateConfig } from '../../../../widgets/config';
+import { tabularWidth } from '../../../../widgets/fitLadder';
 
 jest.mock('../../../../connections/useConnections', () => ({
   useConnections: () => ({ connections: new Map(), isLoading: false, isError: false, error: null }),
@@ -31,7 +32,7 @@ describe('ClockCard self-tick cadence (integration-clock.md §7.2)', () => {
 
   it('ticks every second when showSeconds is true', () => {
     jest.useFakeTimers({ now: new Date('2026-06-28T14:05:00.000Z') });
-    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: true, showDate: false, timezone: 'UTC' }} size="medium" />);
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: true, showDate: false, timezone: 'UTC' }} size="W" />);
 
     expect(timeText()).toBe('14:05:00');
     act(() => jest.advanceTimersByTime(1000));
@@ -42,7 +43,7 @@ describe('ClockCard self-tick cadence (integration-clock.md §7.2)', () => {
 
   it('ticks every minute when showSeconds is false: 1s does nothing, 60s advances the minute', () => {
     jest.useFakeTimers({ now: new Date('2026-06-28T14:05:00.000Z') });
-    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: false, timezone: 'UTC' }} size="medium" />);
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: false, timezone: 'UTC' }} size="W" />);
 
     expect(timeText()).toBe('14:05');
     act(() => jest.advanceTimersByTime(1000));
@@ -55,7 +56,7 @@ describe('ClockCard self-tick cadence (integration-clock.md §7.2)', () => {
     jest.useFakeTimers({ now: new Date('2026-06-28T14:05:00.000Z') });
     const clearInterval = jest.spyOn(globalThis, 'clearInterval');
     const clearTimeout = jest.spyOn(globalThis, 'clearTimeout');
-    const view = render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: true, showDate: false, timezone: 'UTC' }} size="medium" />);
+    const view = render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: true, showDate: false, timezone: 'UTC' }} size="W" />);
     act(() => jest.advanceTimersByTime(1000)); // promote the aligned timeout into a running interval
     view.unmount();
     expect(clearTimeout).toHaveBeenCalled();
@@ -70,7 +71,7 @@ const clockInstance: WidgetInstance = {
   serviceId: 'clock',
   widgetType: 'clock',
   config: {}, // ready on add: every field has a default, no required field (§9.1)
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
@@ -95,9 +96,9 @@ describe('WidgetHost authClass:none no-fetch + self-tick path (integration-clock
     };
     renderHost(source, clockInstance);
 
-    // Fresh on mount: the card is present and the loading skeleton never shows.
+    // Live on mount: the card is present and the connecting skeleton never shows.
     expect(screen.getByTestId('clock-card')).toBeTruthy();
-    expect(screen.queryByTestId('widget-loading')).toBeNull();
+    expect(screen.queryByTestId('widget-connecting')).toBeNull();
     // The leaf actually formatted the device clock (a time string is rendered).
     expect(screen.getByTestId('clock-time').props.children).toBeTruthy();
     // The defining proof: the proxy is never called for a none widget.
@@ -147,32 +148,55 @@ describe('Clock config validation: the Intl time-zone seam (integration-clock.md
   });
 });
 
-describe('ClockCard face across sizes (AOD-37 §8.2-§8.4)', () => {
+describe('ClockCard face across sizes (AOD-37 §8.2-§8.4 over the AOD-122 S/W/L slots; the §8.2 wide 3x1 banner is retired with the 3-wide slot)', () => {
   const cfg = (o: Record<string, unknown> = {}) => ({ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', ...o });
 
-  it('small: time only, no date line (§8.3)', () => {
-    render(<ClockCard data={undefined} config={cfg()} size="small" />);
+  it('S: time only, no date line (§8.3)', () => {
+    render(<ClockCard data={undefined} config={cfg()} size="S" />);
     expect(screen.getByTestId('clock-time')).toBeTruthy();
     expect(screen.queryByTestId('clock-date')).toBeNull();
     expect(screen.queryByTestId('clock-zone')).toBeNull();
   });
 
-  it('medium: time over a date line, no zone kicker for a device-local clock (§8.4)', () => {
-    render(<ClockCard data={undefined} config={cfg({ timezone: '' })} size="medium" />);
+  it('W: time over a date line, no zone kicker for a device-local clock (§8.4)', () => {
+    render(<ClockCard data={undefined} config={cfg({ timezone: '' })} size="W" />);
     expect(screen.getByTestId('clock-time')).toBeTruthy();
     expect(screen.getByTestId('clock-date')).toBeTruthy();
     expect(screen.queryByTestId('clock-zone')).toBeNull();
   });
 
   it('a timezone override shows the second-clock zone kicker, derived from the IANA id (§8.4)', () => {
-    render(<ClockCard data={undefined} config={cfg({ timezone: 'America/New_York' })} size="wide" />);
+    // Pre-AOD-122 this rode the wide banner; the kicker is size-independent above S, so W carries it now.
+    render(<ClockCard data={undefined} config={cfg({ timezone: 'America/New_York' })} size="W" />);
     expect(screen.getByTestId('clock-zone').props.children).toBe('New York');
   });
 
-  it('large: still draws time + date (the wall hero)', () => {
-    render(<ClockCard data={undefined} config={cfg()} size="large" />);
+  it('L: still draws time + date (the wall hero)', () => {
+    render(<ClockCard data={undefined} config={cfg()} size="L" />);
     expect(screen.getByTestId('clock-time')).toBeTruthy();
     expect(screen.getByTestId('clock-date')).toBeTruthy();
+  });
+});
+
+describe('ClockCard width-fit: the time never clips (AOD-95/97)', () => {
+  /** The fitted font size the time rendered at. */
+  const timeSize = () => screen.getByTestId('clock-time').props.style.fontSize as number;
+
+  it('AOD-95: at S a seconds time scales BELOW its 34px step so "HH:MM:SS" fits the 72px width', () => {
+    // Direct render -> the S fallback box is 72x72 (header suppressed). clockSize.small is 34; the full
+    // "18:45:30" is ~150px at 34px, so the width-fit must scale it down. Before the fix it hard-clipped.
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: true, showDate: false, timezone: 'UTC' }} size="S" />);
+    expect(timeSize()).toBeLessThan(34); // scaled down to fit the narrow cell
+    expect(timeSize()).toBeGreaterThan(0);
+  });
+
+  it('AOD-97: at L the time fits the cell WIDTH rather than overflowing it at the 96px step', () => {
+    // The clockSize steps are sized for the wall; a 96px "14:05" is ~270px, far wider than the 168px L
+    // body, so the old fixed step overflowed/clipped. The width-fit scales it to fit the width — no clip.
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: false, timezone: 'UTC' }} size="L" />);
+    const size = timeSize();
+    expect(size).toBeLessThanOrEqual(96);
+    expect(tabularWidth('14:05', size)).toBeLessThanOrEqual(168 + 0.001); // fits the L body width
   });
 });
 
@@ -180,7 +204,7 @@ describe('ClockCard night palette (AOD-37 §8.5)', () => {
   it('draws the time in the deep-red night.primary at phase night', () => {
     render(
       <AmbientProvider value={{ phase: 'night', dimLevel: 0.7 }}>
-        <ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', timezone: '' }} size="medium" />
+        <ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', timezone: '' }} size="W" />
       </AmbientProvider>,
     );
     // §3.2 night.primary is the deep red the time swaps to at night.
@@ -188,7 +212,7 @@ describe('ClockCard night palette (AOD-37 §8.5)', () => {
   });
 
   it('draws the time in the standard text colour by day', () => {
-    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', timezone: '' }} size="medium" />);
+    render(<ClockCard data={undefined} config={{ clockFormat: '24h', showSeconds: false, showDate: true, dateFormat: 'full', timezone: '' }} size="W" />);
     // §3.1 dark theme text.
     expect(screen.getByTestId('clock-time').props.style.color).toBe('#F4F4F8');
   });

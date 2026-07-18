@@ -1,8 +1,9 @@
-// The shared empty-body convention (design-widget-system.md §5.1). A renderer-drawn body for a fresh
-// render whose CONTENT is legitimately empty (no events, no spend, no active cycle): a seventh BODY, not
-// a seventh lifecycle state. Whether fresh content is empty is domain-specific, so the LEAF decides and
-// draws it within its data-bearing states; this component is the one shared shape so the per-widget
-// polish builds (AOD-35/36/30) implement one pattern, not several that drift.
+// The shared empty-body convention (design-widget-system.md §5.1). A body for a `live` render whose
+// CONTENT is legitimately empty (no events, no spend, no active cycle). AOD-125 promoted this to a
+// first-class `empty` lifecycle state: whether content is empty is domain-specific, so each widget
+// declares an `isEmpty(data)` predicate (registry/types.ts) and the HOST draws this one shared shape
+// (WidgetHostView), so the per-widget polish builds (AOD-35/36/30) implement one pattern, not several
+// that drift. (Before AOD-125 the leaf drew it inline within its data-bearing states.)
 //
 // The defining trait is NO ACTION: nothing is wrong, the data simply says "nothing", so unlike the host
 // error / needs_config / disconnected prompts (§5) there is nothing to act on. The glyph is per-widget

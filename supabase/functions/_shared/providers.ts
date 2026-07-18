@@ -129,7 +129,7 @@ export interface ProviderApiResult {
 /**
  * Substitute {token} slots in an allow-listed registry path from the instance params, URL-encoded
  * (integration-calendar.md §6.3c). A path with no {token} is returned unchanged, so services without
- * path tokens (Linear, Weather, the stub, Anthropic) are untouched. The registry path template stays
+ * path tokens (Linear, Weather, Anthropic) are untouched. The registry path template stays
  * the authoritative allow-list: only declared {token} slots are filled, and encodeURIComponent keeps a
  * hostile value inside its single path segment (no traversal, no query injection), preserving the
  * AOD-9 goal-5 allow-list. A token declared in the path but absent from params is a 400, not a silent

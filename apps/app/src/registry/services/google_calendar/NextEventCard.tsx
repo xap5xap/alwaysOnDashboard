@@ -5,25 +5,30 @@
 //
 // AOD-35 polish: the WHEN leads, the title is the value. The relative time is the emphasized figure (an
 // accent, uppercased kicker), with the clock time riding alongside it muted; the title is type.title. An
-// all-day event has no time anchor, so its kicker reads "ALL DAY" with no clock. At small (the 1x1 glance,
+// all-day event has no time anchor, so its kicker reads "ALL DAY" with no clock. At S (the 1x1 glance,
 // header suppressed by the host) the body is the kicker over a 2-line title, no clock, no location. The
-// empty render (hasEvent:false, a normal empty-window result, not an error) is the shared §5.1 EmptyBody
-// with the per-widget calendar glyph -- a calm "Nothing next", carrying NO action.
+// empty render (hasEvent:false, a normal empty-window result, not an error) is now the host-drawn `empty`
+// lifecycle phase (AOD-125, isNextEventEmpty), not a leaf body.
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { CalendarEvent, NextEventData } from './types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
-import { CalendarGlyph, PinGlyph } from './glyphs';
+import { PinGlyph } from './glyphs';
 
-/** Defensive read: anything that is not a well-formed event renders as the empty "Nothing next" state. */
+/** Defensive read: anything that is not a well-formed event reads as no-event (the host draws the empty). */
 function asNextEventData(data: unknown): NextEventData {
   const d = data as { hasEvent?: unknown; event?: unknown } | null | undefined;
   if (d?.hasEvent === true && d.event && typeof d.event === 'object') {
     return { hasEvent: true, event: d.event as CalendarEvent };
   }
   return { hasEvent: false };
+}
+
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): nothing upcoming (hasEvent:false) -> the
+ *  host-drawn empty phase. A normal empty-window result, not an error; the leaf no longer self-draws it. */
+export function isNextEventEmpty(data: unknown): boolean {
+  return !asNextEventData(data).hasEvent;
 }
 
 /** A glanceable "when" label against the device clock (integration-calendar.md §4); the style uppercases it. */
@@ -54,27 +59,18 @@ export function NextEventCard({ data, size }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const next = asNextEventData(data);
 
-  if (!next.hasEvent) {
-    // §5.1 empty body: a calm "Nothing next" with the calendar glyph, no action (nothing is wrong).
-    return (
-      <View style={styles.fill} testID="gcal-next-event-empty">
-        <EmptyBody
-          line="Nothing next"
-          subline="You're clear"
-          glyph={<CalendarGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
+  // AOD-125: hasEvent:false is now the host-drawn `empty` phase (isNextEventEmpty), so the leaf is reached
+  // only with an event. The guard remains for type-narrowing (and crash-safety) and draws nothing.
+  if (!next.hasEvent) return null;
 
   const { event } = next;
-  const isSmall = size === 'small';
+  const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
   const when = formatWhen(event, new Date());
   const clock = formatClock(event);
 
   return (
     <View style={styles.body} accessibilityRole="summary" testID="gcal-next-event">
-      {/* The when emphasis: an accent uppercased kicker; at medium the muted clock rides alongside. */}
+      {/* The when emphasis: an accent uppercased kicker; at W the muted clock rides alongside. */}
       <View style={styles.whenLine}>
         <Text style={styles.when} testID="gcal-next-event-when">
           {when}
@@ -99,7 +95,6 @@ export function NextEventCard({ data, size }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
   body: { gap: theme.spacing(1) },
   whenLine: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1.5) },
   // The kicker maps to type.label (the named scale step is 13/600; the AOD-35 §7 annotation says

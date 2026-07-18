@@ -17,13 +17,16 @@ const current: WidgetDefinition = {
   type: 'current',
   serviceId: 'weather',
   title: 'Current Weather',
-  supportedSizes: ['small', 'medium'],
+  supportedSizes: ['S', 'W'], // AOD-122 slot remap: was ['small','medium'] (same 1x1 / 2x1 geometry)
   defaultRefresh: { seconds: 900 }, // device asks every ~15 min (AOD-4)
   cacheTtlSeconds: 900, // provider hit at most once / 15 min; matches Open-Meteo's update step (§7.2)
   minRefreshSeconds: 600,
   dimsWithAmbient: true,
-  // §5: the 1x1 glance is self-evident (icon over temperature), so the host suppresses the header there.
-  hideHeaderAtSizes: ['small'],
+  // AOD-124: the caption is the PLACE (WEATHER · QUITO), not "Current". The location lives on the
+  // connection, so the host reads it from the merged connection config (`name`); the payload's `place`
+  // takes precedence if a future server forwards it. hideAtSizes ['S']: the 1x1 glance is self-evident
+  // (icon over temperature), so the header drops at S (subsumes the old hideHeaderAtSizes ['S']).
+  caption: { kind: 'place', labelKey: 'name', hideAtSizes: ['S'] },
   configSchema: { fields: [] },
   render: CurrentWeatherCard,
 };
@@ -34,11 +37,15 @@ const forecast: WidgetDefinition = {
   type: 'forecast',
   serviceId: 'weather',
   title: 'Forecast',
-  supportedSizes: ['wide', 'large'],
+  // AOD-122 slot remap: was ['wide','large']; the retired wide (3x1) folds into W (2x1) — the banner
+  // strip stays the horizontal-slot layout (ForecastCard) at the W-width day count.
+  supportedSizes: ['W', 'L'],
   defaultRefresh: { seconds: 1800 }, // device asks every ~30 min; forecast moves slowly (§7.2)
   cacheTtlSeconds: 900, // provider floor at the AOD-5 ceiling; conserves the shared budget (§7.2)
   minRefreshSeconds: 900,
   dimsWithAmbient: true,
+  // AOD-124: also the PLACE (WEATHER · QUITO). No size gate — Forecast is W/L only, never the self-evident S.
+  caption: { kind: 'place', labelKey: 'name' },
   configSchema: { fields: [] },
   render: ForecastCard,
 };

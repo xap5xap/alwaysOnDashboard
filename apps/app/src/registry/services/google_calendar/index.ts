@@ -7,8 +7,8 @@
 // widget host, the config form, and Settings are NOT edited (the §8 not-touched footprint). Calendar is
 // the second real service (after Linear) and the first REST one.
 import type { ServiceDefinition, WidgetDefinition } from '../../types';
-import { NextEventCard } from './NextEventCard';
-import { AgendaCard } from './AgendaCard';
+import { NextEventCard, isNextEventEmpty } from './NextEventCard';
+import { AgendaCard, isAgendaEmpty } from './AgendaCard';
 
 // Next Event (the most glanceable card). Sizes / cadence / TTLs are integration-calendar.md §4.1, §7.2;
 // the config schema is §5.1: calendarId (remote-options, required, the stable Google calendar id stored).
@@ -16,13 +16,15 @@ const nextEvent: WidgetDefinition = {
   type: 'next_event',
   serviceId: 'google_calendar',
   title: 'Next Event',
-  supportedSizes: ['small', 'medium'],
+  supportedSizes: ['S', 'W'], // AOD-122 slot remap: was ['small','medium'] (same 1x1 / 2x1 geometry)
   defaultRefresh: { seconds: 600 }, // device asks every 10 min (AOD-4, AOD-10 §6.2)
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices (AOD-10 §6.1)
   minRefreshSeconds: 120, // never poll Google faster than once every 2 min
   dimsWithAmbient: true,
-  // §7: the 1x1 glance is self-evident (when kicker over the title), so the host suppresses the header there.
-  hideHeaderAtSizes: ['small'],
+  // AOD-124: the caption is the CALENDAR (CALENDAR · <calendar>), never a pane. The events payload lacks
+  // the calendar's own name, so calendarId persists its chosen label under `calendarLabel` (below).
+  // hideAtSizes ['S']: the 1x1 glance is self-evident (when kicker over the title), so the header drops at S.
+  caption: { kind: 'calendar', labelKey: 'calendarLabel', hideAtSizes: ['S'] },
   configSchema: {
     fields: [
       {
@@ -31,10 +33,14 @@ const nextEvent: WidgetDefinition = {
         kind: 'remote-options',
         required: true,
         source: { optionSource: 'google_calendars' },
+        // AOD-124: persist the chosen calendar's display name for the caption (the payload never carries it).
+        labelKey: 'calendarLabel',
       },
     ],
   },
   render: NextEventCard,
+  // AOD-125: nothing upcoming (hasEvent:false) -> the host-drawn `empty` phase.
+  isEmpty: isNextEventEmpty,
 };
 
 // Today's Agenda. Sizes / cadence / TTLs are §4.2, §7.2; config is §5.2 (identical: only calendarId).
@@ -43,11 +49,15 @@ const agenda: WidgetDefinition = {
   type: 'agenda',
   serviceId: 'google_calendar',
   title: "Today's Agenda",
-  supportedSizes: ['tall', 'wide'],
+  // AOD-122 slot remap: was ['tall','wide']; tall (1x2) -> M, and the retired wide (3x1) folds into
+  // W (2x1) — the banner keeps the horizontal-slot layout (AgendaCard).
+  supportedSizes: ['M', 'W'],
   defaultRefresh: { seconds: 900 }, // device asks every 15 min (AOD-4)
   cacheTtlSeconds: 600, // provider hit at most once per 10 min across devices
   minRefreshSeconds: 300,
   dimsWithAmbient: true,
+  // AOD-124: also the CALENDAR (CALENDAR · <calendar>). No size gate — Agenda is M/W only, never S.
+  caption: { kind: 'calendar', labelKey: 'calendarLabel' },
   configSchema: {
     fields: [
       {
@@ -56,10 +66,14 @@ const agenda: WidgetDefinition = {
         kind: 'remote-options',
         required: true,
         source: { optionSource: 'google_calendars' },
+        // AOD-124: persist the chosen calendar's display name for the caption (the payload never carries it).
+        labelKey: 'calendarLabel',
       },
     ],
   },
   render: AgendaCard,
+  // AOD-125: no events on the device-local day -> the host-drawn `empty` phase (time-scoped, uses `now`).
+  isEmpty: isAgendaEmpty,
 };
 
 export const googleCalendarService: ServiceDefinition = {

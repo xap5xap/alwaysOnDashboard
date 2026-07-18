@@ -6,17 +6,18 @@
 // AOD-30 polish: the value-first issue list. The body LEADS with the assigned count (totalCount bright +
 // a muted qualifier echoing the active filter: "12 open" / "12 in progress" / "12 assigned", §5.1), then
 // the rows, then a "+N more" overflow. Each row is a single line: the priority GLYPH (carried by shape, not
-// colour, §4), the identifier (muted tabular), and the title (bright, ellipsized); at large a due date sits
+// colour, §4), the identifier (muted tabular), and the title (bright, ellipsized); at L a due date sits
 // on the right ("Today"/overdue bright, §5.2). The card deliberately spends NO blue accent: a dense work
-// list reads calmest as neutral monochrome (§5.1). The density per size is medium 4 / large 7 / tall 10
-// (the existing VISIBLE_BY_SIZE counts; small/wide are defensive, §8). An empty assigned set (totalCount
-// === 0) is the §5.1 EmptyBody, not a host state. Ad-hoc font sizes map onto theme.type.* (§3/§9).
+// list reads calmest as neutral monochrome (§5.1). The density per slot is W 4 / L 7 / M 10 (the pre-slot
+// medium/large/tall counts, AOD-122; S is defensive, §8). An empty assigned set (totalCount === 0) is now
+// the host-drawn `empty` lifecycle phase (AOD-125, isMyIssuesEmpty), not a leaf-drawn body. Ad-hoc font
+// sizes map onto theme.type.* (§3/§9).
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
-import { CheckboxGlyph, PriorityGlyph } from './glyphs';
+import { fitCount } from '../../../widgets/fitLadder';
+import { PriorityGlyph } from './glyphs';
 
 // The normalized payload the proxy delivers (integration-linear.md §4.1). This mirrors the server-side
 // operations.ts `normalizeMyIssues` output: it is the data contract between the broker's normalize step
@@ -38,16 +39,20 @@ export interface MyIssuesData {
   totalCount: number;
 }
 
-// How many rows fit a glance at each size; the rest collapse into a "+N more" footer (design-linear.md §5.2,
-// the renderer's existing counts). small/wide are defensive (a reconciled off-aspect rect never reads an
-// undefined count); neither is in My Issues' declared supportedSizes (§8).
+// The pre-AOD-123 fixed per-size counts. Kept only as the fallback when the host does not pass a box
+// (a direct render). AOD-123 replaces them with a HEIGHT-DRIVEN count (fitCount) so a short cell never
+// overflows: the old fixed 4-at-W stacked ~128px of count + rows into a 48px body and clipped. The count
+// line is the §5.1 value lead and always shows; the rows shed into "+N more" by how many actually fit.
 const VISIBLE_BY_SIZE: Record<WidgetSize, number> = {
-  small: 3,
-  medium: 4,
-  wide: 4,
-  large: 7,
-  tall: 10,
+  S: 3,
+  M: 10,
+  W: 4,
+  L: 7,
 };
+
+// Row-fit chrome for My Issues (DP, conservative so it never under-counts height -> never clips): a single
+// body-line row (glyph · id · title), the type.title count line as the lead, and the "+N more" footer.
+const ROW_FIT = { rowHeight: 22, leadHeight: 24, footerHeight: 20 } as const;
 
 /** The count's muted qualifier, echoing the active filter (integration-linear.md §5.1; default 'open'). */
 function filterQualifier(filter: unknown): string {
@@ -90,28 +95,28 @@ function asMyIssuesData(data: unknown): MyIssuesData {
   };
 }
 
-export function MyIssuesCard({ data, config, size }: WidgetRenderProps) {
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): no assigned issues -> the host-drawn empty phase.
+ *  The leaf no longer self-draws the empty body; the host owns it, so this card is reached only with issues. */
+export function isMyIssuesEmpty(data: unknown): boolean {
+  return asMyIssuesData(data).totalCount === 0;
+}
+
+export function MyIssuesCard({ data, config, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { issues, totalCount } = asMyIssuesData(data);
+  // AOD-125: the empty case (totalCount === 0) is now the host-drawn `empty` phase (isMyIssuesEmpty), so the
+  // leaf is reached only with issues to draw. It no longer self-draws the §5.1 EmptyBody.
 
-  if (totalCount === 0) {
-    // §5.3 empty body: a calm "No assigned issues" with the per-widget checkbox glyph, no action (nothing
-    // is wrong, the user simply has nothing assigned). Wrapped to keep the existing *-empty testID contract.
-    return (
-      <View style={styles.fill} testID="linear-myissues-empty">
-        <EmptyBody
-          line="No assigned issues"
-          subline="You're all caught up"
-          glyph={<CheckboxGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
-
-  const visible = issues.slice(0, VISIBLE_BY_SIZE[size] ?? 4);
+  // AOD-123: the visible-row count is HEIGHT-DRIVEN so a short cell never overflows — the rows shed into
+  // "+N more" by what actually fits the host-passed box (the count line reserved as the lead). Falls back
+  // to the fixed per-size count only on a direct render with no box.
+  const visibleCount = box
+    ? fitCount(totalCount, box.height, { ...ROW_FIT, gap: theme.spacing(1.5) })
+    : (VISIBLE_BY_SIZE[size] ?? 4);
+  const visible = issues.slice(0, visibleCount);
   const remaining = totalCount - visible.length;
   const qualifier = filterQualifier(config?.filter);
-  const isLarge = size === 'large';
+  const isLarge = size === 'L'; // AOD-122 slot id (was 'large'; same 2x2 geometry)
   const now = new Date();
 
   return (
@@ -168,7 +173,6 @@ export function MyIssuesCard({ data, config, size }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
   body: { gap: theme.spacing(2) },
   list: { gap: theme.spacing(1.5) },
 
@@ -177,7 +181,7 @@ const styles = StyleSheet.create((theme) => ({
   countNum: { color: theme.colors.text, fontWeight: '700', fontVariant: ['tabular-nums'] },
   countQual: { ...theme.type.meta, color: theme.colors.textMuted },
 
-  // §5.2 the row: glyph · identifier (muted tabular caption) · title (bright body, ellipsized) · due (large).
+  // §5.2 the row: glyph · identifier (muted tabular caption) · title (bright body, ellipsized) · due (L).
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2) },
   glyphCol: { width: theme.priorityIcon.size, alignItems: 'center' },
   identifier: {
@@ -189,7 +193,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   title: { ...theme.type.body, color: theme.colors.text, flex: 1 },
 
-  // due: a quiet muted meta at large; "Today"/overdue step up to bright text (§5.2).
+  // due: a quiet muted meta at L; "Today"/overdue step up to bright text (§5.2).
   due: { ...theme.type.caption, letterSpacing: 0, color: theme.colors.textMuted, fontVariant: ['tabular-nums'] },
   dueEmph: { color: theme.colors.text, fontWeight: '700' },
 

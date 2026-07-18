@@ -5,6 +5,7 @@
 // provider URL (AOD-8 §4). The generic engine (registry lookups, the widget host, the dashboard)
 // reads these types and is never edited to add a service.
 import type { ComponentType } from 'react';
+import type { FitBox } from '../widgets/fitLadder';
 
 export type ServiceId = string;
 export type WidgetTypeId = string;
@@ -12,8 +13,11 @@ export type WidgetTypeId = string;
 export type AuthClass = 'oauth2' | 'api_key' | 'admin_key' | 'platform_key' | 'none';
 export type IconRef = string;
 
-// AOD-10 §5.1 canonical size catalogue (role + aspect hint, not a pixel size).
-export type WidgetSize = 'small' | 'medium' | 'large' | 'wide' | 'tall';
+// The S/M/W/L slot catalogue (AOD-122, Many Skies §1c): S 1x1 / M 1x2 / W 2x1 / L 2x2 on a
+// two-column, 96px-row grid. Supersedes the AOD-10 §5.1 five-class set (small/medium/large/wide/tall);
+// the retired legacy ids survive only in the DB column vocabulary (layout/schema.ts DbWidgetSize) and
+// are coerced at the read boundary (layout/mapper.ts).
+export type WidgetSize = 'S' | 'M' | 'W' | 'L';
 
 // AOD-8 §6 refresh interval. Semantics (floors, effective interval) are AOD-10 §6.
 export type RefreshInterval = { seconds: number } | 'manual';
@@ -50,7 +54,18 @@ export type WidgetConfigField = { key: string; label: string; required: boolean 
   | { kind: 'number'; default?: number; min?: number; max?: number; step?: number }
   | { kind: 'boolean'; default?: boolean }
   | { kind: 'enum'; default?: string; options: Choice[] }
-  | { kind: 'remote-options'; default?: string | string[]; source: RemoteOptionsSource; multiple?: boolean }
+  | {
+      kind: 'remote-options';
+      default?: string | string[];
+      source: RemoteOptionsSource;
+      multiple?: boolean;
+      // AOD-124: when set, the config form persists the CHOSEN choice's LABEL under this config key at
+      // save time (single-select only), so a per-widget caption (place / project·team / calendar) can show
+      // a human name the stored id and the payload both lack. The key is DISPLAY-ONLY: the host strips it
+      // from the fetch params (WidgetHost) so it never enters the requestKey or the provider request, and
+      // validateConfig ignores it (it is not a schema field of its own). See widgets/caption.ts.
+      labelKey?: string;
+    }
 );
 
 export type WidgetConfigFieldKind = WidgetConfigField['kind'];
@@ -59,6 +74,37 @@ export interface WidgetConfigSchema {
   fields: WidgetConfigField[];
 }
 
+// --- the per-widget caption strategy (AOD-124) ---------------------------------------------------
+
+/**
+ * How the host resolves a card's quiet header caption, per widget (AOD-124; claude-design/README.md
+ * §"the caption is per-widget"). Replaces the fixed SERVICE · WIDGET header and the AOD-37 hideHeaderAtSizes:
+ * the caption carries the most useful identifier, not one rule. A DECLARATIVE union — the leaf declares
+ * `caption`, the pure host helper `resolveCaption` (widgets/caption.ts) resolves it from { size, config,
+ * data, serviceName } to a string or `null`. `null` == a HEADERLESS card:
+ *   - `hidden`            : chromeless at EVERY size (Clock: "a clock is self-evident"). Subsumes the
+ *                           old hideHeaderAtSizes when a leaf wants no header anywhere.
+ *   - `serviceWidget`     : the DEFAULT — SERVICE · WIDGET, collapsed to one token when the widget title
+ *                           equals the service name.
+ *   - `place`             : SERVICE · <place> (Weather → WEATHER · QUITO). The place is read from the
+ *                           payload (`data.place`) when present, else the merged connection config's
+ *                           `labelKey` (WidgetHost seeds the platform_key connection location).
+ *   - `projectOrTeam`     : SERVICE · <project | team> (Linear). Reads the config `labelKey` persisted at
+ *                           selection; reverts to the widget name when absent (the needs_config case).
+ *   - `calendar`          : SERVICE · <calendar> (Calendar). Reads the config `labelKey` persisted at
+ *                           selection (the events payload never carries the calendar's own name).
+ * `hideAtSizes` makes any non-hidden strategy resolve to `null` at a size — this is how Weather / Calendar
+ * drop the header at S (the old `hideHeaderAtSizes: ['S']`), size-aware without a second field.
+ */
+export type CaptionStrategy =
+  | { kind: 'hidden' }
+  | ({ hideAtSizes?: WidgetSize[] } & (
+      | { kind: 'serviceWidget' }
+      | { kind: 'place'; labelKey: string }
+      | { kind: 'projectOrTeam'; labelKey: string }
+      | { kind: 'calendar'; labelKey: string }
+    ));
+
 // --- the widget (AOD-8 §6 WidgetDefinition + AOD-10 §3 WidgetModel additions) --------------------
 
 /** AOD-8 §6.1 render contract: render is invoked only with live, normalized data. */
@@ -66,6 +112,11 @@ export interface WidgetRenderProps {
   data: unknown; // normalized payload from the proxy (per-widget shape is AOD-10/per-integration)
   config: Record<string, unknown>;
   size: WidgetSize;
+  // AOD-123: the host-computed body box (DP), the slot minus header + padding. The shared FitBody fits
+  // content to it (value held, detail truncate-then-drop) with NO onLayout on the always-on hot path.
+  // Optional so a leaf that does not use FitBody, or a direct-render test, still type-checks; FitBody
+  // falls back to deriving the box from `size` when it is absent.
+  box?: FitBox;
 }
 export type WidgetRenderer = ComponentType<WidgetRenderProps>;
 
@@ -81,9 +132,17 @@ export interface WidgetDefinition {
   cacheTtlSeconds?: number; // provider-facing floor (AOD-9 proxy cache); defaults from defaultRefresh
   minRefreshSeconds?: number; // device-cadence floor the author asserts; default 0
   dimsWithAmbient?: boolean; // default true: host applies the global dim overlay (AOD-10 §8)
-  // AOD-37 §4.2: sizes at which the host suppresses the quiet header for a self-evident card (Clock
-  // small declares ['small']). A generic host capability, not a per-service branch; default = show.
-  hideHeaderAtSizes?: WidgetSize[];
+  // AOD-124: the per-widget caption strategy the host resolves into the quiet header (or `null` = a
+  // headerless card). Replaces the AOD-37 hideHeaderAtSizes + the hardcoded SERVICE · WIDGET collapse.
+  // Default (omitted) = { kind: 'serviceWidget' }. Resolved by widgets/caption.ts (pure).
+  caption?: CaptionStrategy;
+  // AOD-125: the per-widget emptiness predicate. When a data-bearing fetch's CONTENT is legitimately empty
+  // (no assigned issues, no next event, no active cycle, no spend yet), the host derives the first-class
+  // `empty` lifecycle phase and draws the shared EmptyBody — the leaf no longer self-draws its "nothing".
+  // `now` (epoch ms) is passed so a time-scoped predicate (the Agenda's device-local "today" filter) is
+  // pure. Omitted = the widget is never empty-capable ($0.00 spend, a clock, the weather are valid values,
+  // not empties). Pure: no React, no I/O. Reached by deriveViewState (widgets/lifecycle.ts).
+  isEmpty?: (data: unknown, now: number) => boolean;
 }
 
 /** AOD-10 §3 names the AOD-8 widget + its additions WidgetModel; kept as an alias for traceability. */

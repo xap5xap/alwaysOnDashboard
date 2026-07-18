@@ -1,9 +1,10 @@
 // config-options (config-time option-source resolution, AOD-10 §4.3). Mirrors proxy.test.ts: the
 // handler gates the connection (409 when reauth_required / no connection), invokes the allow-listed
-// resolver, caches the Choice[] on the proxy_cache TTL, and returns. The stub option source is
-// STATIC (fixed choices, no provider, no secret), the verification vehicle exactly as the stub
-// exercised host/add/config in AOD-47/51/52. The provider-backed branch (the lazy secret + typed
-// error mapping) is proved generically through makeProviderCaller against the weather backend.
+// resolver, caches the Choice[] on the proxy_cache TTL, and returns. Since AOD-126 removed the
+// walking-skeleton stub (the old STATIC verification vehicle), the suite rides the real Linear
+// provider-backed source (linear_projects) with the provider HTTP boundary faked: the same flow
+// production uses, plus the lazy-secret attach. The provider-error branch of makeProviderCaller is
+// still proved generically below against the weather backend.
 
 import { afterAll, afterEach, describe, it } from "@std/testing/bdd";
 import { assert, assertEquals } from "@std/assert";
@@ -16,7 +17,6 @@ import { userPost } from "../../../test/fixtures/edge.ts";
 import { jsonResponse, mockProvider, type ProviderMock, route } from "../../../test/fixtures/mockProvider.ts";
 import { makeProviderCaller, type ConnectionRow } from "../_shared/connection.ts";
 import { ResponseError } from "../_shared/http.ts";
-import { STUB_OPTION_CHOICES } from "../_shared/option-sources.ts";
 import { getBackend } from "../_shared/registry.ts";
 
 const created: string[] = [];
@@ -28,17 +28,26 @@ async function freshUser(): Promise<TestUser> {
   return u;
 }
 
-/** A connected platform_key stub connection (no Vault secret), so the option-source gate passes. */
-function connectedStub(userId: string) {
+/** A connected oauth2 linear connection with a REAL Vault access secret and a far-future expiry
+ *  (the proxy.test.ts shape), so the provider-backed resolver's lazy secret attach runs for real. */
+function connectedLinear(userId: string) {
   return makeConnection(userId, {
-    service: "stub",
-    auth_class: "platform_key",
+    service: "linear",
+    auth_class: "oauth2",
     status: "connected",
-    access_secret_id: null,
-    refresh_secret_id: null,
-    config: {},
+    expires_at: new Date(Date.now() + 3_600_000),
+    secrets: { access: "live-access", refresh: "live-refresh" },
   });
 }
+
+/** A real Linear projects GraphQL body (integration-linear.md §5.3) and its mapped Choice[]. */
+const PROJECTS_RESPONSE = {
+  data: { projects: { nodes: [{ id: "p1", name: "Integrations" }, { id: "p2", name: "Platform & App Shell" }] } },
+};
+const PROJECT_CHOICES = [
+  { value: "p1", label: "Integrations" },
+  { value: "p2", label: "Platform & App Shell" },
+];
 
 afterEach(() => {
   mock?.restore();
@@ -51,45 +60,54 @@ afterAll(async () => {
 });
 
 describe("config-options handler (AOD-10 §4.3)", { sanitizeResources: false, sanitizeOps: false }, () => {
-  it("connected stub resolves the static option source to its fixed Choice[] with NO provider call", async () => {
+  it("connected linear resolves linear_projects through ONE provider call with the user's secret attached", async () => {
     const user = await freshUser();
-    await connectedStub(user.id);
-    // The static resolver never calls the provider; a mocked stub endpoint proves it is never hit.
-    mock = mockProvider([route("stub.invalid", () => jsonResponse({ shouldNotBeCalled: true }))]);
+    await connectedLinear(user.id);
+    let seenAuth: string | null = null;
+    mock = mockProvider([
+      route("api.linear.app/graphql", (call) => {
+        seenAuth = call.headers.get("authorization");
+        return jsonResponse(PROJECTS_RESPONSE);
+      }),
+    ]);
 
     const res = await handler(
-      await userPost("config-options", user, { service: "stub", optionSource: "stub_options" }),
+      await userPost("config-options", user, { service: "linear", optionSource: "linear_projects" }),
     );
     assertEquals(res.status, 200);
     const body = await res.json();
-    assertEquals(body.choices, STUB_OPTION_CHOICES);
+    assertEquals(body.choices, PROJECT_CHOICES);
     assertEquals(body.cached, false);
-    assertEquals(mock.countMatching("stub.invalid"), 0);
+    assertEquals(mock.countMatching("api.linear.app/graphql"), 1);
+    // The lazy caller read the Vault secret and rode Linear's bearer style (registry.ts).
+    assertEquals(seenAuth, "Bearer live-access");
 
     // The option set was cached under the namespaced widget_type key (data-model §5.8).
     const sql = db();
     const [cache] = await sql`
       select widget_type from public.proxy_cache
-      where user_id = ${user.id} and service = 'stub'
+      where user_id = ${user.id} and service = 'linear'
     `;
-    assertEquals(cache?.widget_type, "@opt:stub_options");
+    assertEquals(cache?.widget_type, "@opt:linear_projects");
   });
 
-  it("a second call within the TTL is served from cache", async () => {
+  it("a second call within the TTL is served from cache (the provider is hit once)", async () => {
     const user = await freshUser();
-    await connectedStub(user.id);
+    await connectedLinear(user.id);
+    mock = mockProvider([route("api.linear.app/graphql", () => jsonResponse(PROJECTS_RESPONSE))]);
 
-    const first = await handler(await userPost("config-options", user, { service: "stub", optionSource: "stub_options" }));
+    const first = await handler(await userPost("config-options", user, { service: "linear", optionSource: "linear_projects" }));
     assertEquals((await first.json()).cached, false);
-    const second = await handler(await userPost("config-options", user, { service: "stub", optionSource: "stub_options" }));
+    const second = await handler(await userPost("config-options", user, { service: "linear", optionSource: "linear_projects" }));
     const body = await second.json();
     assertEquals(body.cached, true);
-    assertEquals(body.choices, STUB_OPTION_CHOICES);
+    assertEquals(body.choices, PROJECT_CHOICES);
+    assertEquals(mock.countMatching("api.linear.app/graphql"), 1);
   });
 
   it("no connection returns 409 needs_reconnect", async () => {
     const user = await freshUser();
-    const res = await handler(await userPost("config-options", user, { service: "stub", optionSource: "stub_options" }));
+    const res = await handler(await userPost("config-options", user, { service: "linear", optionSource: "linear_projects" }));
     assertEquals(res.status, 409);
     assertEquals((await res.json()).error, "needs_reconnect");
   });
@@ -97,24 +115,28 @@ describe("config-options handler (AOD-10 §4.3)", { sanitizeResources: false, sa
   it("a reauth_required connection returns 409 needs_reconnect", async () => {
     const user = await freshUser();
     await makeConnection(user.id, {
-      service: "stub",
-      auth_class: "platform_key",
+      service: "linear",
+      auth_class: "oauth2",
       status: "reauth_required",
-      access_secret_id: null,
-      refresh_secret_id: null,
-      config: {},
     });
-    const res = await handler(await userPost("config-options", user, { service: "stub", optionSource: "stub_options" }));
+    const res = await handler(await userPost("config-options", user, { service: "linear", optionSource: "linear_projects" }));
     assertEquals(res.status, 409);
     assertEquals((await res.json()).error, "needs_reconnect");
   });
 
   it("an unknown option source returns 400 unknown_option_source", async () => {
     const user = await freshUser();
-    await connectedStub(user.id);
-    const res = await handler(await userPost("config-options", user, { service: "stub", optionSource: "nope" }));
+    await connectedLinear(user.id);
+    const res = await handler(await userPost("config-options", user, { service: "linear", optionSource: "nope" }));
     assertEquals(res.status, 400);
     assertEquals((await res.json()).error, "unknown_option_source");
+  });
+
+  it("the AOD-126-removed stub service is unknown to the server registry (400 unknown_service)", async () => {
+    const user = await freshUser();
+    const res = await handler(await userPost("config-options", user, { service: "stub", optionSource: "stub_options" }));
+    assertEquals(res.status, 400);
+    assertEquals((await res.json()).error, "unknown_service");
   });
 });
 

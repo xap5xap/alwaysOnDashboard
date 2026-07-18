@@ -6,20 +6,29 @@
 //
 // AOD-35 polish: one event list, three densities. All-day events have no time anchor, so they group at the
 // top (separated by a hairline); the soonest upcoming event is the agenda's one emphasis (an accent LEFT
-// RAIL + an accent time), so the list points at what is next. At tall a deep column of 2-line rows; at
-// wide a banner of event cells laid left to right; at large (a reconciled class, §9) single-line rows with
-// a location on a second line. Overflow folds into "+N more". The empty render (no events left today, a
-// normal state, not an error) is the shared §5.1 EmptyBody with the per-widget calendar glyph, no action.
+// RAIL + an accent time), so the list points at what is next. At M (1x2; the old tall) a deep column of
+// 2-line rows; at W (2x1; the banner layout the retired 3x1 wide slot wore pre-AOD-122) event cells laid
+// left to right; at L (a coerced class, §9) single-line rows with a location on a second line. Overflow
+// folds into "+N more". The empty render (no events left today, a normal state, not an error) is now the
+// host-drawn `empty` lifecycle phase (AOD-125, isAgendaEmpty), not a leaf body.
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import type { AgendaData, CalendarEvent } from './types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
-import { CalendarGlyph } from './glyphs';
+import { fitCount } from '../../../widgets/fitLadder';
 
-// How many rows fit a glance at each size; the rest collapse into a "+N more" footer.
-const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { small: 4, medium: 5, wide: 5, large: 8, tall: 10 };
+// The pre-AOD-123 fixed per-size counts. AOD-122 remap: M (1x2) kept the old tall 10; W (2x1) 5; L 8;
+// S 4. AOD-123 keeps these only as the no-box fallback: the VERTICAL layouts (M deep column, L rows) now
+// derive the count from the box HEIGHT (fitCount) so a short cell never overflows — 10 two-line rows in a
+// 144px M body was ~400px and clipped. The W BANNER strip stays count-based: it distributes cells across
+// the WIDTH, so its budget is horizontal, not the height fitCount governs (a narrow-strip width-fit is an
+// M4 follow-up, flagged).
+const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { S: 4, M: 10, W: 5, L: 8 };
+
+// Row-fit chrome for the vertical Agenda layouts (DP, conservative): M is a 2-line row (time over title),
+// L a single-line row; both shed into "+N more".
+const ROW_HEIGHT_BY_SIZE: Partial<Record<WidgetSize, number>> = { M: 42, L: 26 };
 
 /** Defensive read: a renderer must never crash on a partial payload (host shows an empty card instead). */
 function asAgendaData(data: unknown): AgendaData {
@@ -45,6 +54,15 @@ function startsToday(event: CalendarEvent, now: Date): boolean {
   );
 }
 
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): NO events start on the device-local day. `now` is
+ *  epoch ms (deriveViewState passes it so the predicate stays pure). Emptiness is the "today"-scoped count —
+ *  the same filter the render applies — never events.length, because the server's coarse now->now+~36h window
+ *  can still hold tomorrow's events. Empty "today" -> the host-drawn empty phase; the leaf no longer draws it. */
+export function isAgendaEmpty(data: unknown, now: number): boolean {
+  const today = new Date(now);
+  return !asAgendaData(data).events.some((e) => startsToday(e, today));
+}
+
 /** Clock time for a timed event, or "All day" for an all-day one. */
 function formatClock(event: CalendarEvent): string {
   if (event.allDay) return 'All day';
@@ -53,24 +71,15 @@ function formatClock(event: CalendarEvent): string {
   return start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-export function AgendaCard({ data, size }: WidgetRenderProps) {
+export function AgendaCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { events } = asAgendaData(data);
   const now = new Date();
   const today = events.filter((e) => startsToday(e, now));
 
-  if (today.length === 0) {
-    // §5.1 empty body: a calm "Nothing left today" with the calendar glyph, no action.
-    return (
-      <View style={styles.fill} testID="gcal-agenda-empty">
-        <EmptyBody
-          line="Nothing left today"
-          subline="Enjoy the quiet"
-          glyph={<CalendarGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
+  // AOD-125: an empty "today" is now the host-drawn `empty` phase (isAgendaEmpty), so the leaf is reached
+  // only with events. The guard remains for crash-safety across a host/leaf now-skew and draws nothing.
+  if (today.length === 0) return null;
 
   // All-day grouped on top; timed sorted ascending below; the soonest upcoming timed event is "next".
   const allDay = today.filter((e) => e.allDay);
@@ -81,14 +90,21 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
   const nextId = timed.find((e) => new Date(e.start).getTime() >= nowMs)?.id;
 
   const ordered = [...allDay, ...timed];
-  const visible = ordered.slice(0, VISIBLE_BY_SIZE[size] ?? 6);
+  // AOD-123: the vertical layouts (M / L) count by HEIGHT so a short cell never overflows; the W banner
+  // strip stays width-budgeted on the fixed count. Falls back to the fixed count on a direct render.
+  const rowHeight = ROW_HEIGHT_BY_SIZE[size];
+  const visibleCount =
+    box && rowHeight != null
+      ? fitCount(ordered.length, box.height, { rowHeight, gap: theme.spacing(1.5), footerHeight: 20 })
+      : (VISIBLE_BY_SIZE[size] ?? 6);
+  const visible = ordered.slice(0, visibleCount);
   const remaining = ordered.length - visible.length;
   const visibleAllDay = visible.filter((e) => e.allDay);
   const visibleTimed = visible.filter((e) => !e.allDay);
   const titleOf = (e: CalendarEvent) => e.summary || '(No title)';
 
-  // wide (3x1): a banner of event cells laid left to right, time over title, hairline dividers between.
-  if (size === 'wide') {
+  // W (2x1): a banner of event cells laid left to right, time over title, hairline dividers between.
+  if (size === 'W') {
     return (
       <View style={styles.wideStrip} accessibilityRole="summary" testID="gcal-agenda">
         {visible.map((e, i) => {
@@ -121,8 +137,8 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // tall (1x2): a deep column of 2-line rows (time over title); all-day grouped under a kicker on top.
-  if (size === 'tall') {
+  // M (1x2): a deep column of 2-line rows (time over title); all-day grouped under a kicker on top.
+  if (size === 'M') {
     return (
       <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
         {visibleAllDay.length > 0 ? (
@@ -164,7 +180,7 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // large (2x2, a reconciled class) and any other size: single-line rows with a 2nd location line.
+  // L (2x2, a coerced class) and any other size: single-line rows with a 2nd location line.
   return (
     <View style={styles.list} accessibilityRole="summary" testID="gcal-agenda">
       {visibleAllDay.map((e) => (
@@ -210,14 +226,13 @@ export function AgendaCard({ data, size }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
   list: { gap: theme.spacing(1.5) },
 
   // the next-event accent left rail (3px); transparent on every other row so titles still align
   rail: { width: 3, borderRadius: 1.5, alignSelf: 'stretch', backgroundColor: 'transparent' },
   railActive: { backgroundColor: theme.colors.accent },
 
-  // all-day group (tall): a quiet kicker over the all-day titles, then a hairline
+  // all-day group (M): a quiet kicker over the all-day titles, then a hairline
   allDayGroup: { gap: theme.spacing(1) },
   groupLabel: { ...theme.type.badge, color: theme.colors.textMuted },
   divider: { height: 1, backgroundColor: theme.colors.border },
@@ -228,18 +243,18 @@ const styles = StyleSheet.create((theme) => ({
   evt: { ...theme.type.body, color: theme.colors.text },
   more: { ...theme.type.meta, color: theme.colors.textMuted, paddingTop: theme.spacing(0.5) },
 
-  // tall: 2-line rows
+  // M: 2-line rows (style keys keep their pre-slot names; only the WidgetSize ids changed, AOD-122)
   tallRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
   tallRowText: { flexShrink: 1, gap: theme.spacing(0.25) },
 
-  // wide: event cells left to right
+  // W: event cells left to right
   wideStrip: { flexDirection: 'row', alignItems: 'stretch', flex: 1 },
   wideCell: { flex: 1, flexDirection: 'row', gap: theme.spacing(1.5), paddingRight: theme.spacing(2) },
   cellBorder: { borderLeftWidth: 1, borderLeftColor: theme.colors.border, paddingLeft: theme.spacing(2) },
   cellText: { flexShrink: 1, gap: theme.spacing(0.25) },
   moreCell: { alignItems: 'center', justifyContent: 'center', flexGrow: 0, flexBasis: 72 },
 
-  // large: single-line rows, location on a 2nd line
+  // L: single-line rows, location on a 2nd line
   largeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(2) },
   timeCol: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'], width: 64 },
   largeRowText: { flexShrink: 1, gap: theme.spacing(0.25) },

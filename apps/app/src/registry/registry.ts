@@ -4,15 +4,15 @@
 // supabase/functions/_shared/registry.ts. Lookups stay generic over the registry, never naming a
 // specific service.
 import type { ServiceDefinition, ServiceId, WidgetDefinition, WidgetTypeId } from './types';
-import { stubService } from './services/stub';
 import { linearService } from './services/linear';
 import { googleCalendarService } from './services/google_calendar';
 import { weatherService } from './services/weather';
 import { anthropicUsageService } from './services/anthropic_usage';
 import { clockService } from './services/clock';
 
+// The AOD-47 walking-skeleton stub service is GONE from production (AOD-126, resolves AOD-94): it
+// lives on as test support (__tests__/stubRegistry.tsx) injected via RegistryProvider, never here.
 export const SERVICE_REGISTRY: ServiceDefinition[] = [
-  stubService,
   linearService, // PS-M3 first real service (AOD-55); My Issues + Current Cycle (integration-linear.md §8).
   googleCalendarService, // I-M1 second real service (AOD-56), first REST one; Next Event + Today's Agenda (integration-calendar.md §8).
   weatherService, // I-M1 third real service (AOD-58), first platform_key one; Current + Forecast (integration-weather.md §8).

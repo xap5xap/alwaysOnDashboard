@@ -5,15 +5,16 @@
 // params are instance.config (empty) and connection.config is NOT merged in. The cents->dollars /100 lives
 // server-side (operations.ts); the card receives an already-normalized payload, so these assert rendering.
 //
-// AOD-36 polish (design-claude-usage.md): the Spend MTD run-rate is medium-only (§5 layout); $0.00 is a
-// valid hero, NOT the EmptyBody (§5.3); Daily Spend draws the sparkline at wide/large with a large-only
-// today label, and an empty days[] is the §5.1 EmptyBody (§6.2).
+// AOD-36 polish (design-claude-usage.md): the Spend MTD run-rate is W-only (§5 layout); $0.00 is a
+// valid hero, NOT an empty (§5.3, so Spend MTD declares no isEmpty); Daily Spend draws the sparkline at
+// W/L with an L-only today label, and an empty days[] is now the host-drawn `empty` phase (AOD-125).
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../../../../host/WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../host/WidgetDataSource';
 import { RegistryProvider } from '../../../RegistryProvider';
+import { SpendMtdCard } from '../SpendMtdCard';
 import type { WidgetInstance } from '../../../types';
 import type { ConnectionMap, ConnectionView } from '../../../../connections/connectionsRepo';
 import type { DailySpendData, SpendMtdData } from '../types';
@@ -34,14 +35,14 @@ const spendInstance: WidgetInstance = {
   serviceId: 'anthropic_usage',
   widgetType: 'spend_mtd',
   config: {}, // zero-config: org-wide totals, no per-instance choice (§5.1)
-  size: 'small',
+  size: 'S', // AOD-122 slot id (was 'small')
   rect: { x: 0, y: 0, w: 1, h: 1, z: 0 },
 };
 
-const mediumSpendInstance: WidgetInstance = {
+const wSpendInstance: WidgetInstance = {
   ...spendInstance,
   instanceId: 'au-spend-md',
-  size: 'medium',
+  size: 'W', // AOD-122 slot id (was 'medium'; same 2x1 rect)
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
@@ -50,14 +51,14 @@ const dailyInstance: WidgetInstance = {
   serviceId: 'anthropic_usage',
   widgetType: 'daily_spend',
   config: {},
-  size: 'wide',
-  rect: { x: 0, y: 0, w: 3, h: 1, z: 0 },
+  size: 'W', // AOD-122: the banner slot (was the retired wide 3x1; W is 2x1)
+  rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
 const largeDailyInstance: WidgetInstance = {
   ...dailyInstance,
   instanceId: 'au-daily-lg',
-  size: 'large',
+  size: 'L', // AOD-122 slot id (was 'large')
   rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
 };
 
@@ -74,7 +75,7 @@ const DAILY_SPEND_DATA: DailySpendData = {
   total: 4,
   days: [
     { date: '2026-06-01', amount: 1.5 },
-    { date: '2026-06-02', amount: 2.5 }, // the rightmost is today -> "today $2.50" at large
+    { date: '2026-06-02', amount: 2.5 }, // the rightmost is today -> "today $2.50" at L
   ],
 };
 
@@ -123,53 +124,65 @@ describe('admin_key host params (integration-claude.md §6.3): the host else-bra
 });
 
 describe('SpendMtdCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
-  it('at medium renders the MTD amount (cents-precision) + the emphasised run-rate', async () => {
+  // AOD-123 (attempt 2): Spend MTD migrated onto the shared FitBody. The amount width-fits (never clips a
+  // narrow cell), and at the wide-short W the value YIELDS height so the run-rate is KEPT (a smaller amount,
+  // not a dropped line). S stays the minimal 1x1 glance (amount only, §5). Nothing clips.
+  it('at W renders the MTD amount + the emphasised run-rate (the value yields so detail is kept)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    renderHost(spendSource(SPEND_MTD_DATA), mediumSpendInstance);
+    renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
-    expect(screen.getByTestId('widget-loading')).toBeTruthy();
+    expect(screen.getByTestId('widget-connecting')).toBeTruthy();
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
-    // one run-rate line: the $/day value + the day count (§5.2)
+    // one run-rate line: the $/day value + the day count (§5.2), kept at W (not clipped, not dropped)
     const runRate = screen.getByTestId('claude-spend-mtd-runrate');
     expect(runRate).toHaveTextContent(/\$2\.00\/day avg/); // 4 / 2 days
     expect(runRate).toHaveTextContent(/2 days this month/);
   });
 
-  it('at small renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
+  it('at S renders the amount but suppresses the run-rate (the 1x1 glance, §5 layout)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    renderHost(spendSource(SPEND_MTD_DATA), spendInstance); // small
+    renderHost(spendSource(SPEND_MTD_DATA), spendInstance); // S
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$4.00');
     expect(screen.queryByTestId('claude-spend-mtd-runrate')).toBeNull();
   });
 
+  it('width-fits a long amount so it never clips the narrow S cell (AOD-95 class)', () => {
+    // "$1,234.56" at type.xl (40px) is ~110px, wider than the 72px S body — before the fit it clipped. The
+    // width-fit renders the money at a smaller font so the whole figure shows.
+    const big: SpendMtdData = { amount: 1234.56, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-10', daysElapsed: 10 };
+    render(<SpendMtdCard data={big} config={{}} size="S" box={{ width: 72, height: 48 }} />);
+    // The whole figure renders (nothing clipped to "$1,23…"): the width-fit chose a smaller font instead.
+    expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$1,234.56');
+  });
+
   it('renders a zero-spend org as the $0.00 hero (a valid figure, NOT the empty body, §5.3)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     const zero: SpendMtdData = { amount: 0, currency: 'USD', windowStart: '2026-06-01', asOf: '2026-06-12', daysElapsed: 12 };
-    renderHost(spendSource(zero), mediumSpendInstance);
+    renderHost(spendSource(zero), wSpendInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByTestId('claude-spend-mtd-amount')).toHaveTextContent('$0.00');
-    // $0.00 is the hero with a normal run-rate, not routed through the calm empty body Daily Spend uses.
+    // $0.00 is the hero with its run-rate (a valid figure), NOT the calm empty body Daily Spend uses.
     expect(screen.getByTestId('claude-spend-mtd-runrate')).toHaveTextContent(/\$0\.00\/day avg/);
     expect(screen.queryByTestId('widget-empty-body')).toBeNull();
   });
 });
 
 describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', () => {
-  it('at wide renders the sparkline + the MTD total, no large-only today label', async () => {
+  it('at W renders the sparkline + the MTD total, no L-only today label', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(dailySource(DAILY_SPEND_DATA), dailyInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-daily-spend')).toBeTruthy());
     expect(screen.getByTestId('claude-daily-spend-total')).toHaveTextContent('$4.00');
     expect(screen.getByTestId('claude-sparkline')).toBeTruthy();
-    expect(screen.queryByTestId('claude-daily-spend-today')).toBeNull(); // today label is large-only (§6.1)
+    expect(screen.queryByTestId('claude-daily-spend-today')).toBeNull(); // today label is L-only (§6.1)
   });
 
-  it('at large adds the "today $X.XX" value label over the today bar (§6.1)', async () => {
+  it('at L adds the "today $X.XX" value label over the today bar (§6.1)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(dailySource(DAILY_SPEND_DATA), largeDailyInstance);
 
@@ -178,12 +191,13 @@ describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', (
     expect(screen.getByTestId('claude-daily-spend-today')).toHaveTextContent('today $2.50'); // last day's amount
   });
 
-  it('renders the §5.1 empty body for a month with no spend yet (never crashes, §6.2)', async () => {
+  it('resolves to the host-drawn empty phase for a month with no spend yet (AOD-125, §6.2)', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
     renderHost(dailySource({ days: [], currency: 'USD', total: 0 }), dailyInstance);
 
-    await waitFor(() => expect(screen.getByTestId('claude-daily-spend-empty')).toBeTruthy());
-    expect(screen.getByTestId('widget-empty-body')).toBeTruthy(); // the shared EmptyBody convention
+    // AOD-125: an empty series is now the host-drawn `empty` phase (isDailySpendEmpty), the shared EmptyBody.
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
+    expect(screen.getByText('Nothing right now.')).toBeTruthy();
     expect(screen.queryByTestId('claude-daily-spend')).toBeNull();
   });
 });
@@ -196,7 +210,7 @@ describe('DailySpendCard through the host lifecycle (AOD-59 + AOD-36 polish)', (
 describe('the host caption is de-duplicated (the SERVICE · WIDGET header convention)', () => {
   it('Spend MTD reads "Claude usage · Spend (MTD)", not a doubled "Claude"', async () => {
     mockConnections = new Map([['anthropic_usage', connection('anthropic_usage', 'admin_key', {})]]);
-    renderHost(spendSource(SPEND_MTD_DATA), mediumSpendInstance);
+    renderHost(spendSource(SPEND_MTD_DATA), wSpendInstance);
 
     await waitFor(() => expect(screen.getByTestId('claude-spend-mtd')).toBeTruthy());
     expect(screen.getByText('Claude usage · Spend (MTD)')).toBeTruthy();

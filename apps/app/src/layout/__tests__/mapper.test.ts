@@ -1,5 +1,7 @@
 // The widget_instances row <-> WidgetInstance boundary. Reads drop malformed rows (AOD-8 §9
-// invariant 1); writes re-validate so no bad geometry is persisted.
+// invariant 1); writes re-validate so no bad geometry is persisted. AOD-122: reads also COERCE the
+// authoritative rect onto the S/M/W/L slot grid (legacy rows render at legal slot sizes with no
+// write-back), and writes serialize the slot id into the frozen DB CHECK vocabulary (SIZE_TO_DB).
 import type { Tables } from '@vela/shared';
 import { configToUpdate, instanceToInsert, layoutToUpdate, rowToInstance } from '../mapper';
 
@@ -12,7 +14,7 @@ function row(overrides: Partial<Tables<'widget_instances'>> = {}): Tables<'widge
     widget_type: 'placeholder',
     size: 'medium',
     config: {},
-    rect: { x: 1, y: 2, w: 2, h: 1, z: 0 },
+    rect: { x: 0, y: 2, w: 2, h: 1, z: 0 },
     refresh: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -20,15 +22,50 @@ function row(overrides: Partial<Tables<'widget_instances'>> = {}): Tables<'widge
   };
 }
 
-describe('rowToInstance', () => {
-  it('maps a valid row to a WidgetInstance', () => {
+describe('rowToInstance (read path: gate on the DB vocabulary, then coerce to the slot grid)', () => {
+  it('maps a valid legacy row, coercing its size id (medium 2x1 -> W, rect untouched)', () => {
     expect(rowToInstance(row())).toEqual({
       instanceId: 'inst-1',
       serviceId: 'stub',
       widgetType: 'placeholder',
       config: {},
-      rect: { x: 1, y: 2, w: 2, h: 1, z: 0 },
-      size: 'medium',
+      rect: { x: 0, y: 2, w: 2, h: 1, z: 0 },
+      size: 'W',
+    });
+  });
+
+  it('resolves every legacy (size, rect) pair deterministically (the AOD-122 coercion table)', () => {
+    expect(rowToInstance(row({ size: 'small', rect: { x: 1, y: 0, w: 1, h: 1, z: 3 } }))).toMatchObject({
+      rect: { x: 1, y: 0, w: 1, h: 1, z: 3 },
+      size: 'S',
+    });
+    expect(rowToInstance(row({ size: 'tall', rect: { x: 0, y: 1, w: 1, h: 2, z: 0 } }))).toMatchObject({
+      rect: { x: 0, y: 1, w: 1, h: 2, z: 0 },
+      size: 'M',
+    });
+    expect(rowToInstance(row({ size: 'large', rect: { x: 0, y: 3, w: 2, h: 2, z: 1 } }))).toMatchObject({
+      rect: { x: 0, y: 3, w: 2, h: 2, z: 1 },
+      size: 'L',
+    });
+    // The retired wide 3x1 clamps to the nearest legal horizontal slot: W 2x1.
+    expect(rowToInstance(row({ size: 'wide', rect: { x: 0, y: 0, w: 3, h: 1, z: 0 } }))).toMatchObject({
+      rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+      size: 'W',
+    });
+  });
+
+  it('snaps a free-drop fractional rect (the pre-slot arrange canvas) onto the grid', () => {
+    expect(rowToInstance(row({ size: 'medium', rect: { x: 0.6, y: 1.25, w: 2.3, h: 1.4, z: 4 } }))).toMatchObject({
+      rect: { x: 0, y: 1, w: 2, h: 1, z: 4 },
+      size: 'W',
+    });
+  });
+
+  it('the rect is authoritative: a size/rect disagreement resolves to the rect (stored hint ignored)', () => {
+    // The row SAYS medium (-> W) but the rect the user last saw was ~1x2: the slot is M.
+    expect(rowToInstance(row({ size: 'medium', rect: { x: 0, y: 0, w: 1.1, h: 1.9, z: 0 } }))).toMatchObject({
+      rect: { x: 0, y: 0, w: 1, h: 2, z: 0 },
+      size: 'M',
     });
   });
 
@@ -43,8 +80,14 @@ describe('rowToInstance', () => {
     expect(rowToInstance(row({ rect: null as never }))).toBeNull();
   });
 
-  it('drops a row with an invalid size or refresh', () => {
+  it('drops a row whose size is outside the DB vocabulary (junk AND un-serialized slot ids)', () => {
     expect(rowToInstance(row({ size: 'huge' }))).toBeNull();
+    // The CHECK constraint makes a stored 'W' impossible today; if a future migration moves the column
+    // to slot ids, widen DbWidgetSizeSchema FIRST, then flip SIZE_TO_DB — this lock documents the order.
+    expect(rowToInstance(row({ size: 'W' }))).toBeNull();
+  });
+
+  it('drops a row with an invalid refresh', () => {
     expect(rowToInstance(row({ refresh: { seconds: 0 } }))).toBeNull();
   });
 
@@ -53,10 +96,10 @@ describe('rowToInstance', () => {
   });
 });
 
-describe('instanceToInsert', () => {
-  it('builds a validated insert with explicit user_id and no client-supplied id', () => {
+describe('instanceToInsert (write path: validate the slot id, serialize to the DB vocabulary)', () => {
+  it('builds a validated insert with explicit user_id, no client-supplied id, and the serialized size', () => {
     const insert = instanceToInsert(
-      { serviceId: 'stub', widgetType: 'placeholder', config: {}, size: 'medium', rect: { x: 0, y: 0, w: 2, h: 1, z: 0 } },
+      { serviceId: 'stub', widgetType: 'placeholder', config: {}, size: 'W', rect: { x: 0, y: 0, w: 2, h: 1, z: 0 } },
       'dash-9',
       'user-9',
     );
@@ -65,17 +108,40 @@ describe('instanceToInsert', () => {
       user_id: 'user-9',
       service_id: 'stub',
       widget_type: 'placeholder',
-      size: 'medium',
+      size: 'medium', // W's exact geometric twin in the frozen CHECK vocabulary
       rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
       refresh: null,
     });
     expect('id' in insert).toBe(false);
   });
 
+  it('serializes every slot id to its geometric legacy twin (S/M/W/L -> small/tall/medium/large)', () => {
+    const seed = (size: 'S' | 'M' | 'W' | 'L', w: number, h: number) =>
+      instanceToInsert(
+        { serviceId: 's', widgetType: 't', config: {}, size, rect: { x: 0, y: 0, w, h, z: 0 } },
+        'd',
+        'u',
+      ).size;
+    expect(seed('S', 1, 1)).toBe('small');
+    expect(seed('M', 1, 2)).toBe('tall');
+    expect(seed('W', 2, 1)).toBe('medium');
+    expect(seed('L', 2, 2)).toBe('large');
+  });
+
   it('throws on a malformed rect (validate on write)', () => {
     expect(() =>
       instanceToInsert(
-        { serviceId: 'stub', widgetType: 'placeholder', config: {}, size: 'medium', rect: { x: 0, y: 0, w: -1, h: 1, z: 0 } },
+        { serviceId: 'stub', widgetType: 'placeholder', config: {}, size: 'W', rect: { x: 0, y: 0, w: -1, h: 1, z: 0 } },
+        'd',
+        'u',
+      ),
+    ).toThrow();
+  });
+
+  it('throws on a non-slot size id (legacy words are a DB vocabulary, not a seed vocabulary)', () => {
+    expect(() =>
+      instanceToInsert(
+        { serviceId: 'stub', widgetType: 'placeholder', config: {}, size: 'medium' as never, rect: { x: 0, y: 0, w: 2, h: 1, z: 0 } },
         'd',
         'u',
       ),
@@ -84,16 +150,16 @@ describe('instanceToInsert', () => {
 });
 
 describe('layoutToUpdate', () => {
-  it('always sets rect + size, and leaves refresh untouched when omitted', () => {
-    const update = layoutToUpdate({ rect: { x: 3, y: 4, w: 1, h: 2, z: 1 }, size: 'tall' });
-    expect(update).toEqual({ rect: { x: 3, y: 4, w: 1, h: 2, z: 1 }, size: 'tall' });
+  it('always sets rect + the serialized size, and leaves refresh untouched when omitted', () => {
+    const update = layoutToUpdate({ rect: { x: 0, y: 4, w: 1, h: 2, z: 1 }, size: 'M' });
+    expect(update).toEqual({ rect: { x: 0, y: 4, w: 1, h: 2, z: 1 }, size: 'tall' });
     expect('refresh' in update).toBe(false);
   });
 
   it('clears refresh when null and sets it when provided', () => {
-    expect(layoutToUpdate({ rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, size: 'small', refresh: null }).refresh).toBeNull();
+    expect(layoutToUpdate({ rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, size: 'S', refresh: null }).refresh).toBeNull();
     expect(
-      layoutToUpdate({ rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, size: 'small', refresh: { seconds: 60 } }).refresh,
+      layoutToUpdate({ rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, size: 'S', refresh: { seconds: 60 } }).refresh,
     ).toEqual({ seconds: 60 });
   });
 });
@@ -118,9 +184,13 @@ describe('configToUpdate (AOD-10 §4 config-update path)', () => {
 });
 
 describe('round-trip', () => {
-  it('row -> instance -> insert preserves geometry, size, and config', () => {
+  it('a legacy row coerces once, then row -> instance -> insert -> instance is a fixed point', () => {
+    // A worst-case legacy row: the retired wide 3x1 parked outside the 2-column grid.
     const original = row({ rect: { x: 5, y: 6, w: 3, h: 1, z: 2 }, size: 'wide', config: { projectId: 'p1' } });
     const instance = rowToInstance(original)!;
+    expect(instance.rect).toEqual({ x: 0, y: 6, w: 2, h: 1, z: 2 });
+    expect(instance.size).toBe('W');
+
     const insert = instanceToInsert(
       {
         serviceId: instance.serviceId,
@@ -133,8 +203,13 @@ describe('round-trip', () => {
       original.dashboard_id,
       original.user_id,
     );
-    expect(insert.rect).toEqual({ x: 5, y: 6, w: 3, h: 1, z: 2 });
-    expect(insert.size).toBe('wide');
+    expect(insert.rect).toEqual({ x: 0, y: 6, w: 2, h: 1, z: 2 });
+    expect(insert.size).toBe('medium'); // W serialized into the frozen vocabulary
     expect(insert.config).toEqual({ projectId: 'p1' });
+
+    // Reading the just-written row back changes NOTHING (the coercion is idempotent on slot geometry).
+    const echoed = rowToInstance(row({ rect: insert.rect as never, size: insert.size as never }))!;
+    expect(echoed.rect).toEqual(instance.rect);
+    expect(echoed.size).toBe(instance.size);
   });
 });

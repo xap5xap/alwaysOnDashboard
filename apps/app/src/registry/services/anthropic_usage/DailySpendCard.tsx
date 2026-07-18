@@ -2,25 +2,24 @@
 // §6). Reached only on data-bearing lifecycle states; the host draws every other state. Receives only
 // { data, config, size }. The server maps each daily bucket to a DailyCost row (cents -> dollars / 100,
 // oldest-first, §6.1); this card draws them as the §4 sparkline. An empty days[] is the normal "no spend
-// yet this month" state, drawn as the §5.1 EmptyBody, never a crash.
+// yet this month" state, now the host-drawn `empty` lifecycle phase (AOD-125, isDailySpendEmpty), not a leaf body.
 //
 // AOD-36 polish: the chart is the hero, the total supports it (the inverse of Spend MTD). The sparkline
 // (§4) is the largest, brightest element; the MTD total is a supporting type.title anchor in the §5.1
-// money typography with a quiet "MONTH TO DATE" qualifier. At wide it is a banner (total left, sparkline
-// filling the right); at large it is a square (a more prominent total, a taller sparkline, and the
-// large-only "today $X.XX" value label over the today bar). Both show the oldest -> Today axis endpoints
-// so the direction reads. The leaf's old "Claude Daily Spend" label is gone: the host owns the caption (§4).
+// money typography with a quiet "MONTH TO DATE" qualifier. At W (2x1; the banner layout the retired 3x1
+// wide slot wore pre-AOD-122) a banner (total left, sparkline filling the right); at L a square (a more
+// prominent total, a taller sparkline, and the L-only "today $X.XX" value label over the today bar).
+// Both show the oldest -> Today axis endpoints so the direction reads. The leaf's old "Claude Daily
+// Spend" label is gone: the host owns the caption (§4).
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { DailyCost, DailySpendData } from './types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
 import { MoneyValue, formatPlainMoney } from './MoneyValue';
 import { Sparkline } from './Sparkline';
-import { ChartEmptyGlyph } from './glyphs';
 
-/** Defensive read: a partial payload renders as the empty body, never a crash (§4.2). */
+/** Defensive read: a partial payload reads as no-days (the host draws the empty), never a crash (§4.2). */
 function asDailySpend(data: unknown): DailySpendData {
   const d = (data ?? {}) as Partial<DailySpendData>;
   const days = Array.isArray(d.days) ? (d.days as DailyCost[]) : [];
@@ -29,6 +28,13 @@ function asDailySpend(data: unknown): DailySpendData {
     currency: typeof d.currency === 'string' && d.currency ? d.currency : 'USD',
     total: typeof d.total === 'number' ? d.total : 0,
   };
+}
+
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): no daily buckets (days.length 0) -> the host-drawn
+ *  empty phase ("no spend yet this month"). A normal state, not an error; the leaf no longer self-draws it.
+ *  Note $0.00 with days present is a VALID figure (Spend MTD keeps it a hero), so this keys off the series. */
+export function isDailySpendEmpty(data: unknown): boolean {
+  return asDailySpend(data).days.length === 0;
 }
 
 /** Parse "YYYY-MM-DD" as a LOCAL date and label it "Jun 1" (the oldest-day axis endpoint). */
@@ -42,22 +48,11 @@ function axisStartLabel(ymd: string): string {
 export function DailySpendCard({ data, size }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const { days, currency, total } = asDailySpend(data);
+  // AOD-125: an empty series (days.length === 0) is now the host-drawn `empty` phase (isDailySpendEmpty), so
+  // the leaf is reached only with spend to chart. It no longer self-draws the §5.1 EmptyBody.
 
-  if (days.length === 0) {
-    // §5.1 empty body: a calm "No spend yet this month" with the per-widget flat-chart glyph, no action
-    // (nothing is wrong, the org simply has not spent yet). Wrapped to keep the *-empty testID contract.
-    return (
-      <View style={styles.fill} testID="claude-daily-spend-empty">
-        <EmptyBody
-          line="No spend yet this month"
-          subline="Costs appear as you use the API"
-          glyph={<ChartEmptyGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
-
-  const isLarge = size === 'large';
+  const isLarge = size === 'L'; // AOD-122 slot id (was 'large'; same 2x2 geometry)
+  // chartHeight.{wide,large} are the pre-slot token-ramp key names (unistyles.ts), not WidgetSize ids.
   const chartHeight = isLarge ? theme.sparkline.chartHeight.large : theme.sparkline.chartHeight.wide;
   const todayAmount = days[days.length - 1]?.amount ?? 0;
 
@@ -104,7 +99,8 @@ export function DailySpendCard({ data, size }: WidgetRenderProps) {
     </View>
   );
 
-  // wide (3x1): a banner. The total on the left; the sparkline filling the right with its axis under it.
+  // W (2x1, and any other non-L coerced slot): a banner. The total on the left; the sparkline filling
+  // the right with its axis under it.
   if (!isLarge) {
     return (
       <View style={styles.wide} accessibilityRole="summary" testID="claude-daily-spend">
@@ -117,7 +113,7 @@ export function DailySpendCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // large (2x2): a square. A more prominent total on top; the today value label; a taller sparkline.
+  // L (2x2): a square. A more prominent total on top; the today value label; a taller sparkline.
   return (
     <View style={styles.large} accessibilityRole="summary" testID="claude-daily-spend">
       {totalBlock}
@@ -133,20 +129,18 @@ export function DailySpendCard({ data, size }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
-
-  // wide banner: total left, chart fills right
+  // W banner: total left, chart fills right (style keys keep their pre-slot names, AOD-122)
   wide: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing(3) },
   wideChart: { flex: 1, gap: theme.spacing(1) },
 
-  // large square: total on top, today label, tall chart
+  // L square: total on top, today label, tall chart
   large: { flex: 1, gap: theme.spacing(1.5) },
   largeChart: { flex: 1, justifyContent: 'flex-end', gap: theme.spacing(1) },
 
   // "MONTH TO DATE" qualifier under the total (the small tracked badge step), muted
   mtdLabel: { ...theme.type.badge, color: theme.colors.textMuted, marginTop: theme.spacing(0.5) },
 
-  // the large-only "today $X.XX" annotation over the today bar (accent, the one numeric label the chart carries)
+  // the L-only "today $X.XX" annotation over the today bar (accent, the one numeric label the chart carries)
   todayLabel: {
     ...theme.type.meta,
     fontWeight: '600',

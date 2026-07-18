@@ -7,15 +7,14 @@
 // colors.accent (the completed fraction), the track is the same colors.accent at theme.progress.trackOpacity
 // (the remaining fraction), so the card spends no second colour. This FIXES the shipped token smell, which
 // filled the track with colors.skeleton (the loading-shimmer colour). The percent is colors.accent /
-// tabular-nums (big at large, small at medium); the "Cycle N: name" label is type.heading; the completed/
-// total counts read with completedCount bright; at large an "ends in N days" meta gives time remaining.
-// active: false -> the §5.1 EmptyBody with the cycle-ring glyph, not a host state. Sizes map onto type.* (§9).
+// tabular-nums (big at L, small at W); the "Cycle N: name" label is type.heading; the completed/
+// total counts read with completedCount bright; at L an "ends in N days" meta gives time remaining.
+// active: false -> the host-drawn `empty` lifecycle phase (AOD-125, isCurrentCycleEmpty), not a leaf body.
+// Sizes map onto type.* (§9).
 import React from 'react';
 import { type DimensionValue, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
-import { EmptyBody } from '../../../widgets/EmptyBody';
-import { CycleRingGlyph } from './glyphs';
 
 // The normalized payload (integration-linear.md §4.2), mirroring the server-side normalizeCurrentCycle
 // output. `active: false` is a normal, data-bearing state (the team has no live cycle), not an error.
@@ -37,6 +36,12 @@ function asCurrentCycleData(data: unknown): CurrentCycleData {
   const d = data as { active?: unknown } | null | undefined;
   if (d?.active === true) return data as CurrentCycleData;
   return { active: false };
+}
+
+/** AOD-125 emptiness predicate (WidgetDefinition.isEmpty): no live cycle (active:false) -> the host-drawn
+ *  empty phase. `active:false` is a normal state, not an error; the leaf no longer self-draws it. */
+export function isCurrentCycleEmpty(data: unknown): boolean {
+  return !asCurrentCycleData(data).active;
 }
 
 /** Pure: Linear's 0..1 progress -> a clamped integer percent (§6.1). Guards a non-finite value to 0. */
@@ -65,21 +70,11 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const cycle = asCurrentCycleData(data);
 
-  if (!cycle.active) {
-    // §6.3 empty body: a calm "No active cycle" with the cycle-ring glyph, no action (nothing is wrong, the
-    // team simply has no live cycle). Wrapped to keep the existing *-inactive testID contract.
-    return (
-      <View style={styles.fill} testID="linear-cycle-inactive">
-        <EmptyBody
-          line="No active cycle"
-          subline="No cycle running"
-          glyph={<CycleRingGlyph color={theme.colors.accent} />}
-        />
-      </View>
-    );
-  }
+  // AOD-125: active:false is now the host-drawn `empty` phase (isCurrentCycleEmpty), so the leaf is reached
+  // only with an active cycle. The guard remains for type-narrowing (and crash-safety) and draws nothing.
+  if (!cycle.active) return null;
 
-  const isLarge = size === 'large';
+  const isLarge = size === 'L'; // AOD-122 slot id (was 'large'; same 2x2 geometry)
   const pct = clampPercent(cycle.progress);
   const label = cycle.name ? `Cycle ${cycle.number}: ${cycle.name}` : `Cycle ${cycle.number}`;
   const trackHeight = isLarge ? theme.progress.trackHeight.large : theme.progress.trackHeight.medium;
@@ -105,7 +100,7 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
     </Text>
   );
 
-  // large (2x2): a big percent hero; the bar; the label up top; the counts + the "ends in N days" meta.
+  // L (2x2): a big percent hero; the bar; the label up top; the counts + the "ends in N days" meta.
   if (isLarge) {
     return (
       <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
@@ -128,7 +123,8 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
     );
   }
 
-  // medium (2x1): compact. label + percent on one line; the bar; the counts.
+  // W (2x1, and any other coerced slot): compact. label + percent on one line; the bar; the counts.
+  // (The pctMedium / trackHeight.medium token names are the pre-slot ramp keys, not WidgetSize ids.)
   return (
     <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
       <View style={styles.head}>
@@ -146,7 +142,6 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  fill: { flex: 1 },
   body: { gap: theme.spacing(2) },
 
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },

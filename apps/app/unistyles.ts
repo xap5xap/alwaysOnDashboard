@@ -6,16 +6,28 @@
 // shipped colours are re-expressed as aliases of a shared primitive ramp set (tier 1, byte-identical
 // hexes, §4) and the additive app-wide tokens land (onAccent / scrim / focusRing, the elevation ladder,
 // radius.full). No rendered value changes. Imported once at app entry (app/_layout.tsx) before any
-// StyleSheet.create runs, and again from jest setupFiles so themes exist under test.
+// StyleSheet.create runs, and again from jest setupFiles so themes exist under test. AOD-120 lands the
+// frozen data-hue colour-law families (design-color-law.md §4-6; the freeze: claude-design/Vela - Made
+// Fast.pdf 1a): the temp/ink/pane primitive ramps plus the semantic theme families temp/ink/pane/when.
+// Machinery only — no leaf consumes them yet. Every data hex is FROZEN: device-verified on the Fire HD 8
+// in a dark room and passed (AOD-119, GO 2026-07-18) — no re-tune needed, the render-frozen values stand.
 import { StyleSheet } from 'react-native-unistyles';
 import type { TextStyle } from 'react-native';
 
 // --- §4.1 primitive colour ramps (AOD-19 tier 1) ----------------------------------------------------
 // Raw, role-free palette values: theme-independent and shared the way sharedTokens is. This is the ONLY
-// place a colour hex is written as a literal; every semantic role below (darkTheme/lightTheme colours and
-// night.*) aliases a step here, so a theme swap re-aliases rather than rewrites (design-tokens.md §3.1,
-// §4.1). Step numbering: lower = lighter, higher = darker. Values are the shipped theme VERBATIM (no hue
-// added, the one-accent rule holds, §4.6); naming them changes no rendered value.
+// place a colour hex is written as a literal; every semantic role below (darkTheme/lightTheme colours,
+// night.* and the AOD-120 data families) aliases a step here, so a theme swap re-aliases rather than
+// rewrites (design-tokens.md §3.1, §4.1). Step numbering: lower = lighter, higher = darker (the AOD-120
+// data ramps instead step by the freeze's own names — a hue walk with lightness pinned). The AOD-19-era
+// values are the shipped theme VERBATIM (naming them changed no rendered value). AOD-120 then extends the
+// tier with the frozen data-hue ramps (temp / ink / pane below; design-color-law.md §4-6, hexes from
+// claude-design/Vela - Made Fast.pdf 1a, names taken verbatim): for DATA the colour law supersedes the
+// §4.6 one-accent rule (design-color-law.md §9 records the revision) — a figure may wear the hue of what
+// it measures, while blue.400/600 stays the INTERACTION accent only (taps), never a data hue. EVERY data
+// hex is FROZEN: device-verified on the Fire HD 8 in a dark room (AOD-119, GO 2026-07-18) — web renders
+// are density- and brightness-blind, so that on-panel pass was the gate. Any future change lands as a
+// deliberate re-freeze here + in __tests__/data-tokens.test.ts, never a silent drift.
 export const primitive = {
   neutral: {
     0: '#FFFFFF', 50: '#F6F6FA', 100: '#F4F4F8', 200: '#EEEEF3', 300: '#E4E4EC',
@@ -27,6 +39,49 @@ export const primitive = {
   red: { 400: '#FF6B6B', 600: '#D64545' }, // status: error
   green: { 400: '#4CB782', 600: '#2F8F63' }, // status: success
   ember: { 500: '#C2362B', 600: '#8A201B', 700: '#5E1714', 850: '#2E1214', 900: '#140709', 950: '#0A0506' }, // ambient-night reds
+  // --- AOD-120 data-hue ramps — ALL HEXES FROZEN (device-verified AOD-119, GO 2026-07-18) -------------
+  // The thermometer (--temp-*): 8 stops cold→hot, linear blend between neighbouring stops at the draw
+  // site; lightness is pinned across the run so any temperature clears any pane at hero sizes. Vela blue
+  // at the cold end, the sail's gold in the middle, ember only past real heat. °C anchors from the freeze.
+  temp: {
+    ice: '#7FA3D9', // <= 6°
+    cold: '#8CA9C7', // 10°
+    cool: '#B3AFA0', // 13°
+    mild: '#C8B183', // 15°
+    warm: '#D4A868', // 17°
+    balmy: '#DC9853', // 19°
+    hot: '#E08348', // 22°
+    swelter: '#D65A3C', // 30°+
+  },
+  // The event inks (--ink-*): five fixed inks, never mixed; rain + sun each carry a dim variant. The
+  // fifth ink, bone ("--ink-bone #F4F4F8 (= --text)"), aliases the neutral ramp at the SEMANTIC tier
+  // (see inkDark/inkLight below) rather than duplicating a literal here.
+  ink: {
+    rain: '#6FB8C9', rainDim: '#5FA8BA', // chance figures, the falling strokes
+    sun: '#D9A458', sunDim: '#9E7E4A', // the sun glyph, the sun-mark, rise and set
+    moon: '#C6CBE8', // moon glyphs on neutral ground (on the night pane the moon draws in the pane's gold)
+    storm: '#A895E8', // the bolt, and only the bolt
+  },
+  // The condition panes (--pane-*): 12 condition × daylight swatches, each bg / line / ink — every one
+  // pulled ~40% from the Sailor's Delight render toward the neutral surface and held within two hairline
+  // steps of neutral.850 (#16161D) so the pinned-lightness figures always win. Gray weather (cloudy, fog,
+  // drizzle, rain, storm, snow) ignores the hour; clear and partly carry first-light / day / golden /
+  // night variants. clearNight alone carries a 4th value: the gold the moon draws in ON that pane (the
+  // colour-law §7 night frame's gold moon).
+  pane: {
+    clearFirst: { bg: '#221419', line: '#3C242C', ink: '#C29AA4' },
+    clearDay: { bg: '#17273C', line: '#2A3E58', ink: '#94ACC2' },
+    clearGolden: { bg: '#2C1E12', line: '#48331E', ink: '#C2A478' },
+    clearNight: { bg: '#121527', line: '#262B4A', ink: '#C9BE9E', moon: '#E0C182' },
+    partlyDay: { bg: '#192332', line: '#2C384C', ink: '#9AAABE' },
+    partlyNight: { bg: '#141724', line: '#272C42', ink: '#B8B29C' },
+    cloudy: { bg: '#1C2028', line: '#2E333E', ink: '#A8B2BF' },
+    fog: { bg: '#201E26', line: '#343141', ink: '#ACA8B8' },
+    drizzle: { bg: '#16272E', line: '#2A3F47', ink: '#8FB5BC' },
+    rain: { bg: '#14262D', line: '#274046', ink: '#89B4BC' },
+    storm: { bg: '#1A172E', line: '#2E294C', ink: '#A29CC6' },
+    snow: { bg: '#1F2734', line: '#344052', ink: '#BCCBDA' },
+  },
 } as const;
 
 // --- §3.3 typography scale --------------------------------------------------------------------------
@@ -80,6 +135,34 @@ export const night = {
   primary: primitive.ember[500], // #C2362B the hero value at night (the time)
   secondary: primitive.ember[600], // #8A201B the date and secondary text at night
   muted: primitive.ember[700], // #5E1714 the zone kicker and tertiary text at night
+} as const;
+
+// --- AOD-120 data-hue semantic families (design-color-law.md §4-6, §8) ------------------------------
+// The colour-law families, landed as MACHINERY only: no leaf consumes them yet (the card faces bind in
+// their own issues). Semantic tier of the data hues — the theme keys temp / ink / pane / when alias the
+// AOD-120 primitive ramps the way colors.* aliases neutral/blue steps, so the future monochrome and
+// per-service themes remap ROLES without touching primitives (§8: a theme is a role→colour remap, never
+// a redesign). Deliberately NOT inside `colors`: roleColor() and every §12 token-group alias assume
+// colors is a FLAT role→string map, so the structured families sit beside it as theme-level groups (the
+// `night` precedent). ALL VALUES FROZEN (device-verified AOD-119, GO 2026-07-18). Accent discipline (the Made Fast 1a
+// freeze + the AOD-120 acceptance rule; the freeze moved the cold end OFF the accent that colour-law §4
+// nominally sketched onto it): blue.400/600 — the interaction accent — appears in NO family below.
+// bone is the freeze's "--ink-bone #F4F4F8 (= --text)": it aliases each theme's text step, so a figure
+// with nothing to say draws exactly as plain text does (gray weather is allowed to be gray).
+const inkDark = { ...primitive.ink, bone: primitive.neutral[100] } as const; // bone #F4F4F8 = dark colors.text
+const inkLight = { ...primitive.ink, bone: primitive.neutral[850] } as const; // bone #16161D = light colors.text
+// The imminence scale (--when-*): Calendar's one reading (§6 — time-to-event: the soonest or
+// happening-now event warmest, distant events cool; Xavier's 2026-07-12 call overriding Made Fast 1e's
+// "a meeting isn't hot"). Six stops CUT from the thermometer's cold end through balmy (ice→balmy
+// verbatim, re-keyed to imminence names, NO new hex), so a meeting warms as it nears but never reads
+// hot — the ramp stops where real heat begins.
+const when = {
+  distant: primitive.temp.ice, // #7FA3D9 the far-off event, coolest
+  far: primitive.temp.cold, // #8CA9C7
+  approaching: primitive.temp.cool, // #B3AFA0
+  near: primitive.temp.mild, // #C8B183
+  soon: primitive.temp.warm, // #D4A868
+  now: primitive.temp.balmy, // #DC9853 happening-now / the soonest event, the warmest a meeting gets
 } as const;
 
 // --- §3.3 / §3.4 sizing tokens ----------------------------------------------------------------------
@@ -406,6 +489,12 @@ export const darkTheme = {
     // distinct from the per-widget DATA alphas (progress 0.18, sparkline 0.5). rgba, so no new hue.
     accentMuted: 'rgba(110, 139, 255, 0.14)',
   },
+  // AOD-120 data-hue families (FROZEN, device-verified AOD-119 GO 2026-07-18): the Signature (1C) mapping
+  // — the frozen ramps verbatim. See the block comment above inkDark for why they sit beside `colors`.
+  temp: primitive.temp,
+  ink: inkDark,
+  pane: primitive.pane,
+  when,
 } as const;
 
 export const lightTheme = {
@@ -430,9 +519,85 @@ export const lightTheme = {
     // (a touch lower than dark, for daylight contrast). Same shared-chrome-tint role; rgba, so no new hue.
     accentMuted: 'rgba(63, 91, 214, 0.12)',
   },
+  // AOD-120 data-hue families (FROZEN dark-first via AOD-119 GO; light is the UNTUNED mirror of the dark/
+  // Signature freeze) — the law is dark-first and wall-first, no light-tuned render exists yet, and no leaf consumes
+  // these in light. Only bone re-aliases (to the light text step) so "nothing to say" still draws as
+  // plain text. A light re-tune lands as a deliberate re-freeze, never a silent drift.
+  temp: primitive.temp,
+  ink: inkLight,
+  pane: primitive.pane,
+  when,
 } as const;
 
-const appThemes = { dark: darkTheme, light: lightTheme };
+// --- AOD-121 Monochrome theme (design-color-law.md §8: "every meaning-role collapses to the white /
+// gray ramp. This is today's build.") ---------------------------------------------------------------
+// Colour is a THEME AXIS (§8): a theme is only a remap from data-hue ROLES to actual colours, exactly the
+// way light/dark already remap `colors`. Monochrome is the SECOND v1 theme (Signature above is the
+// default; both ship free, per-service is a post-launch Pro lever, §96). It reuses each scheme's Signature
+// sibling VERBATIM and overrides ONLY the four data families temp/ink/pane/when, collapsing every
+// meaning-role onto the neutral ramp. The Signature families were the ones on trial at AOD-119 (now FROZEN,
+// GO); Monochrome never needed that exam: it derives solely from primitive.neutral, read through
+// each theme's own text/textMuted/surface/border roles (themselves neutral aliases), which are shipped-
+// frozen. The collapse rule, per §8 "today's build": a data FIGURE draws as bone (the `text` role), its
+// explicit dim variant recedes to `textMuted`; the Weather condition PANE loses its sky and becomes the
+// ordinary card surface (bg→surface, line→border, ink→text), the clearNight moon drawing as bone (text).
+// No Signature hue survives — the byte-lock (__tests__/data-monochrome-tokens.test.ts) proves every value
+// is a neutral step and that Monochrome is byte-identical to its sibling but for these four families.
+// Same nested SHAPE as the Signature families (plain string maps): the values resolve to literal neutral
+// steps HERE, once — no TextStyle in the theme, no computed theme.colors[role] left for a draw site.
+type MonochromeSource = { text: string; textMuted: string; surface: string; border: string };
+
+function monochromeFamilies(c: MonochromeSource) {
+  const { text, textMuted, surface, border } = c;
+  const pane = { bg: surface, line: border, ink: text }; // the sky collapses to the ordinary card surface
+  return {
+    // the thermometer: no gradient in monochrome — every temperature is the bone hero numeral
+    temp: {
+      ice: text, cold: text, cool: text, mild: text,
+      warm: text, balmy: text, hot: text, swelter: text,
+    },
+    // the event inks: the figure is bone; only the explicit *Dim variants recede to textMuted
+    ink: {
+      rain: text, rainDim: textMuted,
+      sun: text, sunDim: textMuted,
+      moon: text, storm: text, bone: text,
+    },
+    // the 12 condition panes: identical ordinary card surface; clearNight alone keeps its moon, drawn as bone
+    pane: {
+      clearFirst: { ...pane }, clearDay: { ...pane }, clearGolden: { ...pane },
+      clearNight: { ...pane, moon: text },
+      partlyDay: { ...pane }, partlyNight: { ...pane },
+      cloudy: { ...pane }, fog: { ...pane }, drizzle: { ...pane },
+      rain: { ...pane }, storm: { ...pane }, snow: { ...pane },
+    },
+    // imminence: no time-to-event colour in monochrome — every event is the bone figure
+    when: {
+      distant: text, far: text, approaching: text,
+      near: text, soon: text, now: text,
+    },
+  };
+}
+
+// The two Monochrome variants: the Signature sibling VERBATIM except the four data families. The spread
+// order guarantees colors / night / every sharedTokens group carries through byte-identical (same
+// references), so the existing dark/light Signature locks stay green untouched.
+export const darkMonochrome = { ...darkTheme, ...monochromeFamilies(darkTheme.colors) } as const;
+export const lightMonochrome = { ...lightTheme, ...monochromeFamilies(lightTheme.colors) } as const;
+
+// The palette × scheme registry. `dark` (Signature) stays first so the mock's Object.values(themes).at(0)
+// and StyleSheet.configure's initialTheme both still resolve to the Signature default. Exported so the
+// AOD-121 helper + the byte-lock can assert the registered keys.
+export const appThemes = {
+  dark: darkTheme, // Signature (1C) default — roles map to the §4 thermometer + condition hues
+  light: lightTheme, // Signature, light scheme
+  darkMonochrome, // §8 Monochrome — every meaning-role collapsed onto the neutral ramp (today's build)
+  lightMonochrome, // Monochrome, light scheme
+};
+
+// The registered theme keys = palette × scheme. The AOD-121 composition helper (src/theme/appearance.ts)
+// maps a (palette, scheme) selection onto one of these; kept === keyof UnistylesThemes (they share this
+// exact registry, below) so UnistylesRuntime.setTheme accepts a ThemeName with no cast.
+export type ThemeName = keyof typeof appThemes;
 const breakpoints = { xs: 0, sm: 360, md: 600, lg: 900, xl: 1200 } as const;
 
 type AppThemes = typeof appThemes;

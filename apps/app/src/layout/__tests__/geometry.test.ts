@@ -5,8 +5,8 @@ import { applyDrag, applyResize, MIN_H, MIN_W, snapUnit, toPixels, UNIT_PX } fro
 const rect = { x: 1, y: 1, w: 2, h: 1, z: 0 };
 
 describe('toPixels', () => {
-  it('scales nominal units by UNIT_PX', () => {
-    expect(toPixels(rect)).toEqual({ left: 80, top: 80, width: 160, height: 80 });
+  it('scales nominal units by UNIT_PX (96 DP per unit, the AOD-122 Many Skies 96px row)', () => {
+    expect(toPixels(rect)).toEqual({ left: 96, top: 96, width: 192, height: 96 });
   });
 });
 
@@ -26,8 +26,10 @@ describe('applyDrag', () => {
   });
 
   it('snaps fractional pixel deltas to hundredths of a unit', () => {
-    // 12px at UNIT_PX 80 = 0.15 units
-    expect(applyDrag({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 12, 0).x).toBe(0.15);
+    // 24px at UNIT_PX 96 = 0.25 units exactly (was 12px at 80 = 0.15 pre-AOD-122)
+    expect(applyDrag({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 24, 0).x).toBe(0.25);
+    // 12px at 96 = 0.125 -> snapUnit rounds to hundredths: 0.13
+    expect(applyDrag({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 12, 0).x).toBe(0.13);
   });
 });
 
