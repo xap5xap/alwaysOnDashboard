@@ -48,6 +48,10 @@ const ACTIVE: CurrentCycleData = {
   totalCount: 24,
 };
 
+// A huge / pathological cycle (100 > RING_MAX_KNOTS 48): the drawn figure must collapse to the O(1) smooth
+// ring / continuous bar, never 100 knots/dashes, while the counts keep the TRUE total (honesty).
+const HUGE: CurrentCycleData = { ...ACTIVE, completedCount: 40, totalCount: 100, progress: 0.4 };
+
 function renderHost(source: WidgetDataSource, instance: WidgetInstance) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0, gcTime: 0 } } });
   return render(
@@ -159,5 +163,47 @@ describe('Linear Current Cycle — The Log Line through the host lifecycle (AOD-
     await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.getByText('Nothing right now.')).toBeTruthy();
     expect(screen.queryByTestId('linear-cycle')).toBeNull();
+  });
+});
+
+describe('a huge / pathological cycle collapses the figure but keeps honest counts (RING_MAX_KNOTS)', () => {
+  it('at L collapses to the O(1) smooth ring — NOT 100 knots — and the counts keep the true total', async () => {
+    renderHost(source(HUGE), largeInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
+    expect(screen.getByTestId('linear-cycle-ring')).toBeTruthy();
+    expect(screen.getByTestId('linear-cycle-smooth')).toBeTruthy(); // the smooth (O(1)) fallback
+    expect(screen.queryAllByTestId('linear-cycle-knot-lit')).toHaveLength(0); // no per-issue knots built
+    expect(screen.queryAllByTestId('linear-cycle-knot-dim')).toHaveLength(0);
+    expect(screen.getByTestId('linear-cycle-pct')).toHaveTextContent('40%');
+    expect(screen.getByTestId('linear-cycle-counts')).toHaveTextContent('40 / 100 issues'); // the TRUE total
+  });
+
+  it('at M and S also collapse to the smooth ring', async () => {
+    const m = renderHost(source(HUGE), mInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
+    expect(screen.getByTestId('linear-cycle-smooth')).toBeTruthy();
+    expect(screen.queryAllByTestId('linear-cycle-knot-lit')).toHaveLength(0);
+    m.unmount();
+
+    renderHost(source(HUGE), sInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
+    expect(screen.getByTestId('linear-cycle-smooth')).toBeTruthy();
+    expect(screen.queryAllByTestId('linear-cycle-knot-lit')).toHaveLength(0);
+  });
+
+  it('at W renders a single continuous fill bar — NOT 100 dashes — and the counts keep the true total', async () => {
+    renderHost(source(HUGE), wInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
+    expect(screen.getByTestId('linear-cycle-fill')).toBeTruthy(); // the continuous bar
+    expect(screen.queryByTestId('linear-cycle-dashes')).toBeNull(); // not the per-issue dash bar
+    expect(screen.queryAllByTestId('linear-cycle-dash-lit')).toHaveLength(0);
+    expect(screen.getByTestId('linear-cycle-counts')).toHaveTextContent('40 / 100 issues'); // the TRUE total
+  });
+
+  it('a normal cycle (under the cap) still renders discrete knots — the common case is unchanged', async () => {
+    renderHost(source(ACTIVE), largeInstance); // 24 issues < 48
+    await waitFor(() => expect(screen.getByTestId('linear-cycle')).toBeTruthy());
+    expect(screen.getAllByTestId('linear-cycle-knot-lit')).toHaveLength(16);
+    expect(screen.queryByTestId('linear-cycle-smooth')).toBeNull(); // knots, not the smooth fallback
   });
 });

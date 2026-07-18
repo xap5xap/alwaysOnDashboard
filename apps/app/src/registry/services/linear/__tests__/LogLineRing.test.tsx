@@ -4,7 +4,7 @@
 // 0-size marker Views (SVG-internal testIDs are unreliable under RNTL — the TransitArc precedent).
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { LogLineRing, LogLineDashes } from '../LogLineRing';
+import { LogLineRing, LogLineDashes, LogLineBar } from '../LogLineRing';
 import { ringLayout, type RingGeometry } from '../logline';
 
 const GEO: RingGeometry = { outerRadius: 40, knotRadius: 4, minKnotRadius: 1.5, minGap: 2 };
@@ -67,5 +67,19 @@ describe('LogLineDashes — the W segmented bar', () => {
   it('renders nothing for a 0-issue cycle (the percent carries it)', () => {
     render(<LogLineDashes completedCount={0} totalCount={0} height={10} gap={3} radius={2} color={COLOR} dimOpacity={DIM} />);
     expect(screen.queryByTestId('linear-cycle-dashes')).toBeNull();
+  });
+});
+
+describe('LogLineBar — the over-cap W continuous bar (the O(1) linear analogue of the smooth arc)', () => {
+  it('renders a single fraction-filled bar — NOT one dash per issue (no per-issue array)', () => {
+    render(<LogLineBar completedCount={40} totalCount={100} height={10} radius={2} color={COLOR} dimOpacity={DIM} />);
+    expect(screen.getByTestId('linear-cycle-fill')).toBeTruthy();
+    expect(screen.queryByTestId('linear-cycle-dashes')).toBeNull();
+    expect(screen.queryAllByTestId('linear-cycle-dash-lit')).toHaveLength(0);
+  });
+
+  it('renders nothing for a 0-issue cycle (the percent carries it)', () => {
+    render(<LogLineBar completedCount={0} totalCount={0} height={10} radius={2} color={COLOR} dimOpacity={DIM} />);
+    expect(screen.queryByTestId('linear-cycle-fill')).toBeNull();
   });
 });

@@ -81,23 +81,38 @@ export function adaptiveKnotRadius(total: number, geo: RingGeometry): number {
  * (center + R·sinθ, center − R·cosθ): θ=0 is the top, θ=π/2 the right (3 o'clock), θ=π the bottom. The
  * box margin uses the token `knotRadius` (the max), so `size` is STABLE across N even as the drawn discs
  * shrink. N=0 yields no knots (the percent carries the number); no division by zero anywhere.
+ *
+ * `maxKnots` (default ∞) is an OOM/ANR ceiling: when `total` exceeds it the per-issue knot array is NOT
+ * built (`knots: []`) — the leaf renders the O(1) smooth arc for a huge / pathological totalCount instead,
+ * so a garbage payload never allocates a per-issue array (a raw 1e9 → JS-heap OOM without this; resolveLit
+ * clamps sign/finiteness but NOT magnitude). `total` / `litCount` / `fraction` stay the TRUE values, so the
+ * card's counts remain honest above the cap — only the DRAWN figure collapses.
  */
-export function ringLayout(completedCount: number, totalCount: number, geo: RingGeometry): RingLayout {
+export function ringLayout(
+  completedCount: number,
+  totalCount: number,
+  geo: RingGeometry,
+  maxKnots = Infinity,
+): RingLayout {
   const { total, lit } = resolveLit(completedCount, totalCount);
   const center = geo.outerRadius + geo.knotRadius; // margin = the token (max) knot radius → stable extent
   const size = center * 2;
   const knotRadius = adaptiveKnotRadius(total, geo);
 
+  // The OOM/ANR guard: above `maxKnots` the per-issue array is NOT built — the leaf draws the O(1) smooth
+  // arc for a huge / pathological cycle instead. At or below the ceiling, one knot per issue as usual.
   const knots: Knot[] = [];
-  for (let i = 0; i < total; i++) {
-    const angle = (i / total) * 2 * Math.PI; // i=0 → 0 (top), regardless of N; single knot sits at the top
-    knots.push({
-      index: i,
-      angle,
-      x: center + geo.outerRadius * Math.sin(angle),
-      y: center - geo.outerRadius * Math.cos(angle),
-      lit: i < lit,
-    });
+  if (total <= maxKnots) {
+    for (let i = 0; i < total; i++) {
+      const angle = (i / total) * 2 * Math.PI; // i=0 → 0 (top), regardless of N; single knot sits at the top
+      knots.push({
+        index: i,
+        angle,
+        x: center + geo.outerRadius * Math.sin(angle),
+        y: center - geo.outerRadius * Math.cos(angle),
+        lit: i < lit,
+      });
+    }
   }
 
   return {

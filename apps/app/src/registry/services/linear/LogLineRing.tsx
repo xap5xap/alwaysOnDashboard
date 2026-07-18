@@ -16,7 +16,7 @@
 // The bare Svg is wrapped in a View so its testID stays queryable, and the lit/dim split + the variant are
 // asserted via 0-size marker Views (SVG-internal testIDs are unreliable under RNTL — the TransitArc rule).
 import React from 'react';
-import { View } from 'react-native';
+import { View, type DimensionValue } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import type { RingLayout } from './logline';
 import { resolveLit } from './logline';
@@ -168,6 +168,48 @@ export function LogLineDashes({
           />
         );
       })}
+    </View>
+  );
+}
+
+export interface LogLineBarProps {
+  completedCount: number;
+  totalCount: number;
+  /** The bar thickness (theme.ring.dash.height). */
+  height: number;
+  /** The rounded end-cap radius (theme.ring.dash.radius). */
+  radius: number;
+  /** The lit colour (theme.colors.accent). The fill at full, the track at `dimOpacity`. */
+  color: string;
+  /** The track intensity (theme.progress.trackOpacity). */
+  dimOpacity: number;
+  testID?: string;
+}
+
+/**
+ * The over-cap W bar: a single CONTINUOUS accent bar, fraction-filled — the LINEAR analogue of the smooth
+ * ring, O(1) in N (a track + one fill, NO per-issue element). Rendered above RING_MAX_KNOTS instead of N
+ * dashes so a huge / pathological cycle never allocates a per-issue array. A track (accent @ dimOpacity) under
+ * a left-anchored fill (solid accent, the completed fraction). The percent + counts keep the TRUE total; only
+ * the drawn bar collapses. total == 0 renders nothing (the percent carries it).
+ */
+export function LogLineBar({
+  completedCount,
+  totalCount,
+  height,
+  radius,
+  color,
+  dimOpacity,
+  testID = 'linear-cycle-fill',
+}: LogLineBarProps) {
+  const { total, lit } = resolveLit(completedCount, totalCount);
+  if (total <= 0) return null;
+  const pct = (lit / total) * 100;
+
+  return (
+    <View testID={testID} style={{ height, borderRadius: radius, overflow: 'hidden', alignSelf: 'stretch' }}>
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: color, opacity: dimOpacity }} />
+      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%` as DimensionValue, backgroundColor: color }} />
     </View>
   );
 }

@@ -121,3 +121,24 @@ describe('ringLayout (positions + lit split + guards)', () => {
     expect(l.fraction).toBe(1);
   });
 });
+
+describe('ringLayout maxKnots ceiling (the OOM/ANR guard: a huge N never builds a per-issue array)', () => {
+  it('skips the knot array above the ceiling but keeps the TRUE total/lit/fraction (honest counts, no OOM)', () => {
+    // A raw 1e9 would allocate a billion-element array (JS-heap OOM) without the guard.
+    const l = ringLayout(1_000_000_000, 2_000_000_000, GEO, 48);
+    expect(l.knots).toHaveLength(0); // no per-issue array allocated
+    expect(l.total).toBe(2_000_000_000); // the true total — the card's counts stay honest
+    expect(l.litCount).toBe(1_000_000_000);
+    expect(l.fraction).toBeCloseTo(0.5, 6); // the smooth arc still has an honest fill fraction
+    expect(l.size).toBe((GEO.outerRadius + GEO.knotRadius) * 2); // geometry still resolves for the smooth arc
+  });
+
+  it('builds the knots at or below the ceiling and skips just above it (the boundary)', () => {
+    expect(ringLayout(0, 48, GEO, 48).knots).toHaveLength(48); // 48 <= 48 → built
+    expect(ringLayout(0, 49, GEO, 48).knots).toHaveLength(0); // 49 > 48 → skipped
+  });
+
+  it('is unbounded when maxKnots is omitted (the default is ∞ — existing callers unchanged)', () => {
+    expect(ringLayout(0, 200, GEO).knots).toHaveLength(200);
+  });
+});

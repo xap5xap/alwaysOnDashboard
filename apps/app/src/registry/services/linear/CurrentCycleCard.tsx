@@ -17,14 +17,20 @@
 // cell); L the countable tally — the big ring + counts + "ends in N days". The ring FITS the host box (the
 // AOD-81 fit-to-bounds lesson: never clip on the density-scaled device), capped by theme.ring.radius.
 //
+// A RING_MAX_KNOTS ceiling collapses a huge / pathological cycle (a garbage totalCount, or one so large the
+// knots would collide) to the O(1) figure — the SMOOTH arc (S/M/L) or a single continuous fill bar (W) —
+// instead of one element per issue, which would ANR / OOM the kiosk (resolveLit clamps sign/finiteness but
+// NOT magnitude). Only the DRAWN figure collapses: the percent + the "N / M issues" counts always keep the
+// true totalCount (honesty). The common case (a normal cycle) is unchanged — discrete knots via RING_VARIANT.
+//
 // active: false -> the host-drawn `empty` phase (AOD-125, isCurrentCycleEmpty), not a leaf body.
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { FitBox } from '../../../widgets/fitLadder';
-import { ringLayout, type RingGeometry } from './logline';
-import { LogLineRing, LogLineDashes, type RingVariant } from './LogLineRing';
+import { ringLayout, resolveLit, type RingGeometry } from './logline';
+import { LogLineRing, LogLineDashes, LogLineBar, type RingVariant } from './LogLineRing';
 
 // The normalized payload (integration-linear.md §4.2), mirroring the server-side normalizeCurrentCycle
 // output. `active: false` is a normal, data-bearing state (the team has no live cycle), not an error.
@@ -45,6 +51,13 @@ export type CurrentCycleData =
 // ONE const to 'smooth' (a continuous arc, no discrete discs) if the knots shimmer / alias on the low-DPI
 // Fire HD 8 device pass. Both renders are wired + tested (LogLineRing.tsx); the device pass decides.
 const RING_VARIANT: RingVariant = 'knots';
+
+// The sanity ceiling on the DRAWN knot/dash count. Above it a cycle collapses to the O(1) smooth ring (S/M/L)
+// / continuous bar (W): (a) it guards against a garbage totalCount building a per-issue array (OOM/ANR — a raw
+// 1e9 crashes; resolveLit clamps sign/finiteness but not magnitude); (b) it is below the knot-overlap
+// threshold (edges collide from the mid-60s at M, low-40s at the compact S), so knots never collide; (c) no
+// real Linear cycle reaches it. The COUNTS keep the true total regardless — only the figure collapses.
+const RING_MAX_KNOTS = 48;
 
 // The knot ring FITS the host body box (never clips — the AOD-81 lesson), reserving room for the text bands
 // that share the box, and capped by the per-size theme.ring.radius. These are the conservative vertical
@@ -110,6 +123,10 @@ export function CurrentCycleCard({ data, size, box }: WidgetRenderProps) {
   const accent = theme.colors.accent; // the ONE accent (lit)
   const dimOpacity = theme.progress.trackOpacity; // the same accent, dimmed (unlit) — one hue, two intensities
 
+  // Above RING_MAX_KNOTS the figure collapses to the O(1) smooth ring (S/M/L) / continuous bar (W) — never one
+  // element per issue (the OOM/ANR guard). The percent + counts below always keep the true total regardless.
+  const overCap = resolveLit(cycle.completedCount, cycle.totalCount).total > RING_MAX_KNOTS;
+
   // §6 the percent readout: BONE (colors.text), the brightest thing (was accent). tabular so it does not
   // jitter as it ticks/refreshes. Present at every size (centred inside the ring at S/M/L, in the W head).
   const percent = (
@@ -130,7 +147,8 @@ export function CurrentCycleCard({ data, size, box }: WidgetRenderProps) {
   );
 
   // W (2×1): the segmented BAR — the linear form of the lit/total logic (a ring does not fit a wide-short
-  // cell). label + percent on one line; the dashes; the counts. (Mirrors the old W bar layout.)
+  // cell). label + percent on one line; the dashes (or, above the cap, a single continuous fill bar); the
+  // counts. (Mirrors the old W bar layout.)
   if (size === 'W') {
     return (
       <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
@@ -140,15 +158,26 @@ export function CurrentCycleCard({ data, size, box }: WidgetRenderProps) {
           </Text>
           {percent}
         </View>
-        <LogLineDashes
-          completedCount={cycle.completedCount}
-          totalCount={cycle.totalCount}
-          height={theme.ring.dash.height}
-          gap={theme.ring.dash.gap}
-          radius={theme.ring.dash.radius}
-          color={accent}
-          dimOpacity={dimOpacity}
-        />
+        {overCap ? (
+          <LogLineBar
+            completedCount={cycle.completedCount}
+            totalCount={cycle.totalCount}
+            height={theme.ring.dash.height}
+            radius={theme.ring.dash.radius}
+            color={accent}
+            dimOpacity={dimOpacity}
+          />
+        ) : (
+          <LogLineDashes
+            completedCount={cycle.completedCount}
+            totalCount={cycle.totalCount}
+            height={theme.ring.dash.height}
+            gap={theme.ring.dash.gap}
+            radius={theme.ring.dash.radius}
+            color={accent}
+            dimOpacity={dimOpacity}
+          />
+        )}
         {counts}
       </View>
     );
@@ -163,11 +192,14 @@ export function CurrentCycleCard({ data, size, box }: WidgetRenderProps) {
     minKnotRadius: theme.ring.minKnot,
     minGap: theme.ring.gap,
   };
-  const layout = ringLayout(cycle.completedCount, cycle.totalCount, geo);
+  // The cap is passed to ringLayout so a huge N never builds the knot array (OOM guard); above it the leaf
+  // draws the smooth arc, which needs only fraction/geometry (not the knots).
+  const layout = ringLayout(cycle.completedCount, cycle.totalCount, geo, RING_MAX_KNOTS);
+  const ringVariant: RingVariant = overCap ? 'smooth' : RING_VARIANT;
 
   const ringWithPercent = (
     <View style={{ width: layout.size, height: layout.size }}>
-      <LogLineRing variant={RING_VARIANT} layout={layout} color={accent} dimOpacity={dimOpacity} stroke={theme.ring.stroke} />
+      <LogLineRing variant={ringVariant} layout={layout} color={accent} dimOpacity={dimOpacity} stroke={theme.ring.stroke} />
       <View style={styles.percentOverlay} pointerEvents="none">
         {percent}
       </View>
