@@ -4,8 +4,8 @@
 // wall-tokens.test.ts, data-tokens.test.ts), now for the Monochrome theme: pin every collapsed data value,
 // prove Monochrome draws PURELY from the frozen neutral ramp (no Signature hue leaks in), and prove each
 // Monochrome variant is byte-identical to its Signature sibling EXCEPT the four data families. Unlike the
-// Signature families (PROVISIONAL pending AOD-119, the Fire HD 8 re-tune), these values are NOT
-// provisional — they derive from the shipped-frozen neutral ramp. Expected hexes are hard-coded (never
+// Signature families (now FROZEN via the AOD-119 GO), these values never needed that exam — they derive
+// from the shipped-frozen neutral ramp. Expected hexes are hard-coded (never
 // sourced from `primitive` — that would be circular), copied from the neutral ramp: they ARE each theme's
 // text / textMuted / surface / border roles.
 import { appThemes, darkTheme, lightTheme, darkMonochrome, lightMonochrome, primitive } from '../unistyles';

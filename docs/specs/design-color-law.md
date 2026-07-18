@@ -108,6 +108,8 @@ Against [`vela-DESIGN.md`](vela-DESIGN.md) §2 and the redesign brief A6/A8:
 
 ## 10. Open items before code (the token freeze)
 
+> **FROZEN 2026-07-18 (AOD-119, GO).** The Signature families were landed in `apps/app/unistyles.ts` (AOD-120) as `--temp` / `--ink` / `--pane` / `--when`, rendered on the real Fire HD 8 via the `/palette` exam route, and judged in a dark room at night brightness — **PASS on every item, GO with no re-tune**. The render-frozen hexes now stand as final; the byte-locks in `apps/app/__tests__/data-tokens.test.ts` are the deliberate freeze. Items 1–2 below are done; item 5 (unistyles reconciliation) is done; items 3–4 (v1 cut sequencing, re-cutting The Watch / Weather Eye finals) carry into the card-face pass. The theme axis (Signature + Monochrome, AOD-121) rides the same roles.
+
 1. Freeze the thermometer stops and the condition-pane hexes as named tokens (`--temp-*`, `--sky-*`, `--data-rain / sun / moon / storm`) from the next render, then re-tune each on the low-DPI Fire HD 8 in a dark room.
 2. Device-verify the night frame (§7) and the warm-on-warm case (a gold temperature on a warm pane) for contrast and legibility.
 3. Sequence the v1 cut: temperature thermometer first, or the full weather set (temperature + rain-teal + sun-gold + moon + storm-violet) at once. Claude spend and Linear breach are a fast-follow, not day one.
