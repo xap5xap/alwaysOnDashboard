@@ -1,20 +1,36 @@
-// The "Current Cycle" leaf renderer (AOD-8 §6.1, integration-linear.md §4.2, design-linear.md §6). Reached
-// only on data-bearing lifecycle states; the host draws every other state. Receives only { data, config,
-// size }. `active: false` is a normal, data-bearing state (the team has no live cycle), not an error.
+// The "Current Cycle" leaf renderer — THE LOG LINE face (AOD-135; design-linear.md §6, claude-design/
+// prompts/linear.md "The Log Line 21-knot ring"). Reached only on data-bearing lifecycle states; the host
+// draws every other state. Receives only { data, config, size, box }. `active: false` is a normal, data-
+// bearing state (the team has no live cycle), not an error.
 //
-// AOD-30 polish: the progress bar is the value, the percent the readout (the bespoke centerpiece, the
-// parallel to the spend sparkline). The bar is one accent at TWO intensities (§6.1): the fill is
-// colors.accent (the completed fraction), the track is the same colors.accent at theme.progress.trackOpacity
-// (the remaining fraction), so the card spends no second colour. This FIXES the shipped token smell, which
-// filled the track with colors.skeleton (the loading-shimmer colour). The percent is colors.accent /
-// tabular-nums (big at L, small at W); the "Cycle N: name" label is type.heading; the completed/
-// total counts read with completedCount bright; at L an "ends in N days" meta gives time remaining.
-// active: false -> the host-drawn `empty` lifecycle phase (AOD-125, isCurrentCycleEmpty), not a leaf body.
-// Sizes map onto type.* (§9).
+// The Log Line replaces the AOD-30 progress BAR with a SEGMENTED KNOT RING: one knot per cycle issue, the
+// completed ones lit. THE ONE ACCENT LIVES HERE — lit knots/dashes = colors.accent, unlit = the SAME accent
+// @ progress.trackOpacity (0.18), so the card spends no second hue and Monochrome separates lit vs unlit by
+// intensity for free. The knot COUNT is DYNAMIC (= totalCount, never the "21" in the title): the disc radius
+// adapts to N (a large N shrinks the discs, never below a floor; logline.ts). The percent readout is now BONE
+// (colors.text) — the brightest thing, and it CHANGES the old card, which drew the percent in accent; the
+// accent is now spent on the ring. The ring is STATIC-per-render (plain react-native-svg, NO Animated / rAF —
+// the AOD-72 `collapsable` leak; the "one knot lights on refresh" settle is just the re-render).
+//
+// Sizes (S/M/W/L): S the knots as a compact texture with the percent carrying the number; M the full knot
+// ring + label + counts; W a segmented BAR of dashes (the linear form — a ring does not fit a wide-short
+// cell); L the countable tally — the big ring + counts + "ends in N days". The ring FITS the host box (the
+// AOD-81 fit-to-bounds lesson: never clip on the density-scaled device), capped by theme.ring.radius.
+//
+// A RING_MAX_KNOTS ceiling collapses a huge / pathological cycle (a garbage totalCount, or one so large the
+// knots would collide) to the O(1) figure — the SMOOTH arc (S/M/L) or a single continuous fill bar (W) —
+// instead of one element per issue, which would ANR / OOM the kiosk (resolveLit clamps sign/finiteness but
+// NOT magnitude). Only the DRAWN figure collapses: the percent + the "N / M issues" counts always keep the
+// true totalCount (honesty). The common case (a normal cycle) is unchanged — discrete knots via RING_VARIANT.
+//
+// active: false -> the host-drawn `empty` phase (AOD-125, isCurrentCycleEmpty), not a leaf body.
 import React from 'react';
-import { type DimensionValue, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
+import type { FitBox } from '../../../widgets/fitLadder';
+import { ringLayout, resolveLit, type RingGeometry } from './logline';
+import { LogLineRing, LogLineDashes, LogLineBar, type RingVariant } from './LogLineRing';
 
 // The normalized payload (integration-linear.md §4.2), mirroring the server-side normalizeCurrentCycle
 // output. `active: false` is a normal, data-bearing state (the team has no live cycle), not an error.
@@ -30,6 +46,34 @@ export type CurrentCycleData =
       completedCount: number;
       totalCount: number;
     };
+
+// The Dead Reckoning fallback toggle (design-linear.md §6): 'knots' is the primary segmented ring; flip this
+// ONE const to 'smooth' (a continuous arc, no discrete discs) if the knots shimmer / alias on the low-DPI
+// Fire HD 8 device pass. Both renders are wired + tested (LogLineRing.tsx); the device pass decides.
+const RING_VARIANT: RingVariant = 'knots';
+
+// The sanity ceiling on the DRAWN knot/dash count. Above it a cycle collapses to the O(1) smooth ring (S/M/L)
+// / continuous bar (W): (a) it guards against a garbage totalCount building a per-issue array (OOM/ANR — a raw
+// 1e9 crashes; resolveLit clamps sign/finiteness but not magnitude); (b) it is below the knot-overlap
+// threshold (edges collide from the mid-60s at M, low-40s at the compact S), so knots never collide; (c) no
+// real Linear cycle reaches it. The COUNTS keep the true total regardless — only the figure collapses.
+const RING_MAX_KNOTS = 48;
+
+// The knot ring FITS the host body box (never clips — the AOD-81 lesson), reserving room for the text bands
+// that share the box, and capped by the per-size theme.ring.radius. These are the conservative vertical
+// reserves (label + counts/foot + gaps, DP) below the ring, per ringed size (W is dashes, no ring).
+const RING_RESERVE_V: Record<'S' | 'M' | 'L', number> = { S: 0, M: 52, L: 56 };
+const RING_MIN_RADIUS = 10; // a degenerate box still draws a small ring (overflow:hidden backstops it)
+
+/** Fit the ring's outer radius to the box: the largest ring that fits (box width, and box height minus the
+ *  reserved text bands), capped by the per-size token radius and floored so it never vanishes. No box (a
+ *  direct render / a test without a host) → the token cap. */
+function fitOuterRadius(cap: number, reserveV: number, knot: number, box: FitBox | undefined): number {
+  if (!box) return cap;
+  const availH = Math.max(0, box.height - reserveV);
+  const fitDiameter = Math.min(box.width, availH);
+  return Math.max(RING_MIN_RADIUS, Math.min(cap, fitDiameter / 2 - knot));
+}
 
 /** Defensive read: anything that is not a well-formed active cycle renders as "no active cycle". */
 function asCurrentCycleData(data: unknown): CurrentCycleData {
@@ -66,7 +110,7 @@ export function endsInLabel(endsAt: string, now: Date): string | null {
   return `ends in ${diffDays} days`;
 }
 
-export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
+export function CurrentCycleCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const cycle = asCurrentCycleData(data);
 
@@ -74,22 +118,24 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
   // only with an active cycle. The guard remains for type-narrowing (and crash-safety) and draws nothing.
   if (!cycle.active) return null;
 
-  const isLarge = size === 'L'; // AOD-122 slot id (was 'large'; same 2x2 geometry)
   const pct = clampPercent(cycle.progress);
   const label = cycle.name ? `Cycle ${cycle.number}: ${cycle.name}` : `Cycle ${cycle.number}`;
-  const trackHeight = isLarge ? theme.progress.trackHeight.large : theme.progress.trackHeight.medium;
-  const radius = trackHeight / 2;
-  const ends = isLarge ? endsInLabel(cycle.endsAt, new Date()) : null;
+  const accent = theme.colors.accent; // the ONE accent (lit)
+  const dimOpacity = theme.progress.trackOpacity; // the same accent, dimmed (unlit) — one hue, two intensities
 
-  // §6.1 the bar: a track (accent @ trackOpacity) under a left-anchored fill (solid accent). The container
-  // clips, so the fill's rounded end rides the track. One accent at two intensities (NOT colors.skeleton).
-  const bar = (
-    <View style={[styles.bar, { height: trackHeight, borderRadius: radius }]} testID="linear-cycle-bar">
-      <View style={styles.barTrack} />
-      <View style={[styles.barFill, { width: `${pct}%` as DimensionValue, borderRadius: radius }]} />
-    </View>
+  // Above RING_MAX_KNOTS the figure collapses to the O(1) smooth ring (S/M/L) / continuous bar (W) — never one
+  // element per issue (the OOM/ANR guard). The percent + counts below always keep the true total regardless.
+  const overCap = resolveLit(cycle.completedCount, cycle.totalCount).total > RING_MAX_KNOTS;
+
+  // §6 the percent readout: BONE (colors.text), the brightest thing (was accent). tabular so it does not
+  // jitter as it ticks/refreshes. Present at every size (centred inside the ring at S/M/L, in the W head).
+  const percent = (
+    <Text style={styles.pct} numberOfLines={1} testID="linear-cycle-pct">
+      {pct}%
+    </Text>
   );
 
+  // §6.2 counts: completedCount bright, the rest muted; tabular so it does not jitter on refresh.
   const counts = (
     <Text style={styles.counts} numberOfLines={1} testID="linear-cycle-counts">
       <Text style={styles.countsDone}>{cycle.completedCount}</Text>
@@ -100,70 +146,126 @@ export function CurrentCycleCard({ data, size }: WidgetRenderProps) {
     </Text>
   );
 
-  // L (2x2): a big percent hero; the bar; the label up top; the counts + the "ends in N days" meta.
-  if (isLarge) {
+  // W (2×1): the segmented BAR — the linear form of the lit/total logic (a ring does not fit a wide-short
+  // cell). label + percent on one line; the dashes (or, above the cap, a single continuous fill bar); the
+  // counts. (Mirrors the old W bar layout.)
+  if (size === 'W') {
+    return (
+      <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
+        <View style={styles.head}>
+          <Text style={styles.label} numberOfLines={1}>
+            {label}
+          </Text>
+          {percent}
+        </View>
+        {overCap ? (
+          <LogLineBar
+            completedCount={cycle.completedCount}
+            totalCount={cycle.totalCount}
+            height={theme.ring.dash.height}
+            radius={theme.ring.dash.radius}
+            color={accent}
+            dimOpacity={dimOpacity}
+          />
+        ) : (
+          <LogLineDashes
+            completedCount={cycle.completedCount}
+            totalCount={cycle.totalCount}
+            height={theme.ring.dash.height}
+            gap={theme.ring.dash.gap}
+            radius={theme.ring.dash.radius}
+            color={accent}
+            dimOpacity={dimOpacity}
+          />
+        )}
+        {counts}
+      </View>
+    );
+  }
+
+  // S / M / L: the knot ring, fit to the box, with the percent centred inside it.
+  const ringedSize: 'S' | 'M' | 'L' = size; // narrowed: W returned above
+  const outerRadius = fitOuterRadius(theme.ring.radius[ringedSize], RING_RESERVE_V[ringedSize], theme.ring.knot, box);
+  const geo: RingGeometry = {
+    outerRadius,
+    knotRadius: theme.ring.knot,
+    minKnotRadius: theme.ring.minKnot,
+    minGap: theme.ring.gap,
+  };
+  // The cap is passed to ringLayout so a huge N never builds the knot array (OOM guard); above it the leaf
+  // draws the smooth arc, which needs only fraction/geometry (not the knots).
+  const layout = ringLayout(cycle.completedCount, cycle.totalCount, geo, RING_MAX_KNOTS);
+  const ringVariant: RingVariant = overCap ? 'smooth' : RING_VARIANT;
+
+  const ringWithPercent = (
+    <View style={{ width: layout.size, height: layout.size }}>
+      <LogLineRing variant={ringVariant} layout={layout} color={accent} dimOpacity={dimOpacity} stroke={theme.ring.stroke} />
+      <View style={styles.percentOverlay} pointerEvents="none">
+        {percent}
+      </View>
+    </View>
+  );
+
+  // S (1×1): the knots as texture, the percent centred over them (the percent carries the number). No label
+  // or counts — the header caption carries the context and the cell is too small for more.
+  if (size === 'S') {
+    return (
+      <View style={styles.centerBody} accessibilityRole="summary" testID="linear-cycle">
+        {ringWithPercent}
+      </View>
+    );
+  }
+
+  // M (1×2): the full knot ring + "Cycle N" + counts, stacked.
+  if (size === 'M') {
     return (
       <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
         <Text style={styles.label} numberOfLines={1}>
           {label}
         </Text>
-        <Text style={styles.pctLarge} testID="linear-cycle-pct">
-          {pct}%
-        </Text>
-        {bar}
-        <View style={styles.foot}>
-          {counts}
-          {ends ? (
-            <Text style={styles.ends} numberOfLines={1} testID="linear-cycle-ends">
-              {ends}
-            </Text>
-          ) : null}
-        </View>
+        <View style={styles.ringRow}>{ringWithPercent}</View>
+        {counts}
       </View>
     );
   }
 
-  // W (2x1, and any other coerced slot): compact. label + percent on one line; the bar; the counts.
-  // (The pctMedium / trackHeight.medium token names are the pre-slot ramp keys, not WidgetSize ids.)
+  // L (2×2): the countable tally — the big ring + the label + a foot with the counts and the "ends in N days"
+  // meta (the L-only affordance, §6.2).
+  const ends = endsInLabel(cycle.endsAt, new Date());
   return (
     <View style={styles.body} accessibilityRole="summary" testID="linear-cycle">
-      <View style={styles.head}>
-        <Text style={styles.label} numberOfLines={1}>
-          {label}
-        </Text>
-        <Text style={styles.pctMedium} testID="linear-cycle-pct">
-          {pct}%
-        </Text>
+      <Text style={styles.label} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={styles.ringRow}>{ringWithPercent}</View>
+      <View style={styles.foot}>
+        {counts}
+        {ends ? (
+          <Text style={styles.ends} numberOfLines={1} testID="linear-cycle-ends">
+            {ends}
+          </Text>
+        ) : null}
       </View>
-      {bar}
-      {counts}
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
   body: { gap: theme.spacing(2) },
+  centerBody: { alignItems: 'center' }, // S: centre the compact ring in the cell
+  ringRow: { alignItems: 'center' }, // M/L: centre the ring horizontally in the column
 
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },
 
-  // §6.2 the "Cycle N: name" label (type.heading) and the percent readout (accent, tabular; big at large).
-  label: { ...theme.type.heading, color: theme.colors.text, flexShrink: 1 },
-  pctMedium: { ...theme.type.title, fontWeight: '700', color: theme.colors.accent, fontVariant: ['tabular-nums'] },
-  pctLarge: { ...theme.type.hero, color: theme.colors.accent, textAlign: 'center' },
+  // the percent overlay: absolutely centred over the ring (the ring is the container's size).
+  percentOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
 
-  // §6.1 the bar: one accent at two intensities. The track is accent @ trackOpacity; the fill is solid accent.
-  bar: { overflow: 'hidden', alignSelf: 'stretch' },
-  barTrack: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.accent,
-    opacity: theme.progress.trackOpacity,
-  },
-  barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: theme.colors.accent },
+  // §6.2 the "Cycle N: name" label (type.heading).
+  label: { ...theme.type.heading, color: theme.colors.text, flexShrink: 1 },
+
+  // §6 the percent readout: BONE (colors.text), always the brightest thing (was accent). tabular.
+  pct: { ...theme.type.title, fontWeight: '700', color: theme.colors.text, fontVariant: ['tabular-nums'] },
 
   // §6.2 counts: completedCount bright, the rest muted; tabular so it does not jitter on refresh.
   counts: { ...theme.type.meta },
