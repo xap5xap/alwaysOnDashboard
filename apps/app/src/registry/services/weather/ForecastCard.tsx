@@ -34,12 +34,17 @@ const VISIBLE_BY_SIZE: Record<WidgetSize, number> = { S: 3, M: 5, W: 3, L: 7 };
 
 // The row column widths (DP). weekday + glyph LEAD; lo / hi / precip are fixed so the bar AREA (flex) is a
 // consistent width across rows and the shared scale reads. Numerals are compact (type.caption) — the Range
-// packs many per card. The bar is the flex remainder (min 24dp) so it takes whatever the 2-unit body
-// (~168dp) leaves; the kiosk wall then auto-fits the whole card up, so a tight bar reads large on-wall.
+// packs many per card. Sized to hold the REAL content at both ends: a 2-digit temp + degree ("28°", a
+// signed "-5°") for lo/hi and "100%" for precip — RNTL can't see numberOfLines clipping, so these widths
+// are the guard (a clipped "1…" would hide the forecast high and fail the colour-law legibility floor). The
+// bar is the flex remainder over the 2-unit body (~168dp); the kiosk wall auto-fits the whole card up, so a
+// tight in-app bar reads large on-wall. Widening the numerals eats that budget, so at W (the compact,
+// ~one-row-tall size) precip is DROPPED — the truncation ladder's first casualty — leaving the bar a fat,
+// shape-first remainder; L keeps precip (it is the fuller list) and takes the narrower bar.
 const WEEKDAY_W = 36;
-const LO_W = 18;
-const HI_W = 20;
-const PRECIP_W = 24;
+const LO_W = 24; // holds a 2-digit temp + degree ("28°") and a signed "-5°"
+const HI_W = 26; // the high is bold (a touch wider)
+const PRECIP_W = 36; // must hold "100%" (the observed ~8px/char web caption + headroom)
 
 const FALLBACK_CONDITION: WeatherCondition = { code: -1, label: 'Unknown', group: 'cloudy', isDay: true };
 
@@ -171,14 +176,18 @@ export function ForecastCard({ data, size, box }: WidgetRenderProps) {
               {Math.round(day.tempMax)}
               {deg}
             </Text>
-            {/* precip → the rain ink; a null precip stays BLANK (never "0%"), the column reserved so bars align */}
-            <View style={styles.precipCol}>
-              {day.precipProbabilityPct != null ? (
-                <Text style={[styles.precip, { color: theme.ink.rain }]} numberOfLines={1}>
-                  {day.precipProbabilityPct}%
-                </Text>
-              ) : null}
-            </View>
+            {/* precip → the rain ink; a null precip stays BLANK (never "0%"), the column reserved so bars align.
+                L ONLY: at the compact W precip is the truncation ladder's first casualty, dropped so the
+                legible numerals don't starve the bar (the day / bar / temps never give way). */}
+            {size === 'L' ? (
+              <View style={styles.precipCol}>
+                {day.precipProbabilityPct != null ? (
+                  <Text style={[styles.precip, { color: theme.ink.rain }]} numberOfLines={1}>
+                    {day.precipProbabilityPct}%
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         );
       })}
@@ -197,10 +206,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(0.5) },
   // weekday: Today bright, later days recede (the relative-time emphasis)
-  weekday: { width: WEEKDAY_W, ...theme.type.caption, letterSpacing: 0 },
-  // hi/lo numerals, tabular so the ° columns align
+  weekday: { width: WEEKDAY_W, flexShrink: 0, ...theme.type.caption, letterSpacing: 0 },
+  // hi/lo numerals, tabular so the ° columns align; flexShrink 0 so they never squeeze below their width
   loNum: {
     width: LO_W,
+    flexShrink: 0,
     textAlign: 'right',
     ...theme.type.caption,
     letterSpacing: 0,
@@ -209,15 +219,19 @@ const styles = StyleSheet.create((theme) => ({
   },
   hiNum: {
     width: HI_W,
+    flexShrink: 0,
     textAlign: 'right',
     ...theme.type.caption,
     letterSpacing: 0,
     fontWeight: '700', // the high is the bold figure
     fontVariant: ['tabular-nums'],
   },
-  // the flex bar track — the segment inside is positioned by the shared-scale fractions (drawn inline)
-  barArea: { flex: 1, minWidth: 24, position: 'relative' },
-  precipCol: { width: PRECIP_W, alignItems: 'flex-end' },
+  // the flex bar track — the segment inside is positioned by the shared-scale fractions (drawn inline). The
+  // bar takes the row remainder after the (legible) numerals; the min floor keeps it visible when the
+  // remainder is tight (L, precip kept) and the wall auto-fit scales it up. flexShrink 0 on the numerals so
+  // a tight row shrinks the BAR (which can spare it), never the numerals (which must never clip).
+  barArea: { flex: 1, minWidth: 16, position: 'relative' },
+  precipCol: { width: PRECIP_W, flexShrink: 0, alignItems: 'flex-end' },
   precip: { ...theme.type.caption, letterSpacing: 0, fontVariant: ['tabular-nums'] },
   // today full-bright + bold vs later days stepped back (weekday + hi share this; hi is already 700, so the
   // weight only lifts today's weekday — the PDF's bold Today lead)

@@ -280,7 +280,7 @@ function forecastSource(data: ForecastData): WidgetDataSource {
 }
 
 describe('ForecastCard through the host lifecycle (AOD-133 Range: hi-lo span-bars on the week scale)', () => {
-  it('at W is a compact span-bar list: Today, the day-form glyph, a bar per day, precip figure, NO label/header', async () => {
+  it('at W is a compact span-bar list: Today, the day-form glyph, a bar per day; precip + header DROPPED', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(forecastSource(FORECAST_DATA), forecastInstance); // W (the compact slot)
 
@@ -291,8 +291,10 @@ describe('ForecastCard through the host lifecycle (AOD-133 Range: hi-lo span-bar
     expect(screen.getByTestId('weather-icon-showers-day')).toBeTruthy();
     // one span-bar per visible day (the Range replaces the numeric hi-lo TEXT with a bar on the shared scale)
     expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(FORECAST_DATA.days.length);
-    // precip is its own figure (the rain ink); the condition label is carried by the glyph, never text
-    expect(screen.getByText('16%')).toBeTruthy();
+    // precip is the truncation ladder's first casualty at the compact W — dropped so the legible temps get
+    // the bar room; NO precip figure at W (a behavioural drop, asserted present at L below)
+    expect(screen.queryByText(/%/)).toBeNull();
+    // the condition label is carried by the glyph, never text
     expect(screen.queryByText(/Light drizzle/)).toBeNull();
     // the "Week …" shared-scale header is an L affordance; W drops it (compact, ~one row tall)
     expect(screen.queryByTestId('weather-forecast-week')).toBeNull();
@@ -314,16 +316,16 @@ describe('ForecastCard through the host lifecycle (AOD-133 Range: hi-lo span-bar
     expect(screen.queryByText(/Slight rain showers/)).toBeNull();
   });
 
-  it('omits precip when the payload value is null — BLANK, never "0%"; the bar/day still draw (W)', async () => {
+  it('at L a null precip stays BLANK, never "0%"; the bar/day still draw (precip is kept at L)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     const noPrecip: ForecastData = {
       units: { temperature: '°C' },
       days: [{ ...FORECAST_DATA.days[0], precipProbabilityPct: null }],
     };
-    renderHost(forecastSource(noPrecip), forecastInstance);
+    renderHost(forecastSource(noPrecip), largeForecastInstance); // L keeps the precip column
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
-    expect(screen.queryByText(/%/)).toBeNull(); // a null precip stays blank
+    expect(screen.queryByText(/%/)).toBeNull(); // a null precip stays blank (never "0%")
     expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(1); // precip giving way never drops the bar
   });
 
