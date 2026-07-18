@@ -17,7 +17,10 @@ const current: WidgetDefinition = {
   type: 'current',
   serviceId: 'weather',
   title: 'Current Weather',
-  supportedSizes: ['S', 'W'], // AOD-122 slot remap: was ['small','medium'] (same 1x1 / 2x1 geometry)
+  // AOD-132 Transit: the ambient weather hero across all four sizes (was ['S','W']). S = glyph-over-temp
+  // glance (arc absent); M/W = a flat waterline; L = the full curved sunrise→sunset arc. weather.md's
+  // "design Current across all four" recommendation, now built.
+  supportedSizes: ['S', 'M', 'W', 'L'],
   defaultRefresh: { seconds: 900 }, // device asks every ~15 min (AOD-4)
   cacheTtlSeconds: 900, // provider hit at most once / 15 min; matches Open-Meteo's update step (§7.2)
   minRefreshSeconds: 600,

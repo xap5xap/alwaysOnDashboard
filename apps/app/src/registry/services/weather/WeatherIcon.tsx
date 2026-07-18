@@ -87,12 +87,14 @@ export function WeatherIcon({ group, isDay, size, color, surface, strokeWidth = 
     </G>
   );
 
-  // Three snowflakes (a touch thinner, matching the mockup's 1.5 override).
+  // Three snowflakes. AOD-132 normalized these to ONE line weight: all strokes inherit s.strokeWidth
+  // (= theme.weatherIcon.stroke, 2), dropping the former three 1.5 per-<Line> overrides so the glyph set
+  // is a single uniform stroke (color-law "one line weight" cleanup; the flakes now match every other glyph).
   const flake = (tx: number, ty: number) => (
     <G transform={`translate(${tx} ${ty})`}>
-      <Line x1={0} y1={-1.6} x2={0} y2={1.6} {...s} strokeWidth={1.5} />
-      <Line x1={-1.4} y1={-0.8} x2={1.4} y2={0.8} {...s} strokeWidth={1.5} />
-      <Line x1={-1.4} y1={0.8} x2={1.4} y2={-0.8} {...s} strokeWidth={1.5} />
+      <Line x1={0} y1={-1.6} x2={0} y2={1.6} {...s} />
+      <Line x1={-1.4} y1={-0.8} x2={1.4} y2={0.8} {...s} />
+      <Line x1={-1.4} y1={0.8} x2={1.4} y2={-0.8} {...s} />
     </G>
   );
 

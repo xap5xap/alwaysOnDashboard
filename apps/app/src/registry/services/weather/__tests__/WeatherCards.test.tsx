@@ -140,6 +140,19 @@ const wCurrentInstance: WidgetInstance = {
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
+// AOD-132 Transit added M (1x2) and L (2x2) to Current.
+const mCurrentInstance: WidgetInstance = {
+  ...currentInstance,
+  size: 'M',
+  rect: { x: 0, y: 0, w: 1, h: 2, z: 0 },
+};
+
+const lCurrentInstance: WidgetInstance = {
+  ...currentInstance,
+  size: 'L',
+  rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
+};
+
 function currentSource(data: CurrentWeatherData): WidgetDataSource {
   return {
     fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
@@ -147,8 +160,8 @@ function currentSource(data: CurrentWeatherData): WidgetDataSource {
   };
 }
 
-describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
-  it('at S renders the temperature + the day-form condition icon, header/meta suppressed (the glance)', async () => {
+describe('CurrentWeatherCard Transit through the host lifecycle (AOD-132; was AOD-58 + AOD-35)', () => {
+  it('at S renders the temperature + the day-form condition icon over the pane; NO condition/meta/arc (the glance)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(currentSource(CURRENT_DATA), currentInstance); // S
 
@@ -157,12 +170,31 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C'); // unit echoed from the payload
     // condition.isDay: true -> the day glyph (the icon's day/night is the payload's, §5.2)
     expect(screen.getByTestId('weather-icon-cloudy-day')).toBeTruthy();
-    // the 1x1 glance suppresses the condition label and the meta
+    // the muted condition pane wears the sky at every size, S included
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    // the 1x1 glance suppresses the condition label, the meta, AND the arc (glyph-over-temp only)
     expect(screen.queryByTestId('weather-current-condition')).toBeNull();
     expect(screen.queryByTestId('weather-current-meta')).toBeNull();
+    expect(screen.queryByTestId('weather-current-arc')).toBeNull();
+    expect(screen.queryByTestId('weather-current-sun')).toBeNull();
   });
 
-  it('at W adds the accent condition and the muted feels/humidity/wind meta line', async () => {
+  it('at M is a stack: glyph+temp, condition, meta, over a flat waterline arc (with the day sun-mark)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    renderHost(currentSource(CURRENT_DATA), mCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
+    expect(screen.getByText('Partly cloudy')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    // arc present at M (flat waterline); day payload -> a sun-mark, never a moon (position-independent)
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-sun')).toBeTruthy();
+    expect(screen.queryByTestId('weather-current-moon')).toBeNull();
+  });
+
+  it('at W is the banner: temp+glyph lead, condition + feels/humidity/wind alongside, over the waterline', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(currentSource(CURRENT_DATA), wCurrentInstance);
 
@@ -170,9 +202,25 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     expect(screen.getByText('Partly cloudy')).toBeTruthy();
     // §5 meta: "Feels {apparent}° · {humidity}% · {wind} {windUnit} {compass}" (bare ° in meta; the hero echoes the unit)
     expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-sun')).toBeTruthy();
   });
 
-  it('swaps the condition icon to the night variant when the payload isDay is false', async () => {
+  it('at L is the wall hero: glyph+temp, condition, meta, and the full curved arc (with the day sun-mark)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    renderHost(currentSource(CURRENT_DATA), lCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
+    expect(screen.getByText('Partly cloudy')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-sun')).toBeTruthy();
+  });
+
+  it('swaps the condition icon to the night variant when the payload isDay is false (S)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     const nightData: CurrentWeatherData = {
       ...CURRENT_DATA,
@@ -183,6 +231,34 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
     expect(screen.getByTestId('weather-icon-cloudy-night')).toBeTruthy();
     expect(screen.queryByTestId('weather-icon-cloudy-day')).toBeNull();
+  });
+
+  it('at night (isDay false) the arc drops the sun-mark and draws the moon crescent (L)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    const nightData: CurrentWeatherData = {
+      ...CURRENT_DATA,
+      condition: { ...CURRENT_DATA.condition, isDay: false }, // partly-night pane
+    };
+    renderHost(currentSource(nightData), lCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    // §7: the sun-mark is gone below the line, a moon crescent takes its place
+    expect(screen.getByTestId('weather-current-moon')).toBeTruthy();
+    expect(screen.queryByTestId('weather-current-sun')).toBeNull();
+    expect(screen.getByTestId('weather-icon-cloudy-night')).toBeTruthy();
+  });
+
+  it('degrades gracefully when sunrise/sunset are missing: the arc line renders, no sun-mark, never crashes', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    const noSun: CurrentWeatherData = { ...CURRENT_DATA, sunrise: '', sunset: '' };
+    renderHost(currentSource(noSun), lCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    // the arc still draws (the line is a quiet fact) but there is no sun-mark (day) since the fraction is null
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.queryByTestId('weather-current-sun')).toBeNull();
+    expect(screen.queryByTestId('weather-current-moon')).toBeNull(); // isDay true -> no moon either
   });
 });
 

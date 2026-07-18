@@ -1,23 +1,33 @@
-// The "Current Weather" leaf renderer (AOD-8 §6.1, integration-weather.md §4.1, design-calendar-weather.md
-// §5). Reached only on data-bearing lifecycle states; the generic host draws every other state's chrome.
-// It receives only { data, config, size } and never branches on auth, loading, or errors. A connected
-// location always has current conditions, so there is no empty state (§4.1). Units are echoed from the
-// payload, so an imperial future (§10) needs no renderer change.
+// The "Current Weather" leaf renderer — the TRANSIT face (AOD-132; design-color-law.md §4-5/§7,
+// claude-design/prompts/weather.md, the RB-M2 run book §5). Reached only on data-bearing lifecycle
+// states; the generic host draws every other state's chrome. It receives only { data, config, size, box }
+// and never branches on auth, loading, or errors. A connected location always has current conditions, so
+// there is no empty state (§4.1). Units are echoed from the payload, so an imperial future needs no change.
 //
-// AOD-35 polish: the value-first body. The temperature is the type.hero value with tabular-nums; the
-// condition icon (WeatherIcon, §4) joins it at the bright colors.text tier; the condition label is the
-// one accent line (type.heading); feels/humidity/wind recede as one muted type.meta line. At S (the
-// 1x1 glance, header suppressed by the host) the body is just icon over temperature. The icon's day/night
-// comes from the PAYLOAD (condition.isDay -> sun vs moon); the card's night DIM is the host's ambient
-// overlay (Weather is overlay-default, not the Clock's deep-red opt-in) -- two independent signals (§5.2).
+// Transit is the ambient weather hero across FOUR sizes (was S/W only). The card wears a muted CONDITION
+// PANE — one flat deep pane of the current sky (theme.pane[key], the §5/§9 one-surface exception, Weather
+// only) — composited behind the figures by this leaf (it is not in the Weather Eye PDF; runbook §5 flag a).
+// The figures wear the DATA's hue (1C, colour-law §4): the temperature runs the 8-stop thermometer
+// (theme.temp, blended by °C at the draw site); the condition GLYPH stays bone (carried by SHAPE, never a
+// tint); a gold sun-mark rides a sunrise→sunset arc — a full CURVE at L, a flat WATERLINE at W/M, ABSENT at
+// S — and at night the sun-mark drops below the line as a gold moon crescent (§7). Colour binds to ROLES
+// only, so Monochrome collapses the pane to the ordinary surface and every hue to bone for free (§8).
+//
+// The arc is STATIC-per-render (the sun position is computed once from now vs sunrise/sunset; the ambient
+// life is the ~15-min refresh re-render, not an Animated loop — see TransitArc). Truncation obeys the
+// FitBody philosophy: wind → humidity → feels → condition give way before the temperature or the glyph.
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { CurrentWeatherData, WeatherCondition } from './types';
 import { WeatherIcon } from './WeatherIcon';
+import { TransitArc } from './TransitArc';
 import { FitBody } from '../../../widgets/FitBody';
-import { tabularWidth } from '../../../widgets/fitLadder';
+import { tabularWidth, fitValueScale, DEFAULT_MIN_SCALE } from '../../../widgets/fitLadder';
+import { SIZE_CATALOGUE } from '../../../widgets/sizes';
+import { UNIT_PX } from '../../../layout/geometry';
+import { paneKeyFor, sunFraction, tempColor } from './transit';
 
 const FALLBACK_CONDITION: WeatherCondition = { code: -1, label: 'Unknown', group: 'cloudy', isDay: true };
 
@@ -50,90 +60,202 @@ function compass(deg: number): string {
   return COMPASS[Math.round((((deg % 360) + 360) % 360) / 45) % 8] ?? 'N';
 }
 
+/** Width-fit a temperature string to the room a hand-rolled row leaves it (the FitBody primitives, reused
+ *  outside FitBody's vertical stack for the W banner + the L hero row). Never below the legibility floor. */
+function fitTempSize(text: string, base: number, availW: number, availH: number): number {
+  const scale = fitValueScale(
+    { width: tabularWidth(text, base), height: base * 1.18 },
+    { width: Math.max(1, availW), height: Math.max(1, availH) },
+    DEFAULT_MIN_SCALE,
+  );
+  return base * scale;
+}
+
 export function CurrentWeatherCard({ data, size, box }: WidgetRenderProps) {
   const { theme } = useUnistyles();
   const c = asCurrent(data);
   const unit = c.units.temperature;
-  const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
+  const tempText = `${Math.round(c.temperature)}${unit}`;
+  const isDay = c.condition.isDay;
+  const heroSize = theme.type.hero.fontSize ?? 44;
 
-  // The condition icon, day or night by the payload's own isDay (the observation's local day/night), at
-  // the size ramp's small or hero step. colors.text keeps it co-equal with the temperature value.
-  const icon = (
+  // §5 the condition pane (Weather only): a flat deep pane of the current sky, bound to the role.
+  const paneKey = paneKeyFor(c.condition.group, c.condition.code, isDay);
+  const pane = theme.pane[paneKey];
+  const paneBg = pane.bg;
+  // §4 the thermometer temperature colour (role blend; bone under Monochrome).
+  const tColor = tempColor(c.temperature, theme.temp);
+  // The sun's honest position, computed ONCE this render (no loop); null degrades to no sun-mark.
+  const fraction = sunFraction(c.sunrise, c.sunset, Date.now());
+  // §7 the moon draws in the clear-night pane's gold, else the neutral moon ink.
+  const moonColor = paneKey === 'clearNight' ? theme.pane.clearNight.moon : theme.ink.moon;
+
+  // The body box the host computed (DP). Fall back to the slot geometry for a direct render / test w/o box.
+  const cat = SIZE_CATALOGUE[size];
+  const contentW = box?.width ?? Math.max(1, cat.nominalW * UNIT_PX - 2 * theme.spacing(3));
+  const contentH =
+    box?.height ??
+    Math.max(1, cat.nominalH * UNIT_PX - 2 * theme.spacing(3) - (size === 'S' ? 0 : 24));
+
+  // The condition glyph: bone (colour carried by SHAPE), its cloud occlusion filled with the PANE bg so it
+  // reads cleanly against the sky (was colors.surface). Day/night from the payload's own isDay (§5.2).
+  const glyph = (px: number) => (
     <WeatherIcon
       group={c.condition.group}
-      isDay={c.condition.isDay}
-      size={isSmall ? theme.weatherIcon.currentSmall : theme.weatherIcon.currentHero}
+      isDay={isDay}
+      size={px}
       color={theme.colors.text}
-      surface={theme.colors.surface}
+      surface={paneBg}
       strokeWidth={theme.weatherIcon.stroke}
     />
   );
 
-  const tempText = `${Math.round(c.temperature)}${unit}`;
-
-  // S (1x1): the self-evident glance is icon over temperature (the host suppresses the header at S).
-  // AOD-123: the fixed hero temp overflowed the 72px cell (e.g. "18°C" is ~110px at 44px, and icon+temp
-  // was ~91px tall in a 72px body). The shared FitBody holds the icon as a lead and WIDTH-FITS the temp
-  // into the space left, so the glance never clips either axis. No condition label, no meta (§4.1).
-  if (isSmall) {
-    const heroSize = theme.type.hero.fontSize ?? 44;
-    return (
-      <FitBody
-        size={size}
-        box={box}
-        headerShown={false}
-        glance
-        lead={{ key: 'icon', role: 'display', node: icon, height: theme.weatherIcon.currentSmall }}
-        value={{
-          key: 'temp',
-          baseSize: heroSize,
-          intrinsicWidth: tabularWidth(tempText, heroSize),
-          render: (fontSize) => (
-            <Text style={[styles.temp, { fontSize }]} testID="weather-current-temp">
-              {tempText}
-            </Text>
-          ),
-        }}
-        gap={theme.spacing(1)}
-        testID="weather-current"
-        accessibilityRole="summary"
-      />
-    );
-  }
-
-  const temp = (
-    <Text style={styles.temp} testID="weather-current-temp">
+  const tempNode = (fontSize: number) => (
+    <Text style={[styles.tempBase, { fontSize, color: tColor }]} testID="weather-current-temp" numberOfLines={1}>
       {tempText}
     </Text>
   );
 
-  // W (2x1, and any other coerced slot): temperature + icon on the value row, the accent condition
-  // line, then the muted meta. NOTE (AOD-123 audit): W keeps this row renderer; its temp+icon row fills
-  // the 1-unit (48px) body, so the condition + meta below can still clip. A wide-short W that seats all
-  // four elements needs a horizontal reflow (temp+icon left, condition/meta right) — an M4 face decision,
-  // not a fit-mechanism one (flagged in the report). The smallest supported size (S) is fixed above.
-  return (
-    <View style={styles.body} accessibilityRole="summary" testID="weather-current">
-      <View style={styles.heroRow}>
-        {temp}
-        {icon}
+  // The pane background: absolute, bled by the card padding (theme.spacing(3)) to the card's inner edge,
+  // where the host card's overflow:hidden + radius clip it — so the card "wears" the pane without a host
+  // edit (the leaf composites it, runbook §5). pointerEvents none: purely a field behind the figures.
+  const paneBackground = (
+    <View testID="weather-current-pane" pointerEvents="none" style={[styles.pane, { backgroundColor: paneBg }]} />
+  );
+
+  const arc = (variant: 'curve' | 'waterline', height: number) => (
+    <TransitArc
+      variant={variant}
+      width={contentW}
+      height={height}
+      isDay={isDay}
+      fraction={fraction}
+      lineColor={pane.line}
+      sunColor={theme.ink.sun}
+      moonColor={moonColor}
+      paneBg={paneBg}
+      stroke={theme.transit.stroke}
+      sunRadius={theme.transit.sunRadius}
+      moonRadius={theme.transit.moonRadius}
+      inset={theme.transit.inset}
+    />
+  );
+
+  const conditionLine = (
+    <Text style={styles.condition} numberOfLines={1} testID="weather-current-condition">
+      {c.condition.label}
+    </Text>
+  );
+  const metaLine = (
+    <Text style={styles.meta} numberOfLines={1} testID="weather-current-meta">
+      Feels {Math.round(c.apparentTemperature)}° · {c.humidityPct}% · {Math.round(c.windSpeed)}{' '}
+      {c.units.windSpeed} {compass(c.windDirectionDeg)}
+    </Text>
+  );
+
+  // S (1×1): the self-evident glance is glyph over temperature (host suppresses the header). Arc absent;
+  // the pane still wears the sky. The shared FitBody holds the icon as a lead and WIDTH-FITS the temp.
+  if (size === 'S') {
+    return (
+      <View style={[styles.root, { minHeight: contentH }]} testID="weather-current" accessibilityRole="summary">
+        {paneBackground}
+        <FitBody
+          size={size}
+          box={box}
+          headerShown={false}
+          glance
+          lead={{ key: 'icon', role: 'display', node: glyph(theme.weatherIcon.currentSmall), height: theme.weatherIcon.currentSmall }}
+          value={{ key: 'temp', baseSize: heroSize, intrinsicWidth: tabularWidth(tempText, heroSize), render: tempNode }}
+          gap={theme.spacing(1)}
+        />
       </View>
-      <Text style={styles.condition} numberOfLines={1} testID="weather-current-condition">
-        {c.condition.label}
-      </Text>
-      <Text style={styles.meta} numberOfLines={1} testID="weather-current-meta">
-        Feels {Math.round(c.apparentTemperature)}° · {c.humidityPct}% · {Math.round(c.windSpeed)}{' '}
-        {c.units.windSpeed} {compass(c.windDirectionDeg)}
-      </Text>
+    );
+  }
+
+  // W (2×1): the banner. temp + glyph lead on the left; condition + meta alongside on the right; a flat
+  // waterline runs along the bottom. The wide-short reflow the AOD-123 audit flagged as an M2/M4 decision.
+  if (size === 'W') {
+    const bannerH = Math.max(24, contentH - theme.transit.waterlineHeight - theme.spacing(1));
+    const tempW = fitTempSize(tempText, heroSize, contentW * 0.5 - theme.weatherIcon.currentSmall - theme.spacing(2), bannerH);
+    return (
+      <View style={[styles.root, styles.stack, { minHeight: contentH }]} testID="weather-current" accessibilityRole="summary">
+        {paneBackground}
+        <View style={styles.bannerRow}>
+          <View style={styles.leftGroup}>
+            {tempNode(tempW)}
+            {glyph(theme.weatherIcon.currentSmall)}
+          </View>
+          <View style={styles.rightGroup}>
+            {conditionLine}
+            {metaLine}
+          </View>
+        </View>
+        {arc('waterline', theme.transit.waterlineHeight)}
+      </View>
+    );
+  }
+
+  // L (2×2): the wall hero. Glyph + temperature commanding on one row, the condition + meta below, and the
+  // full curved sunrise→sunset arc anchored to the bottom. The one read from across a room.
+  if (size === 'L') {
+    const tempW = fitTempSize(tempText, heroSize, contentW - theme.weatherIcon.currentHero - theme.spacing(2), heroSize * 1.18);
+    return (
+      <View style={[styles.root, styles.stack, { minHeight: contentH }]} testID="weather-current" accessibilityRole="summary">
+        {paneBackground}
+        <View style={styles.heroGroup}>
+          <View style={styles.heroRow}>
+            {tempNode(tempW)}
+            {glyph(theme.weatherIcon.currentHero)}
+          </View>
+          {conditionLine}
+          {metaLine}
+        </View>
+        {arc('curve', theme.transit.arcHeight)}
+      </View>
+    );
+  }
+
+  // M (1×2): a vertical stack — glyph + temp, the condition, the feels/humidity/wind line — over a flat
+  // waterline. FitBody fits the value + truncate-then-drops the detail within the room above the arc.
+  const fitBoxM = { width: contentW, height: Math.max(1, contentH - theme.transit.waterlineHeight - theme.spacing(1)) };
+  return (
+    <View style={[styles.root, styles.stack, { minHeight: contentH }]} testID="weather-current" accessibilityRole="summary">
+      {paneBackground}
+      <FitBody
+        size={size}
+        box={fitBoxM}
+        lead={{ key: 'icon', role: 'display', node: glyph(theme.weatherIcon.currentSmall), height: theme.weatherIcon.currentSmall }}
+        value={{ key: 'temp', baseSize: heroSize, intrinsicWidth: tabularWidth(tempText, heroSize), render: tempNode }}
+        detail={[
+          { key: 'condition', role: 'heading', node: conditionLine },
+          { key: 'meta', role: 'meta', node: metaLine },
+        ]}
+      />
+      {arc('waterline', theme.transit.waterlineHeight)}
     </View>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  body: { gap: theme.spacing(1) },
-  small: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing(1) },
-  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  temp: { ...theme.type.hero, color: theme.colors.text },
-  condition: { ...theme.type.heading, color: theme.colors.accent },
+  // position:relative anchors the absolute pane; NO overflow here — the host card clips the pane bleed.
+  root: { position: 'relative' },
+  // fill: figures at the top, the arc pinned to the bottom (M/W/L). S centres its glance via FitBody.
+  stack: { flexDirection: 'column', justifyContent: 'space-between' },
+  pane: {
+    position: 'absolute',
+    top: -theme.spacing(3),
+    left: -theme.spacing(3),
+    right: -theme.spacing(3),
+    bottom: -theme.spacing(3),
+  },
+  heroGroup: { gap: theme.spacing(1) },
+  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },
+  bannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing(2) },
+  leftGroup: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2), flexShrink: 1 },
+  rightGroup: { flexShrink: 1, alignItems: 'flex-end', gap: theme.spacing(0.5) },
+  // the temperature: type.hero geometry; the colour is applied INLINE (the data hue / the tempColor blend).
+  tempBase: { ...theme.type.hero },
+  // the condition label stays bone (the glyph carries the condition by shape; no accent tint — colour-law).
+  condition: { ...theme.type.heading, color: theme.colors.text },
   meta: { ...theme.type.meta, color: theme.colors.textMuted, fontVariant: ['tabular-nums'] },
 }));
