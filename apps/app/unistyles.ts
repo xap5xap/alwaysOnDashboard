@@ -529,7 +529,75 @@ export const lightTheme = {
   when,
 } as const;
 
-const appThemes = { dark: darkTheme, light: lightTheme };
+// --- AOD-121 Monochrome theme (design-color-law.md §8: "every meaning-role collapses to the white /
+// gray ramp. This is today's build.") ---------------------------------------------------------------
+// Colour is a THEME AXIS (§8): a theme is only a remap from data-hue ROLES to actual colours, exactly the
+// way light/dark already remap `colors`. Monochrome is the SECOND v1 theme (Signature above is the
+// default; both ship free, per-service is a post-launch Pro lever, §96). It reuses each scheme's Signature
+// sibling VERBATIM and overrides ONLY the four data families temp/ink/pane/when, collapsing every
+// meaning-role onto the neutral ramp — so unlike the Signature families (PROVISIONAL pending AOD-119, the
+// Fire HD 8 re-tune) Monochrome is NOT provisional: it derives solely from primitive.neutral, read through
+// each theme's own text/textMuted/surface/border roles (themselves neutral aliases), which are shipped-
+// frozen. The collapse rule, per §8 "today's build": a data FIGURE draws as bone (the `text` role), its
+// explicit dim variant recedes to `textMuted`; the Weather condition PANE loses its sky and becomes the
+// ordinary card surface (bg→surface, line→border, ink→text), the clearNight moon drawing as bone (text).
+// No Signature hue survives — the byte-lock (__tests__/data-monochrome-tokens.test.ts) proves every value
+// is a neutral step and that Monochrome is byte-identical to its sibling but for these four families.
+// Same nested SHAPE as the Signature families (plain string maps): the values resolve to literal neutral
+// steps HERE, once — no TextStyle in the theme, no computed theme.colors[role] left for a draw site.
+type MonochromeSource = { text: string; textMuted: string; surface: string; border: string };
+
+function monochromeFamilies(c: MonochromeSource) {
+  const { text, textMuted, surface, border } = c;
+  const pane = { bg: surface, line: border, ink: text }; // the sky collapses to the ordinary card surface
+  return {
+    // the thermometer: no gradient in monochrome — every temperature is the bone hero numeral
+    temp: {
+      ice: text, cold: text, cool: text, mild: text,
+      warm: text, balmy: text, hot: text, swelter: text,
+    },
+    // the event inks: the figure is bone; only the explicit *Dim variants recede to textMuted
+    ink: {
+      rain: text, rainDim: textMuted,
+      sun: text, sunDim: textMuted,
+      moon: text, storm: text, bone: text,
+    },
+    // the 12 condition panes: identical ordinary card surface; clearNight alone keeps its moon, drawn as bone
+    pane: {
+      clearFirst: { ...pane }, clearDay: { ...pane }, clearGolden: { ...pane },
+      clearNight: { ...pane, moon: text },
+      partlyDay: { ...pane }, partlyNight: { ...pane },
+      cloudy: { ...pane }, fog: { ...pane }, drizzle: { ...pane },
+      rain: { ...pane }, storm: { ...pane }, snow: { ...pane },
+    },
+    // imminence: no time-to-event colour in monochrome — every event is the bone figure
+    when: {
+      distant: text, far: text, approaching: text,
+      near: text, soon: text, now: text,
+    },
+  };
+}
+
+// The two Monochrome variants: the Signature sibling VERBATIM except the four data families. The spread
+// order guarantees colors / night / every sharedTokens group carries through byte-identical (same
+// references), so the existing dark/light Signature locks stay green untouched.
+export const darkMonochrome = { ...darkTheme, ...monochromeFamilies(darkTheme.colors) } as const;
+export const lightMonochrome = { ...lightTheme, ...monochromeFamilies(lightTheme.colors) } as const;
+
+// The palette × scheme registry. `dark` (Signature) stays first so the mock's Object.values(themes).at(0)
+// and StyleSheet.configure's initialTheme both still resolve to the Signature default. Exported so the
+// AOD-121 helper + the byte-lock can assert the registered keys.
+export const appThemes = {
+  dark: darkTheme, // Signature (1C) default — roles map to the §4 thermometer + condition hues
+  light: lightTheme, // Signature, light scheme
+  darkMonochrome, // §8 Monochrome — every meaning-role collapsed onto the neutral ramp (today's build)
+  lightMonochrome, // Monochrome, light scheme
+};
+
+// The registered theme keys = palette × scheme. The AOD-121 composition helper (src/theme/appearance.ts)
+// maps a (palette, scheme) selection onto one of these; kept === keyof UnistylesThemes (they share this
+// exact registry, below) so UnistylesRuntime.setTheme accepts a ThemeName with no cast.
+export type ThemeName = keyof typeof appThemes;
 const breakpoints = { xs: 0, sm: 360, md: 600, lg: 900, xl: 1200 } as const;
 
 type AppThemes = typeof appThemes;
