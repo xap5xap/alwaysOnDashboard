@@ -279,48 +279,63 @@ function forecastSource(data: ForecastData): WidgetDataSource {
   };
 }
 
-describe('ForecastCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
-  it('at W is a banner strip: Today, the day-form per-day icon, and the accent precip (no label)', async () => {
+describe('ForecastCard through the host lifecycle (AOD-133 Range: hi-lo span-bars on the week scale)', () => {
+  it('at W is a compact span-bar list: Today, the day-form glyph, a bar per day; precip + header DROPPED', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // W (the banner slot since AOD-122)
+    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // W (the compact slot)
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
     expect(screen.getByText('Today')).toBeTruthy();
     // forecast days always use the day form (§4.2), even for showers/cloudy which swap at Current
     expect(screen.getByTestId('weather-icon-drizzle-day')).toBeTruthy();
     expect(screen.getByTestId('weather-icon-showers-day')).toBeTruthy();
-    // precip is its own accent element at W; the condition label is carried by the icon, not text
-    expect(screen.getByText('16%')).toBeTruthy();
+    // one span-bar per visible day (the Range replaces the numeric hi-lo TEXT with a bar on the shared scale)
+    expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(FORECAST_DATA.days.length);
+    // precip is the truncation ladder's first casualty at the compact W — dropped so the legible temps get
+    // the bar room; NO precip figure at W (a behavioural drop, asserted present at L below)
+    expect(screen.queryByText(/%/)).toBeNull();
+    // the condition label is carried by the glyph, never text
     expect(screen.queryByText(/Light drizzle/)).toBeNull();
+    // the "Week …" shared-scale header is an L affordance; W drops it (compact, ~one row tall)
+    expect(screen.queryByTestId('weather-forecast-week')).toBeNull();
   });
 
-  it('at L is a row list with the condition label + appended precip', async () => {
+  it('at L is the span-bar list under the "Week X–Y" shared-scale header (rounded week min/max, degree echoed)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(forecastSource(FORECAST_DATA), largeForecastInstance);
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
     expect(screen.getByText('Today')).toBeTruthy();
-    expect(screen.getByText('Light drizzle · 16%')).toBeTruthy();
-    expect(screen.getByText('Slight rain showers · 4%')).toBeTruthy();
+    // the shared scale over the visible days: min low 9.1→9, max high 18.3→18; the degree echoed from °C
+    expect(screen.getByTestId('weather-forecast-week')).toHaveTextContent(/Week 9°.18°/);
+    // a bar per day + precip figures; still NO condition label text (the Range reads as shape, not words)
+    expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(FORECAST_DATA.days.length);
+    expect(screen.getByText('16%')).toBeTruthy();
+    expect(screen.getByText('4%')).toBeTruthy();
+    expect(screen.queryByText(/Light drizzle/)).toBeNull();
+    expect(screen.queryByText(/Slight rain showers/)).toBeNull();
   });
 
-  it('omits precip entirely when the payload value is null (W)', async () => {
+  it('at L a null precip stays BLANK, never "0%"; the bar/day still draw (precip is kept at L)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     const noPrecip: ForecastData = {
       units: { temperature: '°C' },
       days: [{ ...FORECAST_DATA.days[0], precipProbabilityPct: null }],
     };
-    renderHost(forecastSource(noPrecip), forecastInstance);
+    renderHost(forecastSource(noPrecip), largeForecastInstance); // L keeps the precip column
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
-    expect(screen.queryByText(/%/)).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull(); // a null precip stays blank (never "0%")
+    expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(1); // precip giving way never drops the bar
   });
 
-  it('renders the empty state for a malformed/empty forecast (never crashes)', async () => {
+  it('resolves to the host-drawn empty phase for an empty forecast (AOD-133 isForecastEmpty), NOT a leaf body', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(forecastSource({ days: [], units: { temperature: '°C' } }), forecastInstance);
 
-    await waitFor(() => expect(screen.getByTestId('weather-forecast-empty')).toBeTruthy());
+    // AOD-133/AOD-125: the pre-M1 leaf-drawn "No forecast" is now the host-drawn `empty` phase (EmptyBody).
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByTestId('weather-forecast')).toBeNull();
+    expect(screen.queryByTestId('weather-forecast-empty')).toBeNull(); // the leaf no longer self-draws it
   });
 });

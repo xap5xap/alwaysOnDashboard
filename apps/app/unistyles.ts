@@ -210,6 +210,26 @@ const transit = {
   inset: 10, // horizontal inset of the arc endpoints from the band edge
 } as const;
 
+// AOD-133 §range: the Weather Forecast RANGE face geometry (the analog of transit/weatherIcon/sparkline —
+// a per-render-context NUMBERS-ONLY group; the colours arrive as ROLE values from the leaf: the span bar
+// wears tempColor(day.tempMax) (theme.temp) as a SOLID, the lo/hi numerals bind colors.textMuted/text, and
+// precip binds theme.ink.rain). Each day's hi-lo is a horizontal span-bar on the week's shared min-max
+// scale (range.ts); today's bar is a touch thicker and full-bright, later days recede to pastOpacity. The
+// row heights + glyph sizes drive the height-fit (fitCount): L is the comfortable list, W the compact one.
+// Test-locked in __tests__/range-tokens.test.ts. Adds NO colour token (like every geometry group).
+const range = {
+  barHeight: 3, // the span-bar thickness (later days)
+  todayBarHeight: 4, // today's span-bar, a touch thicker (the bright lead)
+  capRadius: 2, // the rounded bar end-cap radius
+  minBarWidth: 8, // a rangeless day (tempMin === tempMax) still shows a short mark (never invisible)
+  todayOpacity: 1, // today's bar at full tempColor
+  pastOpacity: 0.5, // later days' bars recede to the same tempColor, dimmer (the Today-bright / muted-later step)
+  rowHeight: 20, // the L row height (fitCount)
+  compactRowHeight: 14, // the W row height (fitCount, denser)
+  glyph: 16, // the L row day-glyph size
+  compactGlyph: 13, // the W row day-glyph size
+} as const;
+
 // AOD-36 §9.1 sparkline: the Daily Spend chart's sizing + intensity (design-claude-usage.md §4, §9.1).
 // A per-context size/intensity ramp the way weatherIcon ramps the weather glyph. The bars draw in
 // colors.accent at two opacities and sit on a colors.border baseline, applied in the leaf; NO colour
@@ -449,6 +469,7 @@ const sharedTokens = {
   elevation,
   weatherIcon,
   transit,
+  range,
   sparkline,
   money,
   priorityIcon,
