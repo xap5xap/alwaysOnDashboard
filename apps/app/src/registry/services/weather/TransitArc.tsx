@@ -102,7 +102,7 @@ export function TransitArc({
   const biteCy = moonCy - moonRadius * 0.5;
 
   return (
-    <View testID={testID} pointerEvents="none">
+    <View testID={testID} style={{ pointerEvents: 'none' }}>
       <Svg width={w} height={height} viewBox={`0 0 ${w} ${height}`} fill="none">
         <Path
           d={linePath}

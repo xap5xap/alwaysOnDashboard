@@ -194,14 +194,18 @@ describe('CurrentWeatherCard Transit through the host lifecycle (AOD-132; was AO
     expect(screen.queryByTestId('weather-current-moon')).toBeNull();
   });
 
-  it('at W is the banner: temp+glyph lead, condition + feels/humidity/wind alongside, over the waterline', async () => {
+  it('at W is the banner: temp+glyph lead + condition over the waterline; meta gives way to fit the slot', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(currentSource(CURRENT_DATA), wCurrentInstance);
 
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    // temp + glyph + condition stay; the temperature is never the thing that drops
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
     expect(screen.getByText('Partly cloudy')).toBeTruthy();
-    // §5 meta: "Feels {apparent}° · {humidity}% · {wind} {windUnit} {compass}" (bare ° in meta; the hero echoes the unit)
-    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    // the W body (~48dp) RESERVES the waterline, so the meta detail (feels/humidity/wind) drops FIRST
+    // (truncate-then-drop order) — the card never exceeds its slot. This is a drop assertion, not a
+    // visual-clip one (the meta element is not rendered at all when it does not fit).
+    expect(screen.queryByTestId('weather-current-meta')).toBeNull();
     expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
     expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
     expect(screen.getByTestId('weather-current-sun')).toBeTruthy();

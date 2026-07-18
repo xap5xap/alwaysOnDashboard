@@ -24,7 +24,7 @@ import type { CurrentWeatherData, WeatherCondition } from './types';
 import { WeatherIcon } from './WeatherIcon';
 import { TransitArc } from './TransitArc';
 import { FitBody } from '../../../widgets/FitBody';
-import { tabularWidth, fitValueScale, DEFAULT_MIN_SCALE } from '../../../widgets/fitLadder';
+import { tabularWidth, fitValueScale, fitBody, DEFAULT_MIN_SCALE } from '../../../widgets/fitLadder';
 import { SIZE_CATALOGUE } from '../../../widgets/sizes';
 import { UNIT_PX } from '../../../layout/geometry';
 import { paneKeyFor, sunFraction, tempColor } from './transit';
@@ -92,10 +92,11 @@ export function CurrentWeatherCard({ data, size, box }: WidgetRenderProps) {
 
   // The body box the host computed (DP). Fall back to the slot geometry for a direct render / test w/o box.
   const cat = SIZE_CATALOGUE[size];
+  const headerShown = size !== 'S'; // the host shows the caption at every size except S (caption.hideAtSizes:['S'])
   const contentW = box?.width ?? Math.max(1, cat.nominalW * UNIT_PX - 2 * theme.spacing(3));
   const contentH =
     box?.height ??
-    Math.max(1, cat.nominalH * UNIT_PX - 2 * theme.spacing(3) - (size === 'S' ? 0 : 24));
+    Math.max(1, cat.nominalH * UNIT_PX - 2 * theme.spacing(3) - (headerShown ? 24 : 0));
 
   // The condition glyph: bone (colour carried by SHAPE), its cloud occlusion filled with the PANE bg so it
   // reads cleanly against the sky (was colors.surface). Day/night from the payload's own isDay (§5.2).
@@ -118,9 +119,14 @@ export function CurrentWeatherCard({ data, size, box }: WidgetRenderProps) {
 
   // The pane background: absolute, bled by the card padding (theme.spacing(3)) to the card's inner edge,
   // where the host card's overflow:hidden + radius clip it — so the card "wears" the pane without a host
-  // edit (the leaf composites it, runbook §5). pointerEvents none: purely a field behind the figures.
+  // edit (the leaf composites it, runbook §5). The TOP bleed is HEADER-AWARE: at S (headerless) it is the
+  // full -spacing(3), but at M/W/L the leaf root already starts one card-gap (spacing(2)) below the header,
+  // so a full -spacing(3) top would paint spacing(1) UP over the caption/refresh — bleed only -spacing(2)
+  // there, so the pane's top edge sits flush at the header's bottom (no overlap, no surface seam).
+  // pointerEvents in STYLE (not the deprecated prop): purely a field behind the figures.
+  const paneTop = -theme.spacing(headerShown ? 2 : 3);
   const paneBackground = (
-    <View testID="weather-current-pane" pointerEvents="none" style={[styles.pane, { backgroundColor: paneBg }]} />
+    <View testID="weather-current-pane" style={[styles.pane, { backgroundColor: paneBg, top: paneTop, pointerEvents: 'none' }]} />
   );
 
   const arc = (variant: 'curve' | 'waterline', height: number) => (
@@ -172,29 +178,45 @@ export function CurrentWeatherCard({ data, size, box }: WidgetRenderProps) {
     );
   }
 
-  // W (2×1): the banner. temp + glyph lead on the left; condition + meta alongside on the right; a flat
+  // W (2×1): the banner. temp + glyph lead on the left; condition (+ meta if it fits) alongside; a flat
   // waterline runs along the bottom. The wide-short reflow the AOD-123 audit flagged as an M2/M4 decision.
   if (size === 'W') {
-    const glyphPx = theme.weatherIcon.currentSmall;
     const gap = theme.spacing(2);
-    // Reserve a truncatable column for the detail (condition + meta); THAT column shrinks first, never the
-    // temperature (color-law / FitBody truncation order). The temp+glyph lead is flexShrink:0 below, so the
-    // font sized here to the ACTUAL remaining width (not a hardcoded half) is the temp's final width — the
-    // flex row can no longer squeeze it into a one-glyph clip.
+    const detailGap = theme.spacing(0.5);
+    // RESERVE the waterline like M, so the banner never exceeds the W slot (48dp body): the banner budget
+    // is the body minus the arc band + its gap. The glyph is a HELD lead but must also FIT this budget (a
+    // 34dp glyph + a 22dp waterline alone overflow 48dp), so it is capped to the budget; the temperature
+    // stays legible (fit to the budget height, never clipped — the flexShrink:0 lead).
+    const bannerBudget = Math.max(1, contentH - theme.transit.waterlineHeight - theme.spacing(1));
+    const glyphPx = Math.min(theme.weatherIcon.currentSmall, bannerBudget);
+    // The detail (condition + meta) gives way when it does not fit the banner height: meta drops first,
+    // then condition — the temp + glyph never do. The shared fitBody ladder owns the drop (value height 0:
+    // the right column has no held value, it is pure detail stacked below nothing).
+    const condH = theme.type.heading.lineHeight ?? Math.round((theme.type.heading.fontSize ?? 15) * 1.25);
+    const metaH = theme.type.meta.lineHeight ?? Math.round((theme.type.meta.fontSize ?? 13) * 1.25);
+    const drop = fitBody({
+      value: { height: 0 },
+      detail: [{ height: condH }, { height: metaH }],
+      gap: detailGap,
+      box: { width: contentW, height: bannerBudget },
+    });
+    const showCondition = drop.detailVisible[0];
+    const showMeta = drop.detailVisible[1];
+    // The temp gets the width that actually remains after the glyph + a reserved detail column (never a
+    // hardcoded half); the flexShrink:0 lead below means this fitted size is final (no further squeeze).
     const rightMin = 72;
-    const bannerH = Math.max(24, contentH - theme.transit.waterlineHeight - theme.spacing(1));
-    const tempW = fitTempSize(tempText, heroSize, Math.max(1, contentW - glyphPx - rightMin - gap * 2), bannerH);
+    const tempW = fitTempSize(tempText, heroSize, Math.max(1, contentW - glyphPx - rightMin - gap * 2), bannerBudget);
     return (
       <View style={[styles.root, styles.stack, { minHeight: contentH }]} testID="weather-current" accessibilityRole="summary">
         {paneBackground}
         <View style={styles.bannerRow}>
           <View style={styles.leftGroup}>
             {tempNode(tempW)}
-            {glyph(theme.weatherIcon.currentSmall)}
+            {glyph(glyphPx)}
           </View>
           <View style={styles.rightGroup}>
-            {conditionLine}
-            {metaLine}
+            {showCondition ? conditionLine : null}
+            {showMeta ? metaLine : null}
           </View>
         </View>
         {arc('waterline', theme.transit.waterlineHeight)}
@@ -248,9 +270,9 @@ const styles = StyleSheet.create((theme) => ({
   root: { position: 'relative' },
   // fill: figures at the top, the arc pinned to the bottom (M/W/L). S centres its glance via FitBody.
   stack: { flexDirection: 'column', justifyContent: 'space-between' },
+  // left/right/bottom bleed to the card's inner edge; `top` is applied inline (header-aware, see paneTop).
   pane: {
     position: 'absolute',
-    top: -theme.spacing(3),
     left: -theme.spacing(3),
     right: -theme.spacing(3),
     bottom: -theme.spacing(3),
