@@ -262,6 +262,20 @@ const priorityIcon = {
   offOpacity: 0.3, // unfilled bars -> colors.textMuted at this intensity, so level is read by filled-bar count
 } as const;
 
+// AOD-134 §soundings: the My Issues SOUNDINGS silhouette geometry (the priority-mark row that is the new
+// hero mark; design-linear.md §4, the RB-M2 runbook §5 AOD-134). The analog of priorityIcon/transit/range —
+// a per-render-context NUMBERS-ONLY group; the marks are drawn bone / shape-only by PriorityGlyph at the
+// draw site (filled = colors.text, ghost bars / none-dashes = colors.textMuted @ priorityIcon.offOpacity),
+// so this adds NO colour token (the §4.2 priority-is-shape rule + the one-accent + status-hue reservation
+// forbid a priority hue). `mark` is the silhouette glyph edge; `gap` the horizontal space between marks (the
+// packing unit — soundings.ts caps the row to what fits so it never clips); `rowHeight` the silhouette band
+// reserved above the L rows in the height-fit (fitCount lead). Test-locked in __tests__/soundings-tokens.test.ts.
+const soundings = {
+  mark: 14, // the silhouette glyph edge (the priorityIcon.size weight; its own token so the silhouette can tune)
+  gap: 4, // spacing(1): the horizontal gap between marks (the packing unit)
+  rowHeight: 18, // the silhouette band reserved above the L rows (fitCount lead): the mark + a little breathing
+} as const;
+
 // AOD-30 §9.2 progress: the Current Cycle progress bar sizing + intensity (design-linear.md §6, §9.2). One
 // accent at TWO intensities: the fill is colors.accent (the completed fraction), the track is the same
 // colors.accent at trackOpacity (the remaining fraction), NOT colors.skeleton (the loading colour, §6.1).
@@ -473,6 +487,7 @@ const sharedTokens = {
   sparkline,
   money,
   priorityIcon,
+  soundings,
   progress,
   // AOD-20 §12 component library groups
   button,
