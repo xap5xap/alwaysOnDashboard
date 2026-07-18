@@ -34,6 +34,8 @@ function asCurrent(data: unknown): CurrentWeatherData {
     humidityPct: typeof d.humidityPct === 'number' ? d.humidityPct : 0,
     windSpeed: typeof d.windSpeed === 'number' ? d.windSpeed : 0,
     windDirectionDeg: typeof d.windDirectionDeg === 'number' ? d.windDirectionDeg : 0,
+    sunrise: typeof d.sunrise === 'string' ? d.sunrise : '',
+    sunset: typeof d.sunset === 'string' ? d.sunset : '',
     units: {
       temperature: d.units?.temperature ?? '°',
       windSpeed: d.units?.windSpeed ?? 'km/h',
