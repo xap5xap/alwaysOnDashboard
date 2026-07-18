@@ -27,13 +27,25 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, AOD-125 six states, 
     expect(within(screen.getByTestId('widget-ghost')).queryByRole('button')).toBeNull();
   });
 
-  it('empty: host-drawn shared EmptyBody ("Nothing right now."), renderer NOT invoked (AOD-125)', () => {
+  it('empty: host-drawn shared EmptyBody, the generic fallback line when the def has no emptyCopy (AOD-125/AOD-136)', () => {
+    // The stub def declares no emptyCopy, so the host falls back to the generic plain words — the seam
+    // guarantees no widget without emptyCopy regresses off "Nothing right now."
     render(<WidgetHostView {...base} state={{ phase: 'empty', data: {}, fetchedAt: 1 }} />);
     expect(screen.getByTestId('widget-empty-body')).toBeTruthy();
     expect(screen.getByText('Nothing right now.')).toBeTruthy();
     expect(screen.queryByText(/stub payload/i)).toBeNull();
     // the empty body carries NO action (the trait separating it from the host prompts)
     expect(within(screen.getByTestId('widget-empty-body')).queryByRole('button')).toBeNull();
+  });
+
+  it('empty: the host passes a def.emptyCopy line + subline through to EmptyBody (AOD-136 seam)', () => {
+    // A widget that names its own plain words (as the Calendar defs do) sees them instead of the generic
+    // line; the host reads def.emptyCopy and forwards it to the shared EmptyBody.
+    const withCopy: WidgetDefinition = { ...def, emptyCopy: { line: 'Nothing next', subline: "You're clear" } };
+    render(<WidgetHostView {...base} def={withCopy} state={{ phase: 'empty', data: {}, fetchedAt: 1 }} />);
+    expect(screen.getByText('Nothing next')).toBeTruthy();
+    expect(screen.getByText("You're clear")).toBeTruthy();
+    expect(screen.queryByText('Nothing right now.')).toBeNull(); // the generic fallback is overridden
   });
 
   it('live: invokes the widget renderer with data (was `fresh`)', () => {

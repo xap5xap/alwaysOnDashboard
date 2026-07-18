@@ -4,6 +4,7 @@
 // host-drawn `empty` phase (hasEvent:false / nothing-left-today; AOD-125), the 409 -> disconnected mapping,
 // the AOD-10 §4.4 render-time calendarId membership re-check, and the §4.2 device-clock "today" scoping.
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../../../../host/WidgetHost';
@@ -11,6 +12,14 @@ import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../hos
 import { RegistryProvider } from '../../../RegistryProvider';
 import type { WidgetInstance } from '../../../types';
 import type { AgendaData, CalendarEvent, NextEventData } from '../types';
+// AOD-136: the initial (Signature/dark) theme the Unistyles mock resolves — the source of truth for the
+// expected Dressed Overall imminence hues (theme.when.*) and the role colours the change moved OFF (accent).
+import { darkTheme } from '../../../../../unistyles';
+
+/** now + `delta` minutes as an ISO start (round-trips through the epoch, so the leaf reads the exact delta). */
+function inMinutes(delta: number): string {
+  return new Date(Date.now() + delta * 60000).toISOString();
+}
 
 // The host reads useConnections() for the generic platform_key params-seeding (integration-weather.md
 // §6.3). google_calendar is oauth2, so seeding is a no-op (params = instance.config); stub the hook so
@@ -112,11 +121,13 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
     renderHost(source, nextEventInstance); // S: caption hidden -> headerless card (AOD-124)
-    // AOD-125: hasEvent:false is now the host-drawn `empty` phase (isNextEventEmpty), drawn as the shared
-    // EmptyBody with the design's plain words ("Nothing right now."); the leaf no longer self-draws it.
+    // AOD-125/AOD-136: hasEvent:false is the host-drawn `empty` phase (isNextEventEmpty), drawn as the shared
+    // EmptyBody with the Calendar's OWN plain words (emptyCopy), not the generic line — the leaf never draws it.
     await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByTestId('gcal-next-event')).toBeNull();
-    expect(screen.getByText('Nothing right now.')).toBeTruthy();
+    expect(screen.getByText('Nothing next')).toBeTruthy();
+    expect(screen.getByText("You're clear")).toBeTruthy();
+    expect(screen.queryByText('Nothing right now.')).toBeNull(); // the generic fallback is overridden
     // the empty BODY carries no action (the trait that separates it from the host error/needs_config
     // prompts). The host's on-demand refresh control is separate chrome — at S (headerless) it now rides
     // the AOD-124 corner cluster, so scope the "no action" check to the empty body itself.
@@ -137,7 +148,24 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
     expect(screen.getByText('Design review')).toBeTruthy();
   });
 
-  it('an all-day event shows the ALL DAY kicker and no clock, with the location at W', async () => {
+  it('Dressed Overall: the when kicker WEARS its imminence hue (theme.when), the clock stays bone (AOD-136)', async () => {
+    // ~40 min out -> the `soon` stop (theme.when.soon). The kicker is coloured by imminence, NOT the old
+    // flat accent; the clock numeral beside it stays bone (the hue rides the hero kicker alone).
+    const data: NextEventData = { hasEvent: true, event: mkEvent('e1', 'Design review', inMinutes(40)) };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, wNextEventInstance); // W: the clock rides alongside the kicker
+    await waitFor(() => expect(screen.getByTestId('gcal-next-event')).toBeTruthy());
+    const whenColor = StyleSheet.flatten(screen.getByTestId('gcal-next-event-when').props.style).color;
+    expect(whenColor).toBe(darkTheme.when.soon); // the imminence hue, not chrome
+    expect(whenColor).not.toBe(darkTheme.colors.accent); // the flat accent kicker is gone
+    const clockColor = StyleSheet.flatten(screen.getByTestId('gcal-next-event-clock').props.style).color;
+    expect(clockColor).toBe(darkTheme.colors.textMuted); // the clock stays bone-muted, never the hue
+  });
+
+  it('an all-day event shows the ALL DAY kicker (no clock) in the calm dawn tone, with the location at W', async () => {
     const event: CalendarEvent = { ...allDayToday('e-ad', "Carla's birthday"), location: 'Home' };
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: { hasEvent: true, event }, fetchedAt: Date.now() }),
@@ -147,6 +175,10 @@ describe('Next Event through the host lifecycle (AOD-56)', () => {
     await waitFor(() => expect(screen.getByTestId('gcal-next-event')).toBeTruthy());
     // the when reads exactly "All day" (no clock rides alongside; an all-day event has no time anchor)
     expect(screen.getByTestId('gcal-next-event-when')).toHaveTextContent('All day');
+    // AOD-136: an all-day event does not ride the imminence ladder — its kicker parks at the calm dawn tone
+    // (theme.when.distant), never the accent.
+    const whenColor = StyleSheet.flatten(screen.getByTestId('gcal-next-event-when').props.style).color;
+    expect(whenColor).toBe(darkTheme.when.distant);
     expect(screen.getByText("Carla's birthday")).toBeTruthy();
     expect(screen.getByText('Home')).toBeTruthy();
   });
@@ -201,17 +233,20 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
       resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
     };
     renderHost(source, agendaInstance);
-    // AOD-125: an empty agenda is now the host-drawn `empty` phase (isAgendaEmpty), the shared EmptyBody.
+    // AOD-125/AOD-136: an empty agenda is the host-drawn `empty` phase (isAgendaEmpty), the shared EmptyBody
+    // carrying the Agenda's OWN plain words (emptyCopy), not the generic line.
     await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByTestId('gcal-agenda')).toBeNull();
-    expect(screen.getByText('Nothing right now.')).toBeTruthy();
+    expect(screen.getByText('Nothing left today')).toBeTruthy();
+    expect(screen.getByText('Enjoy the quiet')).toBeTruthy();
+    expect(screen.queryByText('Nothing right now.')).toBeNull(); // the generic fallback is overridden
   });
 
-  it('groups all-day on top under the ALL DAY kicker and marks the next event with the accent rail', async () => {
+  it('groups all-day on top in the dawn-wash chip; the next-event accent rail is GONE (AOD-136)', async () => {
     const data: AgendaData = {
       events: [
-        mkEvent('t1', 'Design review', lateTodayIso()), // upcoming today -> the "next"
-        allDayToday('ad1', "Carla's birthday"), // no time anchor -> grouped on top
+        mkEvent('t1', 'Design review', lateTodayIso()), // upcoming today
+        allDayToday('ad1', "Carla's birthday"), // no time anchor -> grouped on top, in the dawn chip
       ],
     };
     const source: WidgetDataSource = {
@@ -223,8 +258,52 @@ describe("Today's Agenda through the host lifecycle (AOD-56)", () => {
     expect(screen.getByText('ALL DAY')).toBeTruthy(); // the all-day group kicker (M density)
     expect(screen.getByText("Carla's birthday")).toBeTruthy();
     expect(screen.getByText('Design review')).toBeTruthy();
-    // the soonest upcoming event carries the accent left rail (the agenda points at what is next)
-    expect(screen.getByTestId('gcal-agenda-next-rail')).toBeTruthy();
+    // AOD-136: the all-day band is the dawn-wash chip; the AOD-35 next-event accent rail is REMOVED (the
+    // Dressed Overall warmth on the time carries "next" now — accent is reserved for repair chrome).
+    expect(screen.getByTestId('gcal-agenda-allday')).toBeTruthy();
+    expect(screen.queryByTestId('gcal-agenda-next-rail')).toBeNull();
+    // the ALL DAY label + the chip wash wear the calm dawn tone (theme.when.distant), never the accent.
+    expect(StyleSheet.flatten(screen.getByText('ALL DAY').props.style).color).toBe(darkTheme.when.distant);
+    const wash = StyleSheet.flatten(screen.getByTestId('gcal-agenda-allday-wash').props.style);
+    expect(wash.backgroundColor).toBe(darkTheme.when.distant);
+    expect(wash.opacity).toBe(0.12); // DAWN_CHIP_OPACITY: a faint wash so the ink over it stays crisp
+  });
+
+  it('every timed time numeral wears an imminence hue (theme.when) — no accent, no flat muted (AOD-136)', async () => {
+    // Two same-day timed events -> two time numerals, each coloured by its OWN imminence stop (a warmth
+    // spread). The exact delta->stop is locked in imminence.test.ts; here we prove the LEAF binds a
+    // theme.when value to every timed time, and no longer the flat muted / next-event accent.
+    const whenRamp = Object.values(darkTheme.when);
+    const data: AgendaData = {
+      events: [mkEvent('a1', 'Standup', localAt(0, 9)), mkEvent('a2', 'Design review', localAt(0, 14))],
+    };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, agendaInstance);
+    await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
+    const times = screen.getAllByTestId('gcal-agenda-time');
+    expect(times.length).toBe(2);
+    for (const t of times) {
+      const color = StyleSheet.flatten(t.props.style).color;
+      expect(whenRamp).toContain(color); // on the imminence ladder, a discrete theme.when stop (no blend)
+      expect(color).not.toBe(darkTheme.colors.accent); // accent is spent on repair only now
+      expect(color).not.toBe(darkTheme.colors.textMuted); // no longer the old flat-muted time
+    }
+  });
+
+  it('a past / in-progress event today wears the warmest `now` hue (AOD-136)', async () => {
+    // today 00:00 -> already begun by any realistic run time -> the `now` stop (theme.when.now, balmy).
+    const data: AgendaData = { events: [mkEvent('p1', 'Morning sync', localAt(0, 0))] };
+    const source: WidgetDataSource = {
+      fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+      resolveOptions: jest.fn().mockResolvedValue(calendarChoices),
+    };
+    renderHost(source, agendaInstance);
+    await waitFor(() => expect(screen.getByTestId('gcal-agenda')).toBeTruthy());
+    const timeColor = StyleSheet.flatten(screen.getByTestId('gcal-agenda-time').props.style).color;
+    expect(timeColor).toBe(darkTheme.when.now);
   });
 
   it('folds events beyond the HEIGHT-driven visible count into "+N more" (AOD-123 no-overflow)', async () => {
