@@ -252,6 +252,23 @@ const money = {
   fractionScale: 0.62, // the .XX cents vs the integer dollars; baseline-aligned
 } as const;
 
+// AOD-130 §meridian: the Clock MERIDIAN satellite geometry (design-color-law.md §Clock, RB-M2 AOD-130). The
+// analog of money/transit — a per-render-context NUMBERS-ONLY group; the colours arrive as ROLE values from
+// the leaf (the hero figure = colors.text / night.primary, the meridiem recedes to colors.textMuted /
+// night.secondary, the seconds whisper to colors.textMuted / night.muted). The meridiem (AM/PM) and the
+// seconds whisper are sized as FRACTIONS of the fitted hero time figure (so they scale WITH it under the
+// FitBody width-fit, exactly the way money.symbolScale sizes the currency symbol off the dollars); gapScale
+// is the hero->satellite gap, also a fraction of the figure so the whole composite scales uniformly and the
+// fit stays exact. secondsOpacity recesses the whisper ONE step further than its muted colour (present-but-
+// recessive; the exact value is Xavier's device call, unpinned in the runbook). Test-locked in
+// __tests__/meridian-tokens.test.ts. Adds NO colour token (like every geometry group).
+const meridian = {
+  meridiemScale: 0.34, // the AM/PM height vs the hero time figure
+  secondsScale: 0.28, // the seconds whisper height vs the hero figure (smaller than the meridiem)
+  secondsOpacity: 0.5, // the whisper recedes further than its muted colour (present-but-recessive)
+  gapScale: 0.12, // the hero -> satellite horizontal gap, as a fraction of the fitted figure size
+} as const;
+
 // AOD-30 §9.1 priorityIcon: the My Issues priority glyph sizing + intensity (design-linear.md §4, §9.1).
 // The five glyphs are monochrome and carried by SHAPE, not colour: filled bars / the urgent block draw in
 // colors.text, unfilled bars in colors.textMuted at offOpacity, applied in the leaf. Like
@@ -507,6 +524,7 @@ const sharedTokens = {
   range,
   sparkline,
   money,
+  meridian,
   priorityIcon,
   soundings,
   progress,
