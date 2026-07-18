@@ -286,6 +286,27 @@ const progress = {
   trackOpacity: 0.18, // the remaining-fraction track = colors.accent at this intensity
 } as const;
 
+// AOD-135 §ring: the Current Cycle "Log Line" segmented-knot-ring geometry (design-linear.md §6, claude-
+// design/prompts/linear.md "The Log Line 21-knot ring"). The analog of transit/sparkline/soundings — a per-
+// render-context NUMBERS-ONLY group; the colour arrives as a ROLE from the leaf: the ONE accent lives here,
+// lit = colors.accent and unlit = the SAME accent @ progress.trackOpacity (0.18), so the ring spends no
+// second hue and Monochrome separates lit/unlit by intensity for free. The knot COUNT is dynamic (= the
+// cycle's totalCount, never the "21" in the title): `knot`/`minKnot`/`gap` drive the crowding-adaptive disc
+// radius in logline.ts (a large N shrinks the discs toward `minKnot`, never below), and the leaf fits
+// `radius` to the host box (the AOD-81 fit-to-bounds lesson — never clip on the density-scaled device), so
+// `radius` is the per-size CAP not a fixed size. `radius` is the ring the knot CENTRES sit on, per RINGED
+// size (S texture / M full ring / L countable tally); W is the linear `dash` bar (a ring does not fit a
+// wide-short cell), so W has no ring radius. `stroke` is the smooth Dead-Reckoning continuous-ring weight.
+// Test-locked in __tests__/ring-tokens.test.ts. Adds NO colour token (like every geometry group).
+const ring = {
+  radius: { S: 22, M: 30, L: 46 }, // the knot-centre ring radius per ringed size (cap; the leaf fits to box)
+  knot: 4, // the ideal / max knot disc radius (small N); the stable box margin
+  minKnot: 1.5, // the knot disc radius floor (a large N stays visible, never 0)
+  gap: 2, // the min gap between adjacent knot edges (the crowding-cap input)
+  stroke: 3, // the smooth (Dead Reckoning) continuous-ring stroke width
+  dash: { height: 10, gap: 3, radius: 2 }, // the W segmented bar: one dash per issue, flexed across the width
+} as const;
+
 // --- AOD-20 §12 component token groups (design-component-library.md) ---------------------------------
 // The app-chrome component library's tokens. Each group carries GEOMETRY (numbers) plus ROLE-NAME
 // ALIASES (semantic colour role / type-step / radius keys, as plain strings), never a raw hex, exactly
@@ -489,6 +510,7 @@ const sharedTokens = {
   priorityIcon,
   soundings,
   progress,
+  ring,
   // AOD-20 §12 component library groups
   button,
   input,

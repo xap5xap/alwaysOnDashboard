@@ -60,7 +60,9 @@ const currentCycle: WidgetDefinition = {
   type: 'current_cycle',
   serviceId: 'linear',
   title: 'Current Cycle',
-  supportedSizes: ['W', 'L'], // AOD-122 slot remap: was ['medium','large'] (same 2x1 / 2x2 geometry)
+  // AOD-135 The Log Line: expands to the full S/M/W/L catalogue (was ['W','L']). Order S→M→W→L. The knot
+  // ring seats S (texture) / M (full ring) / L (countable tally); W is the segmented dash bar (linear form).
+  supportedSizes: ['S', 'M', 'W', 'L'],
   defaultRefresh: { seconds: 600 }, // cycle data moves slowly; ask every 10 min
   cacheTtlSeconds: 300, // provider hit at most once per 5 min across devices
   minRefreshSeconds: 120,

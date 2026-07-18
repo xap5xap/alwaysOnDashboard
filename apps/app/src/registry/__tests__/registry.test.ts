@@ -90,7 +90,7 @@ describe('Linear service registration (AOD-55, integration-linear.md §8)', () =
 
   it('Current Cycle declares the §4.2 sizes and the §5.2 teamId option source', () => {
     const def = getWidgetDef('linear', 'current_cycle')!;
-    expect(def.supportedSizes).toEqual(['W', 'L']); // AOD-122 slot ids (was ['medium','large'])
+    expect(def.supportedSizes).toEqual(['S', 'M', 'W', 'L']); // AOD-135 Log Line expands to the full catalogue (was ['W','L'])
     expect(def.cacheTtlSeconds).toBe(300);
 
     const teamId = def.configSchema.fields[0];
