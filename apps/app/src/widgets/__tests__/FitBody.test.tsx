@@ -4,7 +4,7 @@
 // the value at its floor; a lead is held; and an absent `box` falls back to the size-derived box. The
 // value's render receives the fitted font size, which these tests echo to observe the scale.
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import { FitBody, type FitLine, type FitValue } from '../FitBody';
 import { tabularWidth } from '../fitLadder';
@@ -52,6 +52,35 @@ describe('FitBody stage 1: the value width-fits and never clips (AOD-95/97)', ()
     const size = fittedSize();
     expect(size).toBeLessThan(34);
     expect(tabularWidth('18:45', size)).toBeLessThanOrEqual(72 + 0.001);
+  });
+});
+
+describe('FitBody glance: the centred value carries a DEFINITE height (AOD-130 device blank)', () => {
+  // The Clock is the sole glance user. On the dashboard the host card is content-sized and passes no height
+  // down, so a bare flex:1 glance collapsed to ~0 and the fitted figure clipped to a sliver under overflow:
+  // hidden — the AOD-130 device blank (jest/web missed it: no real layout / the wall gives its cells a fixed
+  // height). The glance container must take the host box height as a definite floor.
+  it('applies an explicit height = box.height on the glance container so it cannot collapse to a sliver', () => {
+    render(
+      <FitBody size="W" headerShown={false} glance box={{ width: 168, height: 72 }} value={value(56, '12:31')} testID="glance-body" />,
+    );
+    const style = StyleSheet.flatten(screen.getByTestId('glance-body').props.style);
+    expect(style.height).toBe(72); // a DEFINITE dimension Yoga always honours — device-observed that flex:1's
+    expect(style.flex).toBeUndefined(); // flex-basis:0 defeated even a minHeight floor in the content-sized card chain
+  });
+
+  it('the value still renders (the figure is present, not clipped away) in a glance body', () => {
+    render(
+      <FitBody size="W" headerShown={false} glance box={{ width: 168, height: 72 }} value={value(56, '12:31')} testID="glance-body" />,
+    );
+    expect(screen.getByTestId('fit-value').props.children).toBe('12:31');
+    expect(fittedSize()).toBeGreaterThan(0);
+  });
+
+  it('a non-glance (stack) body carries NO forced height — it sizes to content', () => {
+    render(<FitBody size="W" box={{ width: 168, height: 72 }} value={value(40, '$4.00')} testID="stack-body" />);
+    const style = StyleSheet.flatten(screen.getByTestId('stack-body').props.style);
+    expect(style.minHeight).toBeUndefined(); // only glance takes the box height; stacks self-size
   });
 });
 

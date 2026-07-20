@@ -1,159 +1,103 @@
-// Pure unit tests for the on-device Clock formatting (integration-clock.md §4.1, §5.2, §7.3, §12). No
-// React, no host: a Date + ClockConfig in, a ClockView out, plus the IANA-zone validity check. The leaf
-// (ClockCard) and the host none path are exercised in ClockCard.test.tsx. Locale is pinned to 'en-US' so
-// the asserted strings are deterministic under the Node/jest ICU; whitespace is normalized because modern
-// ICU emits a narrow no-break space (U+202F) before AM/PM.
-import {
-  deviceTimeZone,
-  formatClock,
-  humanizeZone,
-  isValidTimeZone,
-  resolveConfig,
-  validateTimeZone,
-  zoneShortOffset,
-} from '../time';
+// Pure unit tests for the on-device Clock formatting (integration-clock.md §4.1, §12; RB-M2 AOD-130
+// Meridian). No React, no host: a Date + ClockConfig in, a ClockView (the parts split) out. The leaf
+// (ClockCard) and the host none path are exercised in ClockCard.test.tsx. formatClock derives the parts
+// DIRECTLY FROM THE Date (no Intl) — a dependency-free simplification (the AOD-130 device blank was the leaf's
+// FitBody `glance` collapsing to zero height, NOT the formatting), formatting in DEVICE-LOCAL time (the
+// timezone override was removed with the second clock, AOD-130). jest pins no TZ, so the HOUR is CI-dependent: the assertions
+// below are TZ-robust — the seconds field (33) is offset-independent, the figure shape is fixed, and the
+// exact figure/meridiem are pinned by parity against the SAME Date methods the impl uses (both device-local).
+import { formatClock, resolveConfig } from '../time';
 import { CLOCK_CONFIG_DEFAULTS, type ClockConfig } from '../types';
 
-// 2026-06-28T14:05:33Z: in UTC this reads 14:05:33 on Sunday, June 28, 2026.
+// 2026-06-28T14:05:33Z. The SECONDS (33) are timezone-independent (no modern zone has a sub-minute offset),
+// so v.seconds is deterministic on any CI zone; the hour/minute are not, hence the Date-parity reference below.
 const INSTANT = new Date('2026-06-28T14:05:33.000Z');
-const EN = 'en-US';
-
-/** Collapse Unicode whitespace (incl. the U+202F before AM/PM in modern ICU) to a single ASCII space. */
-function norm(s: string): string {
-  return s.replace(/\s+/g, ' ').trim();
-}
 
 function config(overrides: Partial<ClockConfig> = {}): ClockConfig {
-  return { ...CLOCK_CONFIG_DEFAULTS, timezone: 'UTC', ...overrides };
+  return { ...CLOCK_CONFIG_DEFAULTS, ...overrides };
 }
 
-describe('formatClock time formatting (integration-clock.md §4.1, §12)', () => {
-  it('24-hour, no seconds -> "14:05"', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: false, showDate: false }), EN);
-    expect(norm(v.time)).toBe('14:05');
-    expect(v.date).toBeNull();
+/** The reference parts, computed from the Date the SAME way the impl does (device-local, no Intl), so the
+ *  parity test pins the exact figure/meridiem on any CI timezone without a hard-coded value or formatToParts. */
+function reference(clockFormat: '12h' | '24h', showSeconds: boolean) {
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const h = INSTANT.getHours();
+  const hour = clockFormat === '12h' ? String(h % 12 || 12) : pad2(h);
+  return {
+    figure: `${hour}:${pad2(INSTANT.getMinutes())}`,
+    meridiem: clockFormat === '12h' ? (h < 12 ? 'AM' : 'PM') : null,
+    seconds: showSeconds ? pad2(INSTANT.getSeconds()) : null,
+  };
+}
+
+describe('formatClock parts split (integration-clock.md §4.1, §12; AOD-130 Meridian, Hermes-safe)', () => {
+  it('24-hour, no seconds -> a 2-digit figure, no meridiem, no seconds whisper', () => {
+    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: false }));
+    expect(v.figure).toMatch(/^\d{2}:\d{2}$/); // hour:minute only — the split leaks no seconds and no AM/PM
+    expect(v.meridiem).toBeNull(); // 24h carries no dayPeriod
+    expect(v.seconds).toBeNull(); // the whisper is off
   });
 
-  it('24-hour with seconds -> "14:05:33"', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: true, showDate: false }), EN);
-    expect(norm(v.time)).toBe('14:05:33');
+  it('24-hour with seconds -> the seconds ride the whisper, NOT the figure', () => {
+    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: true }));
+    expect(v.figure).toMatch(/^\d{2}:\d{2}$/); // still just hour:minute — seconds are split out
+    expect(v.seconds).toBe('33'); // the instant's seconds, offset-independent
+    expect(v.meridiem).toBeNull();
   });
 
-  it('12-hour with seconds -> "2:05:33 PM"', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: true, showDate: false }), EN);
-    expect(norm(v.time)).toBe('2:05:33 PM');
+  it('12-hour -> a meridiem (AM/PM) is split out, and it is NOT embedded in the figure', () => {
+    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: false }));
+    expect(v.figure).toMatch(/^\d{1,2}:\d{2}$/); // numeric hour (no leading zero), minute; no AM/PM in the figure
+    expect(v.meridiem === 'AM' || v.meridiem === 'PM').toBe(true);
+    expect(v.seconds).toBeNull();
   });
 
-  it('12-hour, no seconds -> "2:05 PM"', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: false, showDate: false }), EN);
-    expect(norm(v.time)).toBe('2:05 PM');
-  });
-});
-
-describe('formatClock date formatting maps dateFormat -> Intl dateStyle (integration-clock.md §5.1, §12)', () => {
-  // Reference-equality against Intl with the same dateStyle/zone/locale: this pins that formatClock wires
-  // dateFormat through as dateStyle (a wrong style or zone would diverge from the reference), without
-  // hard-coding ICU output that can shift between versions.
-  for (const dateStyle of ['full', 'long', 'medium', 'short'] as const) {
-    it(`dateFormat "${dateStyle}" matches Intl dateStyle "${dateStyle}"`, () => {
-      const v = formatClock(INSTANT, config({ dateFormat: dateStyle, showDate: true }), EN);
-      const ref = new Intl.DateTimeFormat(EN, { dateStyle, timeZone: 'UTC' }).format(INSTANT);
-      expect(v.date).toBe(ref);
-    });
-  }
-
-  it('short date is the stable "6/28/26"', () => {
-    const v = formatClock(INSTANT, config({ dateFormat: 'short', showDate: true }), EN);
-    expect(v.date).toBe('6/28/26');
+  it('12-hour with seconds -> figure + meridiem + seconds whisper are all separated', () => {
+    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: true }));
+    expect(v.figure).toMatch(/^\d{1,2}:\d{2}$/);
+    expect(v.meridiem === 'AM' || v.meridiem === 'PM').toBe(true);
+    expect(v.seconds).toBe('33');
   });
 
-  it('omits the date entirely when showDate is false', () => {
-    const v = formatClock(INSTANT, config({ showDate: false }), EN);
-    expect(v.date).toBeNull();
-  });
-});
-
-describe('formatClock time-zone handling (integration-clock.md §5.2, §7.3)', () => {
-  it('formats in an IANA override zone, and different zones differ at the same instant', () => {
-    const ny = formatClock(INSTANT, config({ clockFormat: '12h', timezone: 'America/New_York', showSeconds: true, showDate: false }), EN);
-    const tokyo = formatClock(INSTANT, config({ clockFormat: '12h', timezone: 'Asia/Tokyo', showSeconds: true, showDate: false }), EN);
-    expect(ny.zone).toBe('America/New_York');
-    expect(tokyo.zone).toBe('Asia/Tokyo');
-    // 14:05:33Z is 10:05:33 in New York (UTC-4 in June) and 23:05:33 in Tokyo (UTC+9).
-    expect(norm(ny.time)).toBe('10:05:33 AM');
-    expect(norm(tokyo.time)).toBe('11:05:33 PM');
+  it('the figure/meridiem/seconds match the Date-derived reference (exact, device-local)', () => {
+    for (const clockFormat of ['24h', '12h'] as const) {
+      for (const showSeconds of [false, true]) {
+        const v = formatClock(INSTANT, config({ clockFormat, showSeconds }));
+        expect(v).toEqual(reference(clockFormat, showSeconds));
+      }
+    }
   });
 
-  it('an empty timezone resolves to the device-local zone (the default, §5.2)', () => {
-    const v = formatClock(INSTANT, { ...CLOCK_CONFIG_DEFAULTS, timezone: '' }, EN);
-    expect(v.zone).toBe(deviceTimeZone());
-  });
-
-  it('a malformed stored zone degrades to device-local and never throws (§7.3)', () => {
-    const fn = () => formatClock(INSTANT, { ...CLOCK_CONFIG_DEFAULTS, timezone: 'Mars/Phobos' }, EN);
-    expect(fn).not.toThrow();
-    expect(fn().zone).toBe(deviceTimeZone());
+  it('12-hour wraps midnight/noon to 12 (h%12||12), never 0; 24h is zero-padded', () => {
+    const mk = (h: number) => new Date(2026, 5, 28, h, 7, 0); // LOCAL h:07 (constructed local, no UTC skew)
+    expect(formatClock(mk(0), config({ clockFormat: '12h' }))).toMatchObject({ figure: '12:07', meridiem: 'AM' });
+    expect(formatClock(mk(12), config({ clockFormat: '12h' }))).toMatchObject({ figure: '12:07', meridiem: 'PM' });
+    expect(formatClock(mk(13), config({ clockFormat: '12h' }))).toMatchObject({ figure: '1:07', meridiem: 'PM' });
+    expect(formatClock(mk(9), config({ clockFormat: '24h' }))).toMatchObject({ figure: '09:07', meridiem: null });
   });
 });
 
-describe('isValidTimeZone / validateTimeZone (integration-clock.md §5.2)', () => {
-  it('isValidTimeZone accepts real IANA zones and rejects junk/empty', () => {
-    expect(isValidTimeZone('UTC')).toBe(true);
-    expect(isValidTimeZone('America/New_York')).toBe(true);
-    expect(isValidTimeZone('Europe/Madrid')).toBe(true);
-    expect(isValidTimeZone('Mars/Phobos')).toBe(false);
-    expect(isValidTimeZone('')).toBe(false);
-  });
-
-  it('validateTimeZone accepts empty (device-local) and valid zones, rejects invalid ones', () => {
-    expect(validateTimeZone('')).toBeNull();
-    expect(validateTimeZone('America/Guayaquil')).toBeNull();
-    expect(validateTimeZone('Not/AZone')).toEqual(expect.any(String));
-  });
-});
-
-describe('resolveConfig defensive read (integration-clock.md §5.1)', () => {
+describe('resolveConfig defensive read (integration-clock.md §5.1; AOD-130 two-field config)', () => {
   it('returns the defaults for an empty config', () => {
     expect(resolveConfig({})).toEqual(CLOCK_CONFIG_DEFAULTS);
     expect(resolveConfig(undefined)).toEqual(CLOCK_CONFIG_DEFAULTS);
   });
 
   it('passes through a fully valid config', () => {
-    const c = { clockFormat: '12h', showSeconds: true, showDate: false, dateFormat: 'short', timezone: 'Asia/Tokyo' };
+    const c = { clockFormat: '12h', showSeconds: true } as const;
     expect(resolveConfig(c)).toEqual(c);
   });
 
   it('falls back to defaults for unrecognized values rather than reaching Intl with junk', () => {
-    const c = resolveConfig({ clockFormat: 'bogus', showSeconds: 'yes', dateFormat: 42 });
+    const c = resolveConfig({ clockFormat: 'bogus', showSeconds: 'yes' });
     expect(c.clockFormat).toBe('24h');
     expect(c.showSeconds).toBe(false);
-    expect(c.dateFormat).toBe('full');
-  });
-});
-
-describe('AOD-37 §8.4 second-clock zone label/offset', () => {
-  it('humanizeZone humanizes the last IANA path segment', () => {
-    expect(humanizeZone('America/New_York')).toBe('New York');
-    expect(humanizeZone('Europe/Madrid')).toBe('Madrid');
-    expect(humanizeZone('America/Argentina/Buenos_Aires')).toBe('Buenos Aires');
   });
 
-  it('zoneShortOffset returns a GMT offset for a real zone (or null if Intl lacks shortOffset)', () => {
-    const off = zoneShortOffset(INSTANT, 'America/New_York', EN);
-    // shortOffset support is runtime-dependent; when present it carries a digit (e.g. "GMT-4").
-    if (off !== null) expect(off).toMatch(/GMT[+-]?\d/);
-  });
-
-  it('formatClock exposes a zone label only when a valid override is set (a second clock)', () => {
-    const second = formatClock(INSTANT, config({ timezone: 'America/New_York' }), EN);
-    expect(second.zoneLabel).toBe('New York');
-
-    const local = formatClock(INSTANT, config({ timezone: '' }), EN);
-    expect(local.zoneLabel).toBeNull();
-    expect(local.zoneOffset).toBeNull();
-
-    // A degraded (invalid) override is device-local, so it carries no kicker either (§7.3).
-    const degraded = formatClock(INSTANT, config({ timezone: 'Mars/Phobos' }), EN);
-    expect(degraded.zoneLabel).toBeNull();
+  it('IGNORES the stripped pre-Meridian fields (showDate/dateFormat/timezone) — they never reach the view', () => {
+    // A pre-Meridian instance carries these in its stored config; resolveConfig drops them cleanly so the
+    // resolved shape is exactly the two Meridian fields (harmless coexistence, integration-clock.md §5.1).
+    const c = resolveConfig({ clockFormat: '12h', showSeconds: true, showDate: true, dateFormat: 'full', timezone: 'America/New_York' });
+    expect(c).toEqual({ clockFormat: '12h', showSeconds: true });
   });
 });

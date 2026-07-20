@@ -3,13 +3,15 @@
 // Linear my_issues path end to end on the client: connecting -> live renders the issues, the host-drawn
 // empty phase (AOD-125), the 409 -> disconnected mapping, and the AOD-10 §4.4 render-time projectId re-check.
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WidgetHost } from '../../../../host/WidgetHost';
 import { WidgetDataSourceProvider, type WidgetDataSource } from '../../../../host/WidgetDataSource';
 import { RegistryProvider } from '../../../RegistryProvider';
 import type { WidgetInstance } from '../../../types';
-import type { MyIssuesData } from '../MyIssuesCard';
+import type { MyIssue, MyIssuesData } from '../MyIssuesCard';
+import { darkTheme } from '../../../../../unistyles';
 
 // The host reads useConnections() for the generic platform_key params-seeding (integration-weather.md
 // §6.3). linear is oauth2, so seeding is a no-op (params = instance.config); stub the hook so the host
@@ -80,18 +82,20 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     });
   });
 
-  it('at the short W cell leads with the count and sheds rows into "+N more" (AOD-123 no-overflow)', async () => {
-    // W (2x1) is a 48px body; a count line + issue rows cannot both fit, so the height-driven count keeps
-    // the §5.1 count value and folds the rows into "+N more" rather than overflowing the card.
+  it('at W leads with the count over the priority silhouette — no rows, no "+N more" (AOD-134)', async () => {
+    // W (2x1) is the count + silhouette banner: the priority marks carry the texture and the rows are an M/L
+    // affordance, so there are no issue rows and no "+N more" here (both fit the 168dp width → 2 marks).
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: sampleData, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(projectChoices),
     };
     renderHost(source); // W (baseInstance)
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
-    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open'); // the value still leads
-    expect(screen.getByTestId('linear-myissues-more')).toHaveTextContent('+2 more'); // rows shed, not clipped
-    expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // no row overflow
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open'); // the value leads
+    expect(screen.getByTestId('linear-myissues-silhouette')).toBeTruthy();
+    expect(screen.getAllByTestId('linear-myissues-mark')).toHaveLength(2); // one mark per issue
+    expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // W shows no rows
+    expect(screen.queryByTestId('linear-myissues-more')).toBeNull();
   });
 
   it('resolves to the host-drawn empty phase when there are no assigned issues (AOD-125)', async () => {
@@ -159,5 +163,104 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     renderHost(mk()); // W
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.queryByTestId('linear-myissues-due')).toBeNull();
+  });
+});
+
+// --- AOD-134 Soundings: the priority silhouette + the S/M/W/L layouts + the overdue-vs-Today due split ----
+const sInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-s', size: 'S', rect: { x: 0, y: 0, w: 1, h: 1, z: 0 } };
+const mInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-m', size: 'M', rect: { x: 0, y: 0, w: 1, h: 2, z: 0 } };
+
+const PRIORITY_LABEL: Record<number, string> = { 0: 'No priority', 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low' };
+const issue = (id: string, priority: number, extra: Partial<MyIssue> = {}): MyIssue => ({
+  id,
+  identifier: `AOD-${id}`,
+  title: `Issue ${id}`,
+  url: 'u',
+  stateName: 'Todo',
+  stateType: 'unstarted',
+  priority,
+  priorityLabel: PRIORITY_LABEL[priority] ?? 'No priority',
+  dueDate: null,
+  ...extra,
+});
+const sourceFor = (data: MyIssuesData): WidgetDataSource => ({
+  fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
+  resolveOptions: jest.fn().mockResolvedValue(projectChoices),
+});
+function todayYmd(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`;
+}
+
+describe('Soundings priority silhouette + S/M/W/L layouts (AOD-134)', () => {
+  it('at S is the glance: the count over the silhouette, no rows', async () => {
+    renderHost(sourceFor(sampleData), baseInstance.config, sInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
+    expect(screen.getByTestId('linear-myissues-silhouette')).toBeTruthy();
+    expect(screen.getAllByTestId('linear-myissues-mark')).toHaveLength(2);
+    expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // S shows no rows
+    expect(screen.queryByTestId('linear-myissues-more')).toBeNull();
+  });
+
+  it('at M is the reading size: the count over identifier·title rows, and the rows DROP their glyphs (no silhouette, no marks)', async () => {
+    renderHost(sourceFor(sampleData), baseInstance.config, mInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
+    // M is the one size with NO silhouette; since the per-row glyph is gone too, there is no priority mark at all
+    expect(screen.queryByTestId('linear-myissues-silhouette')).toBeNull();
+    expect(screen.queryAllByTestId('linear-myissues-mark')).toHaveLength(0);
+    // the rows themselves are present (identifier · title)
+    expect(screen.getByText('AOD-55')).toBeTruthy();
+    expect(screen.getByText('Wire Linear My Issues')).toBeTruthy();
+  });
+
+  it('at L carries BOTH the silhouette and the issue rows (count + silhouette + rows)', async () => {
+    renderHost(sourceFor(sampleData), largeInstance.config, largeInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
+    expect(screen.getByTestId('linear-myissues-silhouette')).toBeTruthy();
+    expect(screen.getAllByTestId('linear-myissues-mark')).toHaveLength(2);
+    expect(screen.getByText('AOD-55')).toBeTruthy(); // rows present alongside the silhouette
+  });
+
+  it('sorts the silhouette HEAVY→LIGHT and CAPS it to the width — the heaviest survive, never clipped', async () => {
+    // 12 issues, source order deliberately NOT heavy→light: [low×3, med×2, none×2, high×2, urgent×2, none].
+    const many: MyIssuesData = {
+      issues: [
+        issue('a', 4), issue('b', 4), issue('c', 4), issue('d', 3), issue('e', 3), issue('f', 0),
+        issue('g', 0), issue('h', 2), issue('i', 2), issue('j', 1), issue('k', 1), issue('l', 0),
+      ],
+      totalCount: 12,
+    };
+    renderHost(sourceFor(many), largeInstance.config, largeInstance); // L: 168dp width → capacity 9
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    const labels = screen.getAllByTestId('linear-myissues-mark').map((m) => m.props.accessibilityLabel);
+    // heavy→light, capped to 9: urgent, urgent, high, high, medium, medium, low, low, low — the 3 nones drop
+    expect(labels).toEqual(['Urgent', 'Urgent', 'High', 'High', 'Medium', 'Medium', 'Low', 'Low', 'Low']);
+    expect(labels).not.toContain('No priority'); // the lightest are the dropped ones (heaviest survive)
+    expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('12 open'); // the count carries the total
+  });
+
+  it('warms the due ONLY on a breach: overdue → warning ink, Today → text, future → muted (L, §5.2)', async () => {
+    const dueData: MyIssuesData = {
+      issues: [
+        issue('over', 1, { dueDate: '2020-01-01' }), // long overdue
+        issue('today', 2, { dueDate: todayYmd() }), // due today
+        issue('future', 3, { dueDate: '2099-12-31' }), // far future
+      ],
+      totalCount: 3,
+    };
+    renderHost(sourceFor(dueData), largeInstance.config, largeInstance);
+    await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
+    const dues = screen.getAllByTestId('linear-myissues-due'); // rows render in source order
+    expect(dues).toHaveLength(3);
+    const colorOf = (i: number) => StyleSheet.flatten(dues[i].props.style).color;
+    expect(colorOf(0)).toBe(darkTheme.colors.warning); // overdue → the one amber status ink (the breach)
+    expect(colorOf(1)).toBe(darkTheme.colors.text); // Today → bone-bright
+    expect(colorOf(2)).toBe(darkTheme.colors.textMuted); // future → recedes
+    // the accent is never spent (My Issues is deliberately monochrome): no due wears colors.accent
+    expect([colorOf(0), colorOf(1), colorOf(2)]).not.toContain(darkTheme.colors.accent);
+    expect(new Set([colorOf(0), colorOf(1), colorOf(2)]).size).toBe(3); // the three tones are distinct
   });
 });

@@ -38,6 +38,8 @@ export interface CurrentWeatherData {
   humidityPct: number;
   windSpeed: number;
   windDirectionDeg: number;
+  sunrise: string; // today, local ISO (frozen contract for the AOD-132 Transit sun arc; same shape as ForecastDay)
+  sunset: string; // today, local ISO
   units: WeatherUnits;
 }
 

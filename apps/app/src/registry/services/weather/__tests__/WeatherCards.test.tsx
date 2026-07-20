@@ -52,6 +52,8 @@ const CURRENT_DATA: CurrentWeatherData = {
   humidityPct: 60,
   windSpeed: 7.1,
   windDirectionDeg: 120,
+  sunrise: '2026-06-27T06:13',
+  sunset: '2026-06-27T18:20',
   units: { temperature: '°C', windSpeed: 'km/h', humidity: '%' },
 };
 
@@ -138,6 +140,19 @@ const wCurrentInstance: WidgetInstance = {
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
+// AOD-132 Transit added M (1x2) and L (2x2) to Current.
+const mCurrentInstance: WidgetInstance = {
+  ...currentInstance,
+  size: 'M',
+  rect: { x: 0, y: 0, w: 1, h: 2, z: 0 },
+};
+
+const lCurrentInstance: WidgetInstance = {
+  ...currentInstance,
+  size: 'L',
+  rect: { x: 0, y: 0, w: 2, h: 2, z: 0 },
+};
+
 function currentSource(data: CurrentWeatherData): WidgetDataSource {
   return {
     fetch: jest.fn().mockResolvedValue({ data, fetchedAt: Date.now() }),
@@ -145,8 +160,8 @@ function currentSource(data: CurrentWeatherData): WidgetDataSource {
   };
 }
 
-describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
-  it('at S renders the temperature + the day-form condition icon, header/meta suppressed (the glance)', async () => {
+describe('CurrentWeatherCard Transit through the host lifecycle (AOD-132; was AOD-58 + AOD-35)', () => {
+  it('at S renders the temperature + the day-form condition icon over the pane; NO condition/meta/arc (the glance)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(currentSource(CURRENT_DATA), currentInstance); // S
 
@@ -155,22 +170,61 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C'); // unit echoed from the payload
     // condition.isDay: true -> the day glyph (the icon's day/night is the payload's, §5.2)
     expect(screen.getByTestId('weather-icon-cloudy-day')).toBeTruthy();
-    // the 1x1 glance suppresses the condition label and the meta
+    // the muted condition pane wears the sky at every size, S included
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    // the 1x1 glance suppresses the condition label, the meta, AND the arc (glyph-over-temp only)
     expect(screen.queryByTestId('weather-current-condition')).toBeNull();
     expect(screen.queryByTestId('weather-current-meta')).toBeNull();
+    expect(screen.queryByTestId('weather-current-arc')).toBeNull();
+    expect(screen.queryByTestId('weather-current-sun')).toBeNull();
   });
 
-  it('at W adds the accent condition and the muted feels/humidity/wind meta line', async () => {
+  it('at M is a stack: glyph+temp, condition, meta, over a flat waterline arc (with the day sun-mark)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    renderHost(currentSource(CURRENT_DATA), mCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
+    expect(screen.getByText('Partly cloudy')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    // arc present at M (flat waterline); day payload -> a sun-mark, never a moon (position-independent)
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-sun')).toBeTruthy();
+    expect(screen.queryByTestId('weather-current-moon')).toBeNull();
+  });
+
+  it('at W is the banner: temp+glyph lead + condition over the waterline; meta gives way to fit the slot', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(currentSource(CURRENT_DATA), wCurrentInstance);
 
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    // temp + glyph + condition stay; the temperature is never the thing that drops
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
     expect(screen.getByText('Partly cloudy')).toBeTruthy();
-    // §5 meta: "Feels {apparent}° · {humidity}% · {wind} {windUnit} {compass}" (bare ° in meta; the hero echoes the unit)
-    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    // the W body (~48dp) RESERVES the waterline, so the meta detail (feels/humidity/wind) drops FIRST
+    // (truncate-then-drop order) — the card never exceeds its slot. This is a drop assertion, not a
+    // visual-clip one (the meta element is not rendered at all when it does not fit).
+    expect(screen.queryByTestId('weather-current-meta')).toBeNull();
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-sun')).toBeTruthy();
   });
 
-  it('swaps the condition icon to the night variant when the payload isDay is false', async () => {
+  it('at L is the wall hero: glyph+temp, condition, meta, and the full curved arc (with the day sun-mark)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    renderHost(currentSource(CURRENT_DATA), lCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-current-temp')).toHaveTextContent('18°C');
+    expect(screen.getByText('Partly cloudy')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-meta')).toHaveTextContent('Feels 18° · 60% · 7 km/h SE');
+    expect(screen.getByTestId('weather-current-pane')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.getByTestId('weather-current-sun')).toBeTruthy();
+  });
+
+  it('swaps the condition icon to the night variant when the payload isDay is false (S)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     const nightData: CurrentWeatherData = {
       ...CURRENT_DATA,
@@ -181,6 +235,34 @@ describe('CurrentWeatherCard through the host lifecycle (AOD-58 + AOD-35 polish)
     await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
     expect(screen.getByTestId('weather-icon-cloudy-night')).toBeTruthy();
     expect(screen.queryByTestId('weather-icon-cloudy-day')).toBeNull();
+  });
+
+  it('at night (isDay false) the arc drops the sun-mark and draws the moon crescent (L)', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    const nightData: CurrentWeatherData = {
+      ...CURRENT_DATA,
+      condition: { ...CURRENT_DATA.condition, isDay: false }, // partly-night pane
+    };
+    renderHost(currentSource(nightData), lCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    // §7: the sun-mark is gone below the line, a moon crescent takes its place
+    expect(screen.getByTestId('weather-current-moon')).toBeTruthy();
+    expect(screen.queryByTestId('weather-current-sun')).toBeNull();
+    expect(screen.getByTestId('weather-icon-cloudy-night')).toBeTruthy();
+  });
+
+  it('degrades gracefully when sunrise/sunset are missing: the arc line renders, no sun-mark, never crashes', async () => {
+    mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
+    const noSun: CurrentWeatherData = { ...CURRENT_DATA, sunrise: '', sunset: '' };
+    renderHost(currentSource(noSun), lCurrentInstance);
+
+    await waitFor(() => expect(screen.getByTestId('weather-current')).toBeTruthy());
+    // the arc still draws (the line is a quiet fact) but there is no sun-mark (day) since the fraction is null
+    expect(screen.getByTestId('weather-current-arc')).toBeTruthy();
+    expect(screen.queryByTestId('weather-current-sun')).toBeNull();
+    expect(screen.queryByTestId('weather-current-moon')).toBeNull(); // isDay true -> no moon either
   });
 });
 
@@ -197,48 +279,63 @@ function forecastSource(data: ForecastData): WidgetDataSource {
   };
 }
 
-describe('ForecastCard through the host lifecycle (AOD-58 + AOD-35 polish)', () => {
-  it('at W is a banner strip: Today, the day-form per-day icon, and the accent precip (no label)', async () => {
+describe('ForecastCard through the host lifecycle (AOD-133 Range: hi-lo span-bars on the week scale)', () => {
+  it('at W is a compact span-bar list: Today, the day-form glyph, a bar per day; precip + header DROPPED', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
-    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // W (the banner slot since AOD-122)
+    renderHost(forecastSource(FORECAST_DATA), forecastInstance); // W (the compact slot)
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
     expect(screen.getByText('Today')).toBeTruthy();
     // forecast days always use the day form (§4.2), even for showers/cloudy which swap at Current
     expect(screen.getByTestId('weather-icon-drizzle-day')).toBeTruthy();
     expect(screen.getByTestId('weather-icon-showers-day')).toBeTruthy();
-    // precip is its own accent element at W; the condition label is carried by the icon, not text
-    expect(screen.getByText('16%')).toBeTruthy();
+    // one span-bar per visible day (the Range replaces the numeric hi-lo TEXT with a bar on the shared scale)
+    expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(FORECAST_DATA.days.length);
+    // precip is the truncation ladder's first casualty at the compact W — dropped so the legible temps get
+    // the bar room; NO precip figure at W (a behavioural drop, asserted present at L below)
+    expect(screen.queryByText(/%/)).toBeNull();
+    // the condition label is carried by the glyph, never text
     expect(screen.queryByText(/Light drizzle/)).toBeNull();
+    // the "Week …" shared-scale header is an L affordance; W drops it (compact, ~one row tall)
+    expect(screen.queryByTestId('weather-forecast-week')).toBeNull();
   });
 
-  it('at L is a row list with the condition label + appended precip', async () => {
+  it('at L is the span-bar list under the "Week X–Y" shared-scale header (rounded week min/max, degree echoed)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(forecastSource(FORECAST_DATA), largeForecastInstance);
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
     expect(screen.getByText('Today')).toBeTruthy();
-    expect(screen.getByText('Light drizzle · 16%')).toBeTruthy();
-    expect(screen.getByText('Slight rain showers · 4%')).toBeTruthy();
+    // the shared scale over the visible days: min low 9.1→9, max high 18.3→18; the degree echoed from °C
+    expect(screen.getByTestId('weather-forecast-week')).toHaveTextContent(/Week 9°.18°/);
+    // a bar per day + precip figures; still NO condition label text (the Range reads as shape, not words)
+    expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(FORECAST_DATA.days.length);
+    expect(screen.getByText('16%')).toBeTruthy();
+    expect(screen.getByText('4%')).toBeTruthy();
+    expect(screen.queryByText(/Light drizzle/)).toBeNull();
+    expect(screen.queryByText(/Slight rain showers/)).toBeNull();
   });
 
-  it('omits precip entirely when the payload value is null (W)', async () => {
+  it('at L a null precip stays BLANK, never "0%"; the bar/day still draw (precip is kept at L)', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     const noPrecip: ForecastData = {
       units: { temperature: '°C' },
       days: [{ ...FORECAST_DATA.days[0], precipProbabilityPct: null }],
     };
-    renderHost(forecastSource(noPrecip), forecastInstance);
+    renderHost(forecastSource(noPrecip), largeForecastInstance); // L keeps the precip column
 
     await waitFor(() => expect(screen.getByTestId('weather-forecast')).toBeTruthy());
-    expect(screen.queryByText(/%/)).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull(); // a null precip stays blank (never "0%")
+    expect(screen.getAllByTestId('weather-forecast-bar')).toHaveLength(1); // precip giving way never drops the bar
   });
 
-  it('renders the empty state for a malformed/empty forecast (never crashes)', async () => {
+  it('resolves to the host-drawn empty phase for an empty forecast (AOD-133 isForecastEmpty), NOT a leaf body', async () => {
     mockConnections = new Map([['weather', connection('weather', 'platform_key', QUITO)]]);
     renderHost(forecastSource({ days: [], units: { temperature: '°C' } }), forecastInstance);
 
-    await waitFor(() => expect(screen.getByTestId('weather-forecast-empty')).toBeTruthy());
+    // AOD-133/AOD-125: the pre-M1 leaf-drawn "No forecast" is now the host-drawn `empty` phase (EmptyBody).
+    await waitFor(() => expect(screen.getByTestId('widget-empty-body')).toBeTruthy());
     expect(screen.queryByTestId('weather-forecast')).toBeNull();
+    expect(screen.queryByTestId('weather-forecast-empty')).toBeNull(); // the leaf no longer self-draws it
   });
 });

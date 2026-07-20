@@ -341,15 +341,20 @@ const FORECAST_BODY = {
 const QUITO = { latitude: -0.1807, longitude: -78.4678, timezone: "America/Guayaquil", name: "Quito, Ecuador" };
 
 describe("weather buildQuery: location (from params) + static selectors, no path token (§6.1)", () => {
-  it("current: carries the seeded location + the static current= selector, never the daily block", () => {
+  it("current: carries the location + static current= selector + a narrow daily= block (sunrise/sunset only) on a 1-day horizon", () => {
     const q = weatherOp("current").buildQuery!(QUITO);
     assertEquals(q.latitude, -0.1807);
     assertEquals(q.longitude, -78.4678);
     assertEquals(q.timezone, "America/Guayaquil");
     assert(typeof q.current === "string" && q.current.includes("temperature_2m"), "static current selector");
     assert((q.current as string).includes("weather_code"), "weather_code is requested");
-    assertEquals(q.daily, undefined);
-    assertEquals(q.forecast_days, undefined);
+    // Today's sunrise/sunset now ride the Current payload (AOD-131) for the AOD-132 Transit sun arc: a
+    // narrow daily block on a 1-day (today) horizon, distinct from the forecast's full daily selector.
+    assert(typeof q.daily === "string", "current now requests a narrow daily block");
+    assert((q.daily as string).includes("sunrise"), "sunrise is requested");
+    assert((q.daily as string).includes("sunset"), "sunset is requested");
+    assert(!(q.daily as string).includes("temperature_2m_max"), "current's daily stays distinct from the forecast's full daily");
+    assertEquals(q.forecast_days, 1);
   });
 
   it("forecast: carries the location + the static daily= selector + a fixed 7-day horizon, no current", () => {
@@ -385,6 +390,8 @@ describe("weather normalize current: current{}+current_units{} -> CurrentWeather
     assertEquals(d.windSpeed, 4.4);
     assertEquals(d.windDirectionDeg, 210);
     assertEquals(d.condition, { code: 3, label: "Overcast", group: "cloudy", isDay: false }); // is_day 0
+    assertEquals(d.sunrise, "2026-06-27T06:13"); // today's sunrise from the narrow daily block (AOD-131)
+    assertEquals(d.sunset, "2026-06-27T18:20"); // today's sunset from the narrow daily block (AOD-131)
     assertEquals(d.units, { temperature: "°C", windSpeed: "km/h", humidity: "%" });
   });
 
@@ -400,6 +407,8 @@ describe("weather normalize current: current{}+current_units{} -> CurrentWeather
     assertEquals(d.observedAt, "");
     assertEquals(d.condition.group, "cloudy"); // unknown code -> neutral bucket
     assertEquals(d.condition.code, -1);
+    assertEquals(d.sunrise, ""); // missing daily block -> "" (dailyColumn [] -> [0] undefined -> wStr), never a throw
+    assertEquals(d.sunset, "");
     assertEquals(d.units, { temperature: "°C", windSpeed: "km/h", humidity: "%" }); // metric v1 defaults
   });
 });

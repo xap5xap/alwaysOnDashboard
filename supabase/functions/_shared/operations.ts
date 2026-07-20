@@ -365,6 +365,8 @@ export interface CurrentWeatherData {
   humidityPct: number;
   windSpeed: number;
   windDirectionDeg: number; // 0-360
+  sunrise: string; // today, local ISO (same names + semantics as ForecastDay.sunrise/sunset; rides the Current payload for the AOD-132 Transit sun arc)
+  sunset: string; // today, local ISO
   units: WeatherUnits;
 }
 
@@ -390,6 +392,9 @@ const CURRENT_FIELDS =
   "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m,wind_direction_10m";
 const DAILY_FIELDS =
   "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset";
+// A narrow daily block rides the Current query so today's sunrise/sunset ship on the Current payload
+// (for the AOD-132 Transit sun arc); distinct from the full DAILY_FIELDS the Forecast widget requests.
+const CURRENT_DAILY_FIELDS = "sunrise,sunset";
 const FORECAST_DAYS = 7;
 
 // The verified WMO weather_code interpretation (integration-weather.md §4.0 / §12): code -> human label
@@ -461,9 +466,13 @@ function locationQuery(params: Record<string, unknown>): Record<string, unknown>
   };
 }
 
-/** Current Weather query (§4.1): the location + the static `current=` selector. */
+/**
+ * Current Weather query (§4.1): the location + the static `current=` selector, plus a narrow `daily=`
+ * block on a 1-day horizon so the response carries today's sunrise/sunset (for the AOD-132 Transit sun
+ * arc). One combined Open-Meteo call; `/v1/forecast` already serves current, so no proxy/allow-list change.
+ */
 function buildCurrentQuery(params: Record<string, unknown>): Record<string, unknown> {
-  return { ...locationQuery(params), current: CURRENT_FIELDS };
+  return { ...locationQuery(params), current: CURRENT_FIELDS, daily: CURRENT_DAILY_FIELDS, forecast_days: 1 };
 }
 
 /** Forecast query (§4.2): the location + the static `daily=` selector + a fixed 7-day horizon. */
@@ -489,9 +498,16 @@ interface RawCurrent {
  * provider's strings, defaulting to the metric v1 units when absent.
  */
 function normalizeCurrent(raw: unknown): CurrentWeatherData {
-  const body = (raw ?? {}) as { current?: RawCurrent | null; current_units?: Record<string, unknown> | null };
+  const body = (raw ?? {}) as {
+    current?: RawCurrent | null;
+    current_units?: Record<string, unknown> | null;
+    daily?: Record<string, unknown> | null;
+  };
   const c = body.current ?? {};
   const u = body.current_units ?? {};
+  // Today's sunrise/sunset from the narrow daily block buildCurrentQuery requests. A missing daily block
+  // yields "" (dailyColumn -> [], [0] undefined, wStr -> ""), never a throw (same guarantee as forecast).
+  const daily = body.daily ?? {};
   return {
     observedAt: wStr(c.time),
     condition: toCondition(c.weather_code, wNum(c.is_day) === 1),
@@ -500,6 +516,8 @@ function normalizeCurrent(raw: unknown): CurrentWeatherData {
     humidityPct: wNum(c.relative_humidity_2m),
     windSpeed: wNum(c.wind_speed_10m),
     windDirectionDeg: wNum(c.wind_direction_10m),
+    sunrise: wStr(dailyColumn(daily, "sunrise")[0]),
+    sunset: wStr(dailyColumn(daily, "sunset")[0]),
     units: {
       temperature: typeof u.temperature_2m === "string" ? u.temperature_2m : "°C",
       windSpeed: typeof u.wind_speed_10m === "string" ? u.wind_speed_10m : "km/h",

@@ -1,34 +1,32 @@
-// The "Clock" leaf renderer (AOD-8 §6.1, integration-clock.md §4.1, design-widget-system.md §8). The
-// bookend leaf: unlike every other card it receives NO live proxy data (the host none path hands it
-// data: undefined, §6.3) and ignores it. It self-ticks from the device clock (useClockTick, §7.2) and
-// formats via Intl (formatClock, §12) using the instance config. Reached only on the (always) Fresh
-// state; the generic host draws the frame, the SERVICE header (suppressed at S), and the dim chrome.
+// The "Clock" leaf renderer (AOD-8 §6.1, integration-clock.md §4.1; RB-M2 AOD-130 Meridian). The bookend
+// leaf: unlike every other card it receives NO live proxy data (the host none path hands it data: undefined,
+// §6.3) and ignores it. It self-ticks from the device clock (useClockTick, §7.2) and formats it straight
+// from that Date (formatClock, §12) using the instance config. Reached only on the (always) Fresh state; the generic host
+// draws the frame and the (suppressed at every size) header.
 //
-// AOD-123 (attempt 2): the Clock is the SUBJECT of AOD-95/97 and the flagship of the shared fit-to-bounds
-// body. AOD-95: at the small size the fixed 34px time "18:45" is ~96px in a 72px cell, so minutes clip.
-// AOD-97: resizing to a tall/narrow cell scales the time to the HEIGHT so it overflows the WIDTH and
-// hard-clips. The fix is the FitBody width-fit: the time is the scalable VALUE, rendered at its per-size
-// clockSize step when it fits and otherwise scaled by min(widthScale, heightScale) in DP down to a floor,
-// so it NEVER clips either axis. The zone kicker is the held LEAD; the date is truncate-then-drop DETAIL.
-// Per-size CONTENT is unchanged (S: time only; W: time + date, + zone on a timezone override; L: the
-// same with more room) — the fit is what changed, not the face. The clockSize ramp is CONSUMED as the
-// per-size baseSize (not restructured), and the night recolor (useAmbient) + dimsWithAmbient:false opt-out
-// are untouched. The Meridian styling pass (M4) still owns any aesthetic beyond the fit.
+// AOD-130 MERIDIAN (subtractive reface): a single centered time FIGURE, no chrome at any size. The date line,
+// the zone kicker, the GMT offset, and the wide-banner branch were all stripped, so the FitBody carries the
+// VALUE ALONE (no lead, no detail) — the hero figure (hour:minute) width-fit into the box like before, plus
+// two small SATELLITES beside it: the meridiem (AM/PM, 12h only) and the seconds WHISPER (small + muted +
+// recessive, shown only when showSeconds). The satellites are sized as fractions of the fitted hero via the
+// `meridian` token group, so the whole composite scales as one unit under the width-fit (never clips). The
+// clockSize ramp is CONSUMED as the per-size baseSize, and the night recolor (useAmbient) + dimsWithAmbient:
+// false opt-out are UNTOUCHED — the ~3h dusk->ember ramp is AOD-174 (RB-M6), not this issue; Meridian binds
+// the ember to the CURRENT ambient phase (kiosk/ambient.ts owns the transition), it does not build one.
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import { useAmbient } from '../../../ambient/AmbientContext';
-import { FitBody, type FitLine } from '../../../widgets/FitBody';
+import { FitBody } from '../../../widgets/FitBody';
 import { tabularWidth } from '../../../widgets/fitLadder';
 import { useClockTick } from './useClockTick';
 import { formatClock, resolveConfig } from './time';
 
 // The theme.clockSize ramp keys predate the S/M/W/L slot ids (AOD-122): bridge by geometry rather than
-// rename the test-locked token group — S (1x1) -> the small step, W (2x1) -> the medium step (its
-// geometric twin), L (2x2) -> the large step. M (1x2) is not a declared Clock size; if a coerced rect
-// mounts it anyway it reads the medium step, exactly what the old unknown-size fallback did. The
-// Meridian face (M4) owns retiring the legacy key names.
+// rename the token group — S (1x1) -> the small step, W (2x1) -> the medium step (its geometric twin),
+// L (2x2) -> the large step. M (1x2) is not a declared Clock size; if a coerced rect mounts it anyway it
+// reads the medium step, exactly what the old unknown-size fallback did.
 const CLOCK_RAMP_KEY: Record<WidgetSize, 'small' | 'medium' | 'large'> = {
   S: 'small',
   M: 'medium',
@@ -42,90 +40,95 @@ export function ClockCard({ config, size, box }: WidgetRenderProps) {
   const clockConfig = resolveConfig(config);
   // The render tick: 1s when seconds are shown, else 60s (§7.2). `data` is intentionally ignored.
   const now = useClockTick(clockConfig.showSeconds);
-  // Device locale (undefined); the zone comes from config or degrades to device-local (§7.3).
   const view = formatClock(now, clockConfig);
 
-  const isSmall = size === 'S';
-  const isLarge = size === 'L';
-  // §8.3 date hidden at S; §8.4 zone kicker shown only on a valid timezone override (second clock).
-  const showDateLine = !isSmall && view.date != null;
-  const showKicker = !isSmall && view.zoneLabel != null;
-
-  // §8.5 night palette: deep red on the host's night frame, dimming further with dimLevel (floor ~0.45,
-  // a build-refinement approximation of the §3.2 luminance multiply). Day = the standard palette.
+  // §8.5 night palette (UNTOUCHED by AOD-130): the figure swaps to the deep-red ember at phase night, the
+  // satellites recede a step (secondary/muted), and the whole card dims further with dimLevel (floor ~0.45).
+  // Day = the standard palette; the meridiem + seconds whisper recede to textMuted. Bound to colour ROLES.
   const night = ambient.phase === 'night';
-  const timeColor = night ? theme.night.primary : theme.colors.text;
-  const dateColor = night ? theme.night.secondary : theme.colors.textMuted;
-  const kickerColor = night ? theme.night.muted : theme.colors.textMuted;
+  const figureColor = night ? theme.night.primary : theme.colors.text;
+  const meridiemColor = night ? theme.night.secondary : theme.colors.textMuted;
+  const secondsColor = night ? theme.night.muted : theme.colors.textMuted;
   const nightOpacity = night ? Math.max(0.45, 1 - ambient.dimLevel * 0.6) : 1;
 
-  // §3.3 the time is the scalable VALUE: its per-size clockSize step is the baseSize the FitBody width-fit
-  // scales down from when the string is too wide/tall for the box. tabularWidth estimates its DP width so
-  // the fit needs no measurement. The Text keeps a FLAT style object (color read by the night test) and
-  // its raw children (read by the tick test); only the fontSize now comes from the fit.
+  // The satellite geometry (fractions of the fitted hero, so the composite scales as one). Present only when
+  // there is something to show beside the figure (a 12h meridiem and/or the seconds whisper).
+  const { meridiemScale, secondsScale, secondsOpacity, gapScale } = theme.meridian;
+  const hasSatellite = view.meridiem != null || view.seconds != null;
+
+  // §3.3 the composite is the scalable VALUE: its per-size clockSize step is the baseSize the FitBody
+  // width-fit scales down from. The intrinsic width is the hero PLUS the gap + the widest satellite (both at
+  // baseSize), so the fit reserves room for the meridiem/seconds and the composite never clips either axis.
   const baseSize = theme.clockSize[CLOCK_RAMP_KEY[size]];
+  const satelliteWidth = Math.max(
+    view.meridiem != null ? tabularWidth(view.meridiem, baseSize * meridiemScale) : 0,
+    view.seconds != null ? tabularWidth(view.seconds, baseSize * secondsScale) : 0,
+  );
+  const intrinsicWidth = tabularWidth(view.figure, baseSize) + (hasSatellite ? baseSize * gapScale : 0) + satelliteWidth;
+
   const timeValue = {
     key: 'time',
     baseSize,
-    intrinsicWidth: tabularWidth(view.time, baseSize),
-    lineFactor: 1.1, // tabular time glyphs are compact
+    intrinsicWidth,
+    lineFactor: 1.1, // tabular time glyphs are compact; the satellites are smaller and add no height
+    // The hero Text keeps a FLAT style object (its fontSize + color are read by the fit / night tests) and its
+    // raw children (read by the tick test). The satellites ride beside it, sized off the same fitted fontSize.
     render: (fontSize: number) => (
-      <Text
-        style={{
-          fontSize,
-          fontWeight: '700',
-          letterSpacing: fontSize >= 80 ? -1 : -0.5,
-          fontVariant: ['tabular-nums'],
-          color: timeColor,
-        }}
-        numberOfLines={1}
-        testID="clock-time"
-      >
-        {view.time}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text
+          style={{
+            fontSize,
+            fontWeight: '700',
+            letterSpacing: fontSize >= 80 ? -1 : -0.5,
+            fontVariant: ['tabular-nums'],
+            color: figureColor,
+          }}
+          numberOfLines={1}
+          testID="clock-time"
+        >
+          {view.figure}
+        </Text>
+        {hasSatellite ? (
+          <View style={{ marginLeft: fontSize * gapScale, justifyContent: 'center', alignItems: 'flex-start' }}>
+            {view.meridiem != null ? (
+              <Text
+                style={{ fontSize: fontSize * meridiemScale, fontWeight: '700', letterSpacing: 0.5, color: meridiemColor }}
+                numberOfLines={1}
+                testID="clock-meridiem"
+              >
+                {view.meridiem}
+              </Text>
+            ) : null}
+            {view.seconds != null ? (
+              <Text
+                style={{
+                  fontSize: fontSize * secondsScale,
+                  fontWeight: '600',
+                  fontVariant: ['tabular-nums'],
+                  color: secondsColor,
+                  opacity: secondsOpacity, // the whisper recedes further than its muted colour
+                }}
+                numberOfLines={1}
+                testID="clock-seconds"
+              >
+                {view.seconds}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
     ),
   };
 
-  // §8.4 the zone kicker rides ABOVE the time as the held lead (a second-clock label on an override).
-  const lead: FitLine | undefined = showKicker
-    ? {
-        key: 'zone',
-        role: 'caption',
-        node: (
-          <Text style={[theme.type.caption, { color: kickerColor }]} numberOfLines={1} testID="clock-zone">
-            {view.zoneLabel}
-          </Text>
-        ),
-      }
-    : undefined;
-
-  // §8.3 the date is truncate-then-drop detail (heading at L, meta elsewhere), so a cell too short simply
-  // sheds it instead of clipping it below the card edge (the other half of the AOD-95 report).
-  const detail: FitLine[] = showDateLine
-    ? [
-        {
-          key: 'date',
-          role: isLarge ? 'heading' : 'meta',
-          node: (
-            <Text style={[isLarge ? theme.type.heading : theme.type.meta, { color: dateColor }]} numberOfLines={1} testID="clock-date">
-              {view.date}
-            </Text>
-          ),
-        },
-      ]
-    : [];
-
-  // S centres the time as a glance (header suppressed); W/L stack it with the date/zone.
+  // A chromeless, centered figure at EVERY size: no header reserved (headerShown false), the value centred as
+  // a glance, no lead/detail. The night opacity rides the container.
   return (
     <FitBody
       size={size}
       box={box}
-      headerShown={!isSmall}
-      lead={lead}
+      headerShown={false}
       value={timeValue}
-      detail={detail}
-      gap={theme.spacing(1)}
-      glance={isSmall}
+      glance
       style={{ opacity: nightOpacity }}
       testID="clock-card"
       accessibilityRole="summary"

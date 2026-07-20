@@ -15,6 +15,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps } from '../../types';
 import type { CalendarEvent, NextEventData } from './types';
 import { PinGlyph } from './glyphs';
+import { imminenceStop, minutesUntilStart } from './imminence';
 
 /** Defensive read: anything that is not a well-formed event reads as no-event (the host draws the empty). */
 function asNextEventData(data: unknown): NextEventData {
@@ -31,12 +32,13 @@ export function isNextEventEmpty(data: unknown): boolean {
   return !asNextEventData(data).hasEvent;
 }
 
-/** A glanceable "when" label against the device clock (integration-calendar.md §4); the style uppercases it. */
+/** A glanceable "when" label against the device clock (integration-calendar.md §4); the style uppercases it.
+ *  Shares the delta with the Dressed Overall hue (minutesUntilStart), so the kicker TEXT and its imminence
+ *  COLOUR are computed off the same number and never disagree at a boundary. */
 function formatWhen(event: CalendarEvent, now: Date): string {
   if (event.allDay) return 'All day';
-  const start = new Date(event.start);
-  if (Number.isNaN(start.getTime())) return '';
-  const diffMin = Math.round((start.getTime() - now.getTime()) / 60000);
+  const diffMin = minutesUntilStart(event, now);
+  if (diffMin == null) return ''; // an unparseable start (NaN); minutesUntilStart guards it
   if (diffMin <= 0) return 'Now';
   if (diffMin < 60) return `in ${diffMin} min`;
   if (diffMin < 24 * 60) {
@@ -44,7 +46,7 @@ function formatWhen(event: CalendarEvent, now: Date): string {
     const m = diffMin % 60;
     return m ? `in ${h}h ${m}m` : `in ${h}h`;
   }
-  return start.toLocaleDateString(undefined, { weekday: 'short' });
+  return new Date(event.start).toLocaleDateString(undefined, { weekday: 'short' });
 }
 
 /** The clock time of a timed event (empty for all-day; an all-day event has no time anchor). */
@@ -65,17 +67,25 @@ export function NextEventCard({ data, size }: WidgetRenderProps) {
 
   const { event } = next;
   const isSmall = size === 'S'; // AOD-122 slot id (was 'small'; same 1x1 geometry)
-  const when = formatWhen(event, new Date());
+  const now = new Date();
+  const when = formatWhen(event, now);
   const clock = formatClock(event);
+  // AOD-136 Dressed Overall: the when kicker WEARS its imminence on the theme.when ladder (replacing the
+  // flat accent) — dawn-cool far, balmy at Now; an all-day event has no time anchor, so imminenceStop parks
+  // it at the calm dawn tone (`distant`). Binds to the ROLE, so Monochrome collapses it to bone (§8).
+  const whenColor = theme.when[imminenceStop(event, now)];
 
   return (
     <View style={styles.body} accessibilityRole="summary" testID="gcal-next-event">
-      {/* The when emphasis: an accent uppercased kicker; at W the muted clock rides alongside. */}
+      {/* The when emphasis: an uppercased kicker wearing its imminence hue; at W the bone clock rides
+          alongside (the hue rides the kicker alone — the clock numeral stays bone). */}
       <View style={styles.whenLine}>
-        <Text style={styles.when} testID="gcal-next-event-when">
+        <Text style={[styles.when, { color: whenColor }]} testID="gcal-next-event-when">
           {when}
         </Text>
-        {!isSmall && clock ? <Text style={styles.clock}>{`·  ${clock}`}</Text> : null}
+        {!isSmall && clock ? (
+          <Text style={styles.clock} testID="gcal-next-event-clock">{`·  ${clock}`}</Text>
+        ) : null}
       </View>
 
       <Text style={styles.title} numberOfLines={2} testID="gcal-next-event-title">
@@ -98,8 +108,9 @@ const styles = StyleSheet.create((theme) => ({
   body: { gap: theme.spacing(1) },
   whenLine: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1.5) },
   // The kicker maps to type.label (the named scale step is 13/600; the AOD-35 §7 annotation says
-  // 13/700 -- flagged as a tiny follow-up, mapped to the step here), accent, uppercased.
-  when: { ...theme.type.label, color: theme.colors.accent, textTransform: 'uppercase', letterSpacing: 0.5 },
+  // 13/700 -- flagged as a tiny follow-up, mapped to the step here), uppercased. AOD-136: the COLOUR is now
+  // applied inline (theme.when[stop] — the Dressed Overall imminence hue), no longer a flat accent here.
+  when: { ...theme.type.label, textTransform: 'uppercase', letterSpacing: 0.5 },
   clock: { ...theme.type.label, color: theme.colors.textMuted },
   title: { ...theme.type.title, color: theme.colors.text },
   locationLine: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(1) },
