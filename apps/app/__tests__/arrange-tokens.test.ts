@@ -12,6 +12,8 @@ describe('§10 editor-scoped token group: pinned byte-identical (numbers + role-
       selectFill: 'surfaceAlt', // the bodyArranging fill
       handle: { dot: 24, hit: 44, ring: 'background' }, // the 24pt resize dot in a 44pt hit, ringed in background
       configurePill: { bg: 'accent', label: 'onAccent' }, // the top-left Configure pill
+      removePill: { bg: 'error', label: 'onAccent' }, // AOD-141: the top-right Remove pill (destructive role)
+      confirm: { scrim: 'scrim', label: 'onAccent' }, // AOD-141: the in-place "Remove?" confirm face
     });
   });
 
@@ -28,6 +30,10 @@ describe('§10 layering rule: every alias `arrange` names is a REAL role, never 
       darkTheme.arrange.handle.ring,
       darkTheme.arrange.configurePill.bg,
       darkTheme.arrange.configurePill.label,
+      darkTheme.arrange.removePill.bg,
+      darkTheme.arrange.removePill.label,
+      darkTheme.arrange.confirm.scrim,
+      darkTheme.arrange.confirm.label,
     ];
     for (const role of roles) {
       expect(darkTheme.colors).toHaveProperty(role);

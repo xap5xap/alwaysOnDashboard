@@ -69,6 +69,7 @@ export function WallPreview({ instances, onClose }: WallPreviewProps) {
               onExitArrange={noop}
               onCommit={noop}
               onRequestConfigure={noop}
+              onRemove={noop}
             />
           </View>
         </View>

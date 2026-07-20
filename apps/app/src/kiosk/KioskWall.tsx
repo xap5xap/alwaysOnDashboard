@@ -111,6 +111,7 @@ export function KioskWall() {
                 onExitArrange={noop}
                 onCommit={noop}
                 onRequestConfigure={noop}
+                onRemove={noop}
               />
             </View>
           )}
