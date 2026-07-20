@@ -493,6 +493,14 @@ const arrange = {
   selectFill: 'surfaceAlt', // bodyArranging: the selected card's fill (one step up from the resting card)
   handle: { dot: 24, hit: 44, ring: 'background' }, // resize handle: a 24pt accent dot ringed in `background`, inside a 44pt hit target
   configurePill: { bg: 'accent', label: 'onAccent' }, // the top-left Configure pill (§11 drift 3: label -> onAccent, was colors.background)
+  // AOD-141 per-widget delete-in-place (resolves AOD-104): the top-right Remove pill flips the tile's OWN
+  // face into the in-place "Remove?" confirm (no modal). `error` is the EXISTING destructive role — the
+  // Button `destructive` variant already shares it ("Disconnect / Remove") — with an `onAccent` label; this
+  // adds NO new colour primitive. `confirm` is the confirm face: a `scrim` backdrop over the dimmed card
+  // plus `onAccent` (white) question/keep text legible on it. When AOD-142's Arrange dial restyles the
+  // affordance, only these aliases move; the delete plumbing (repo + useRemoveWidget) is final.
+  removePill: { bg: 'error', label: 'onAccent' }, // the top-right Remove pill (mirrors configurePill, destructive role)
+  confirm: { scrim: 'scrim', label: 'onAccent' }, // the in-place "Remove?" face: scrim over the card + white text; the confirm button reuses removePill
 } as const;
 
 // --- AOD-39 §10 kiosk-wall-scoped token group (design-kiosk-wall.md §10) ----------------------------

@@ -10,7 +10,7 @@
 // the legacy five words, so the mapper serializes W to its exact geometric twin on write — while the
 // MAPPED result locks 'W', the read-time coercion's output. Same DB bytes as pre-AOD-122; only the
 // app-side vocabulary changed.
-import { bootstrapDashboard } from '../dashboardRepo';
+import { bootstrapDashboard, deleteWidgetInstance } from '../dashboardRepo';
 import { getWidgetDef } from '../../registry/registry';
 import { SIZE_CATALOGUE } from '../../widgets/sizes';
 import { validateConfig } from '../../widgets/config';
@@ -103,5 +103,33 @@ describe('bootstrapDashboard first-run seed (AOD-126: Clock, not the removed stu
     // Born valid: every Clock field is optional/defaulted, so {} passes and the host never opens on
     // needs_config for a brand-new user.
     expect(validateConfig(def!.configSchema, instance.config).ok).toBe(true);
+  });
+});
+
+// AOD-141 (resolves AOD-104): the client-direct per-widget delete. The RLS grant + policy
+// widget_instances_rw_own (`for all using (user_id = auth.uid())`) already cover DELETE, so the repo
+// only issues delete().eq('id', ...) by id (dashboard_id untouched, like persistInstanceLayout/Config).
+// These tests override the shared from() mock with a delete-aware chain and lock the id targeting + the
+// error-propagation the optimistic hook relies on to roll back.
+describe('deleteWidgetInstance: client-direct RLS delete by id', () => {
+  it('deletes the widget_instances row by its id and resolves', async () => {
+    const eq = jest.fn(async () => ({ error: null }));
+    const del = jest.fn(() => ({ eq }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ delete: del });
+
+    await expect(deleteWidgetInstance('wi-42')).resolves.toBeUndefined();
+
+    expect(supabase.from).toHaveBeenCalledWith('widget_instances');
+    expect(del).toHaveBeenCalledTimes(1);
+    // Targets by id only — never dashboard_id — so the §8 ownership check holds trivially and no other
+    // instance (or the service connection) is affected.
+    expect(eq).toHaveBeenCalledWith('id', 'wi-42');
+  });
+
+  it('throws when RLS/network rejects, so the hook can surface it and roll the tile back', async () => {
+    const eq = jest.fn(async () => ({ error: new Error('rls denied') }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ delete: jest.fn(() => ({ eq })) });
+
+    await expect(deleteWidgetInstance('wi-42')).rejects.toThrow('rls denied');
   });
 });

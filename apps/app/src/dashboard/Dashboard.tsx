@@ -20,6 +20,7 @@ import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { WidgetPicker } from '../layout/WidgetPicker';
 import { useDashboard } from '../layout/useDashboard';
+import { useRemoveWidget } from '../layout/useRemoveWidget';
 import { WallPreview } from '../kiosk/WallPreview';
 import type { WidgetInstance } from '../registry/types';
 import { AppBar, EmptyState, ErrorState, LoadingState, Screen } from '../shell';
@@ -29,6 +30,7 @@ import { AddGlyph } from './glyphs';
 
 export function Dashboard() {
   const { instances, isLoading, isError, error, refetch, commit } = useDashboard();
+  const { removeWidget } = useRemoveWidget();
   const { theme } = useUnistyles();
   const [arranging, setArranging] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -99,6 +101,7 @@ export function Dashboard() {
               onExitArrange={() => setArranging(false)}
               onCommit={commit}
               onRequestConfigure={setConfiguring}
+              onRemove={(instanceId) => void removeWidget(instanceId)}
             />
           </View>
         )}

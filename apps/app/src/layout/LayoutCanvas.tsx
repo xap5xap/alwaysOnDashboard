@@ -18,6 +18,9 @@ export interface LayoutCanvasProps {
   onCommit(instanceId: string, patch: LayoutPatch): void;
   /** Open the config form for one instance (AOD-10 §4); the dashboard owns the modal. */
   onRequestConfigure(instance: WidgetInstance): void;
+  /** Delete one instance (AOD-141); the dashboard owns the mutation. Fired from the arrange-mode
+   *  in-place "Remove?" confirm. The wall callers pass a noop (they never arrange). */
+  onRemove(instanceId: string): void;
 }
 
 export function LayoutCanvas({
@@ -27,6 +30,7 @@ export function LayoutCanvas({
   onExitArrange,
   onCommit,
   onRequestConfigure,
+  onRemove,
 }: LayoutCanvasProps) {
   return (
     <View style={styles.canvas}>
@@ -42,6 +46,7 @@ export function LayoutCanvas({
           onLongPress={onEnterArrange}
           onCommit={onCommit}
           onRequestConfigure={onRequestConfigure}
+          onRemove={onRemove}
         />
       ))}
     </View>

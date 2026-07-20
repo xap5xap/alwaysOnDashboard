@@ -127,3 +127,13 @@ export async function persistInstanceConfig(
     .eq('id', instanceId);
   if (error) throw error;
 }
+
+/** Delete ONE widget instance the user owns (AOD-141, resolves AOD-104). Client-direct under RLS: the
+ *  grant and policy widget_instances_rw_own (`for all using (user_id = auth.uid())`) already cover DELETE,
+ *  so no server change is needed. Targets by id only — the SAME per-row delete the disconnect broker does
+ *  per-service (AOD-9 §10 / AOD-49), here a single instance from arrange mode. Connections are NOT touched:
+ *  they belong to the account, not the card, so removing a widget never signs the user out of a service. */
+export async function deleteWidgetInstance(instanceId: string): Promise<void> {
+  const { error } = await supabase.from('widget_instances').delete().eq('id', instanceId);
+  if (error) throw error;
+}
