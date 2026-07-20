@@ -1,6 +1,7 @@
 // The on-device Clock data contract (integration-clock.md §4.1, §5; RB-M2 AOD-130 Meridian). Unlike every
 // other widget, the "data" the ClockCard renders is NOT a proxy payload: it is derived IN THE LEAF from the
-// device clock each tick (§7.2), formatted via Intl.DateTimeFormat.formatToParts with the instance config.
+// device clock each tick (§7.2), formatted straight from the device Date (no Intl) with the instance config.
+// (The AOD-130 device blank was the leaf's FitBody `glance` collapsing to zero height, not the formatting.)
 // The leaf is mounted with the AOD-8 §6.1 render contract { data, config, size } where data === undefined
 // (the host none path, §6.3) and ignores data entirely. This module declares only the shapes the leaf
 // computes and reads; the bookend has no server half, so there is no operations.ts to mirror (contrast

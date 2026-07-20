@@ -1,75 +1,79 @@
 // Pure unit tests for the on-device Clock formatting (integration-clock.md §4.1, §12; RB-M2 AOD-130
 // Meridian). No React, no host: a Date + ClockConfig in, a ClockView (the parts split) out. The leaf
-// (ClockCard) and the host none path are exercised in ClockCard.test.tsx. Locale is pinned to 'en-US' so the
-// asserted AM/PM is deterministic under the Node/jest ICU. formatClock now formats in DEVICE-LOCAL time (the
-// timezone override was removed with the second clock, AOD-130), and jest pins no TZ, so the HOUR (and, on a
-// sub-hour-offset zone, the minute) is CI-dependent: the assertions below are TZ-robust — the seconds field
-// (33) is offset-independent, the figure shape is fixed, and the exact figure/meridiem are pinned by
-// reference-equality against Intl with the same options (both device-local), never a hard-coded "14:05".
+// (ClockCard) and the host none path are exercised in ClockCard.test.tsx. formatClock derives the parts
+// DIRECTLY FROM THE Date (no Intl) — a dependency-free simplification (the AOD-130 device blank was the leaf's
+// FitBody `glance` collapsing to zero height, NOT the formatting), formatting in DEVICE-LOCAL time (the
+// timezone override was removed with the second clock, AOD-130). jest pins no TZ, so the HOUR is CI-dependent: the assertions
+// below are TZ-robust — the seconds field (33) is offset-independent, the figure shape is fixed, and the
+// exact figure/meridiem are pinned by parity against the SAME Date methods the impl uses (both device-local).
 import { formatClock, resolveConfig } from '../time';
 import { CLOCK_CONFIG_DEFAULTS, type ClockConfig } from '../types';
 
 // 2026-06-28T14:05:33Z. The SECONDS (33) are timezone-independent (no modern zone has a sub-minute offset),
-// so v.seconds is deterministic on any CI zone; the hour/minute are not, hence the reference-equality below.
+// so v.seconds is deterministic on any CI zone; the hour/minute are not, hence the Date-parity reference below.
 const INSTANT = new Date('2026-06-28T14:05:33.000Z');
-const EN = 'en-US';
 
 function config(overrides: Partial<ClockConfig> = {}): ClockConfig {
   return { ...CLOCK_CONFIG_DEFAULTS, ...overrides };
 }
 
-/** The reference parts split: the Intl output for the same options, split the way formatClock should. Both
- *  are device-local, so this pins the exact figure/meridiem on any CI timezone without a hard-coded value. */
+/** The reference parts, computed from the Date the SAME way the impl does (device-local, no Intl), so the
+ *  parity test pins the exact figure/meridiem on any CI timezone without a hard-coded value or formatToParts. */
 function reference(clockFormat: '12h' | '24h', showSeconds: boolean) {
-  const opts: Intl.DateTimeFormatOptions = {
-    hour: clockFormat === '24h' ? '2-digit' : 'numeric',
-    minute: '2-digit',
-    hour12: clockFormat === '12h',
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const h = INSTANT.getHours();
+  const hour = clockFormat === '12h' ? String(h % 12 || 12) : pad2(h);
+  return {
+    figure: `${hour}:${pad2(INSTANT.getMinutes())}`,
+    meridiem: clockFormat === '12h' ? (h < 12 ? 'AM' : 'PM') : null,
+    seconds: showSeconds ? pad2(INSTANT.getSeconds()) : null,
   };
-  if (showSeconds) opts.second = '2-digit';
-  const parts = new Intl.DateTimeFormat(EN, opts).formatToParts(INSTANT);
-  const val = (t: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === t)?.value ?? null;
-  const hi = parts.findIndex((p) => p.type === 'hour');
-  const sep = hi >= 0 && parts[hi + 1]?.type === 'literal' ? parts[hi + 1]!.value : ':';
-  return { figure: `${val('hour') ?? ''}${sep}${val('minute') ?? ''}`, meridiem: val('dayPeriod'), seconds: val('second') };
 }
 
-describe('formatClock parts split (integration-clock.md §4.1, §12; AOD-130 Meridian)', () => {
+describe('formatClock parts split (integration-clock.md §4.1, §12; AOD-130 Meridian, Hermes-safe)', () => {
   it('24-hour, no seconds -> a 2-digit figure, no meridiem, no seconds whisper', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: false }), EN);
+    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: false }));
     expect(v.figure).toMatch(/^\d{2}:\d{2}$/); // hour:minute only — the split leaks no seconds and no AM/PM
     expect(v.meridiem).toBeNull(); // 24h carries no dayPeriod
     expect(v.seconds).toBeNull(); // the whisper is off
   });
 
   it('24-hour with seconds -> the seconds ride the whisper, NOT the figure', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: true }), EN);
+    const v = formatClock(INSTANT, config({ clockFormat: '24h', showSeconds: true }));
     expect(v.figure).toMatch(/^\d{2}:\d{2}$/); // still just hour:minute — seconds are split out
     expect(v.seconds).toBe('33'); // the instant's seconds, offset-independent
     expect(v.meridiem).toBeNull();
   });
 
   it('12-hour -> a meridiem (AM/PM) is split out, and it is NOT embedded in the figure', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: false }), EN);
+    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: false }));
     expect(v.figure).toMatch(/^\d{1,2}:\d{2}$/); // numeric hour (no leading zero), minute; no AM/PM in the figure
     expect(v.meridiem === 'AM' || v.meridiem === 'PM').toBe(true);
     expect(v.seconds).toBeNull();
   });
 
   it('12-hour with seconds -> figure + meridiem + seconds whisper are all separated', () => {
-    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: true }), EN);
+    const v = formatClock(INSTANT, config({ clockFormat: '12h', showSeconds: true }));
     expect(v.figure).toMatch(/^\d{1,2}:\d{2}$/);
     expect(v.meridiem === 'AM' || v.meridiem === 'PM').toBe(true);
     expect(v.seconds).toBe('33');
   });
 
-  it('the figure/meridiem/seconds match the Intl reference for the same options (exact, device-local)', () => {
+  it('the figure/meridiem/seconds match the Date-derived reference (exact, device-local)', () => {
     for (const clockFormat of ['24h', '12h'] as const) {
       for (const showSeconds of [false, true]) {
-        const v = formatClock(INSTANT, config({ clockFormat, showSeconds }), EN);
+        const v = formatClock(INSTANT, config({ clockFormat, showSeconds }));
         expect(v).toEqual(reference(clockFormat, showSeconds));
       }
     }
+  });
+
+  it('12-hour wraps midnight/noon to 12 (h%12||12), never 0; 24h is zero-padded', () => {
+    const mk = (h: number) => new Date(2026, 5, 28, h, 7, 0); // LOCAL h:07 (constructed local, no UTC skew)
+    expect(formatClock(mk(0), config({ clockFormat: '12h' }))).toMatchObject({ figure: '12:07', meridiem: 'AM' });
+    expect(formatClock(mk(12), config({ clockFormat: '12h' }))).toMatchObject({ figure: '12:07', meridiem: 'PM' });
+    expect(formatClock(mk(13), config({ clockFormat: '12h' }))).toMatchObject({ figure: '1:07', meridiem: 'PM' });
+    expect(formatClock(mk(9), config({ clockFormat: '24h' }))).toMatchObject({ figure: '09:07', meridiem: null });
   });
 });
 

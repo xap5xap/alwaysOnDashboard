@@ -159,7 +159,17 @@ export function FitBody({
   );
   const fittedSize = value.baseSize * scale;
 
-  const containerStyle: ViewStyle = glance ? GLANCE_STYLE : STACK_STYLE;
+  // GLANCE (the Clock's centred figure) must carry an EXPLICIT height, not lean on flex:1 filling its parent.
+  // On the dashboard the cards are content-sized — the reanimated cell height does not clamp them (weather
+  // simply overflows its slot) — so a flex:1 glance has no bounded parent to fill: it collapsed to ~0 and the
+  // (correctly fitted) value clipped to a sliver under the card's overflow:hidden — the AOD-130 device blank.
+  // flex:1's flex-basis:0 even defeated a minHeight FLOOR in that auto-height chain (device-observed). An
+  // explicit height is a definite dimension Yoga always honours: resolvedBox.height is the SAME box the value
+  // was fit into, so the glance fills its box on every surface (the kiosk wall passes the cell height as this
+  // box, so it fills there too). jest/web never caught it: react-test-renderer does no layout.
+  const containerStyle: ViewStyle = glance
+    ? { ...GLANCE_STYLE, height: resolvedBox.height }
+    : STACK_STYLE;
 
   return (
     <View style={[containerStyle, { gap: stackGap }, style]} testID={testID} accessibilityRole={accessibilityRole}>
@@ -173,4 +183,4 @@ export function FitBody({
 }
 
 const STACK_STYLE: ViewStyle = { flexDirection: 'column' };
-const GLANCE_STYLE: ViewStyle = { flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center' };
+const GLANCE_STYLE: ViewStyle = { flexDirection: 'column', alignItems: 'center', justifyContent: 'center' };

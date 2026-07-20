@@ -1,7 +1,7 @@
 // The "Clock" leaf renderer (AOD-8 §6.1, integration-clock.md §4.1; RB-M2 AOD-130 Meridian). The bookend
 // leaf: unlike every other card it receives NO live proxy data (the host none path hands it data: undefined,
-// §6.3) and ignores it. It self-ticks from the device clock (useClockTick, §7.2) and formats via Intl
-// (formatClock, §12) using the instance config. Reached only on the (always) Fresh state; the generic host
+// §6.3) and ignores it. It self-ticks from the device clock (useClockTick, §7.2) and formats it straight
+// from that Date (formatClock, §12) using the instance config. Reached only on the (always) Fresh state; the generic host
 // draws the frame and the (suppressed at every size) header.
 //
 // AOD-130 MERIDIAN (subtractive reface): a single centered time FIGURE, no chrome at any size. The date line,
