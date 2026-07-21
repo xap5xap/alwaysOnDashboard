@@ -138,6 +138,12 @@ function normalizeMyIssues(raw: unknown): MyIssuesData {
 // seam exists. The widget tracks the chosen team's LIVE active cycle (the user picks the team, §5.2).
 // ---------------------------------------------------------------------------------------------------
 
+// The counts come from the cycle's LIVE issue nodes, NOT issueCountHistory / completedIssueCountHistory:
+// those history arrays are Linear's DAILY burndown snapshot, which is EMPTY on a cycle's first day and
+// lags a day intra-day, so on a young cycle `last(*History)` was 0/0 while the ring should render (AOD-135).
+// `progress` stays Linear's own live completion fraction. `first: 250` is Linear's max page size — well past
+// the client's knot cap (above which the ring is an O(1) smooth arc from the lit fraction), so no real cycle
+// paginates. Each node carries only `state { type }`, enough to bucket completed vs canceled (see normalize).
 const CURRENT_CYCLE_QUERY = `query CurrentCycle($teamId: String!) {
   team(id: $teamId) {
     id
@@ -149,8 +155,12 @@ const CURRENT_CYCLE_QUERY = `query CurrentCycle($teamId: String!) {
       startsAt
       endsAt
       progress
-      issueCountHistory
-      completedIssueCountHistory
+      issues(first: 250) {
+        nodes {
+          id
+          state { type }
+        }
+      }
     }
   }
 }`;
@@ -172,16 +182,14 @@ export type CurrentCycleData =
     name: string | null;
     startsAt: string; // ISO
     endsAt: string; // ISO
-    progress: number; // 0..1, drives the ring
-    completedCount: number; // last(completedIssueCountHistory)
-    totalCount: number; // last(issueCountHistory)
+    progress: number; // 0..1, Linear's live completion fraction (drives the percent)
+    completedCount: number; // live count of the cycle's issues in a completed state (drives lit knots)
+    totalCount: number; // live cycle scope: issue count excluding canceled (drives the knot count)
   };
 
-/** Last element of a Linear count-history array (the current value), or 0 if absent (§4.2). */
-function lastCount(history: unknown): number {
-  if (!Array.isArray(history) || history.length === 0) return 0;
-  const last = Number(history[history.length - 1]);
-  return Number.isFinite(last) ? last : 0;
+/** A raw issue node in the cycle: only its workflow-state TYPE, enough to bucket completed vs canceled. */
+interface RawCycleIssue {
+  state?: RawWorkflowState | null;
 }
 
 interface RawActiveCycle {
@@ -190,8 +198,30 @@ interface RawActiveCycle {
   startsAt?: unknown;
   endsAt?: unknown;
   progress?: unknown;
-  issueCountHistory?: unknown;
-  completedIssueCountHistory?: unknown;
+  issues?: { nodes?: unknown } | null;
+}
+
+/**
+ * Count the cycle's LIVE issues (activeCycle.issues.nodes), bucketed by workflow-state type:
+ * `completedCount` = issues in a `completed` state; `totalCount` = the cycle scope, every issue EXCEPT
+ * those `canceled` (Linear drops a canceled issue from cycle scope, matching the old burndown snapshot).
+ * This replaces `last(issueCountHistory)` / `last(completedIssueCountHistory)`, which read that DAILY
+ * snapshot: EMPTY on a cycle's first day (0/0 while the ring should render) and a day stale intra-day
+ * (AOD-135). A missing or partial nodes array degrades to 0/0 (a real empty cycle), never a throw — the
+ * same defensive guard as normalizeMyIssues.
+ */
+function countCycleIssues(issues: unknown): { completedCount: number; totalCount: number } {
+  const nodes = (issues as { nodes?: unknown })?.nodes;
+  const list: RawCycleIssue[] = Array.isArray(nodes) ? nodes : [];
+  let completedCount = 0;
+  let totalCount = 0;
+  for (const n of list) {
+    const type = typeof n?.state?.type === "string" ? n.state.type : "";
+    if (type === "canceled") continue; // a canceled issue leaves the cycle scope: not counted, not lit
+    totalCount++;
+    if (type === "completed") completedCount++;
+  }
+  return { completedCount, totalCount };
 }
 
 /** Map `data.team.activeCycle` to CurrentCycleData; a null active cycle is the `active: false` state. */
@@ -199,6 +229,7 @@ function normalizeCurrentCycle(raw: unknown): CurrentCycleData {
   const cycle = (raw as { data?: { team?: { activeCycle?: RawActiveCycle | null } } })
     ?.data?.team?.activeCycle;
   if (!cycle) return { active: false };
+  const { completedCount, totalCount } = countCycleIssues(cycle.issues);
   return {
     active: true,
     number: typeof cycle.number === "number" ? cycle.number : 0,
@@ -206,8 +237,8 @@ function normalizeCurrentCycle(raw: unknown): CurrentCycleData {
     startsAt: typeof cycle.startsAt === "string" ? cycle.startsAt : "",
     endsAt: typeof cycle.endsAt === "string" ? cycle.endsAt : "",
     progress: typeof cycle.progress === "number" ? cycle.progress : 0,
-    completedCount: lastCount(cycle.completedIssueCountHistory),
-    totalCount: lastCount(cycle.issueCountHistory),
+    completedCount,
+    totalCount,
   };
 }
 

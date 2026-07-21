@@ -154,10 +154,11 @@ describe("current_cycle buildBody + normalize (§4.2)", () => {
   it("buildBody holds the query server-side and passes the teamId variable", () => {
     const b = currentCycle().buildBody!({ teamId: "t1" }) as { query: string; variables: { teamId: string } };
     assert(b.query.includes("activeCycle"), "the GraphQL query is server-side");
+    assert(b.query.includes("issues("), "the query counts the cycle's live issues, not the burndown history (AOD-135)");
     assertEquals(b.variables.teamId, "t1");
   });
 
-  it("normalize maps an active cycle, taking the last element of each count history", () => {
+  it("normalize counts the cycle's LIVE issues: completed = completed-state, total excludes canceled", () => {
     const raw = {
       data: {
         team: {
@@ -167,8 +168,15 @@ describe("current_cycle buildBody + normalize (§4.2)", () => {
             startsAt: "2026-06-22",
             endsAt: "2026-06-29",
             progress: 0.5,
-            issueCountHistory: [3, 5, 8],
-            completedIssueCountHistory: [1, 2, 4],
+            issues: {
+              nodes: [
+                { state: { type: "completed" } },
+                { state: { type: "completed" } },
+                { state: { type: "started" } },
+                { state: { type: "backlog" } },
+                { state: { type: "canceled" } }, // dropped from scope: not in total, not lit
+              ],
+            },
           },
         },
       },
@@ -176,10 +184,41 @@ describe("current_cycle buildBody + normalize (§4.2)", () => {
     const data = currentCycle().normalize(raw) as Extract<CurrentCycleData, { active: true }>;
     assertEquals(data.active, true);
     assertEquals(data.number, 1);
-    assertEquals(data.totalCount, 8); // last(issueCountHistory)
-    assertEquals(data.completedCount, 4); // last(completedIssueCountHistory)
+    assertEquals(data.totalCount, 4); // 5 nodes minus the 1 canceled
+    assertEquals(data.completedCount, 2); // the two completed-state issues
     assertEquals(data.progress, 0.5);
     assertEquals(data.endsAt, "2026-06-29");
+  });
+
+  // AOD-135: on a cycle's FIRST DAY Linear's *History arrays are still empty, so the old
+  // last(*History) returned 0/0 and the 21-knot ring never rendered (it fell back to "% / 0 of 0")
+  // even though the cycle already held issues and progress was live. Live counting fixes day-1 AND the
+  // intra-day staleness (the daily snapshot lags a day). This reproduces the on-device payload: progress
+  // 0.4722 on a day-1 cycle that actually held 10 issues, with NO history arrays present at all.
+  it("normalize renders a day-1 cycle whose burndown history has not been generated yet (AOD-135)", () => {
+    const nodes = [
+      ...Array(4).fill({ state: { type: "completed" } }),
+      ...Array(3).fill({ state: { type: "started" } }),
+      ...Array(3).fill({ state: { type: "backlog" } }),
+    ]; // 10 issues, 4 completed — no issueCountHistory / completedIssueCountHistory keys anywhere
+    const raw = { data: { team: { activeCycle: { number: 5, progress: 0.4722, issues: { nodes } } } } };
+    const data = currentCycle().normalize(raw) as Extract<CurrentCycleData, { active: true }>;
+    assertEquals(data.totalCount, 10); // live count, NOT last([]) === 0 (the bug)
+    assertEquals(data.completedCount, 4); // the ring draws 10 knots, 4 lit
+    assertEquals(data.progress, 0.4722); // progress stays live/correct
+  });
+
+  it("normalize yields active:true with 0/0 for a genuinely empty cycle (missing/empty/garbage issues)", () => {
+    const base = { number: 2, progress: 0, startsAt: "", endsAt: "" };
+    for (const issues of [undefined, null, {}, { nodes: [] }, { nodes: "oops" }]) {
+      const data = currentCycle().normalize({ data: { team: { activeCycle: { ...base, issues } } } }) as Extract<
+        CurrentCycleData,
+        { active: true }
+      >;
+      assertEquals(data.active, true);
+      assertEquals(data.totalCount, 0);
+      assertEquals(data.completedCount, 0);
+    }
   });
 
   it("normalize returns active:false when the team has no active cycle (a normal state)", () => {

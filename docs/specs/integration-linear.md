@@ -208,14 +208,18 @@ query CurrentCycle($teamId: String!) {
       startsAt                     # ISO
       endsAt                       # ISO
       progress                     # Float 0..1, Linear-computed completion
-      issueCountHistory            # [Float]; last element = current total scope
-      completedIssueCountHistory   # [Float]; last element = current completed
+      issues(first: 250) {         # the cycle's LIVE issues; count them (AOD-135), see below
+        nodes {
+          id
+          state { type }           # "completed" -> lit knot; "canceled" -> out of cycle scope
+        }
+      }
     }
   }
 }
 ```
 
-`$teamId` is the instance config `teamId` (section 5.2). The live API confirmed the active cycle shape on 2026-06-26: cycle number 1, `startsAt` 2026-06-22, `endsAt` 2026-06-29, with `completedIssueCountHistory` / `issueCountHistory` whose last elements were the current completed / total counts.
+`$teamId` is the instance config `teamId` (section 5.2). **The counts come from the cycle's live `issues` nodes, not `issueCountHistory` / `completedIssueCountHistory`.** Those burndown-history arrays are Linear's *daily* snapshot: they are empty on a cycle's first day and lag a day intra-day, so `last(*History)` returned `0` on a young cycle while the ring should render (AOD-135, device-caught 2026-07-20: a day-1 cycle reported `progress 0.4722` but `totalCount 0`, suppressing the whole knot ring). `normalize` now buckets the live nodes by `state.type` — a `completed` issue is lit, a `canceled` issue leaves the scope. `first: 250` is Linear's max page size, well past the client's knot cap (above which the ring is an O(1) smooth arc from the lit fraction), so no real cycle paginates.
 
 **Raw response** is `data.team.activeCycle` (which is **null when the team has no active cycle**, a real and expected state). **Normalized payload:**
 
@@ -228,13 +232,13 @@ type CurrentCycleData =
       name: string | null;
       startsAt: string;        // ISO
       endsAt: string;          // ISO
-      progress: number;        // 0..1, drives the progress ring
-      completedCount: number;  // last(completedIssueCountHistory)
-      totalCount: number;      // last(issueCountHistory)
+      progress: number;        // 0..1, Linear's live completion fraction (drives the percent)
+      completedCount: number;  // live count of the cycle's completed-state issues (drives lit knots)
+      totalCount: number;      // live cycle scope: issue count excluding canceled (drives the knot count)
     };
 ```
 
-`completedCount` / `totalCount` are the last elements of the history arrays; `progress` is Linear's own completion fraction. The renderer draws the ring from `progress` (and can label it `completedCount / totalCount`). `active: false` is a normal data-bearing state, not an error or needs-config.
+`completedCount` / `totalCount` are live counts of the cycle's issues (bucketed by `state.type`); `progress` is Linear's own completion fraction. The Log Line renderer (AOD-135) draws one knot per issue in `totalCount`, lights `completedCount` of them, and shows `progress` as the percent. `active: false` is a normal data-bearing state, not an error or needs-config.
 
 **Client-half definition:**
 
