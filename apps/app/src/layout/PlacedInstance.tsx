@@ -15,7 +15,7 @@
 // not which service this is), and every AOD-141 affordance (Configure/Remove pills, the 44pt resize
 // handle, the two-step "Remove?" confirm face) is preserved.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Dimensions, Pressable, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -32,6 +32,10 @@ const LIFT = { duration: 140 } as const; // the held card raising / settling bac
 const REFLOW = { duration: 190 } as const; // a neighbour easing into its reflowed slot
 const SETTLE = { duration: 160 } as const; // the dropped card settling onto its snapped slot
 const LIFT_SCALE = 0.03; // the "one step up" scale while held (surface-step model, not a heavy shadow)
+// AOD-146 (Many Skies §1d): how near the screen edge (px) the finger must carry a held card before the
+// dashboard arms the cross-sky "hold" dwell. Screen-space, not slot-space — the true edge of the display.
+// A device-tuned seed (AOD-190), like the motion timings above.
+const EDGE_BAND_PX = 28;
 
 export interface PlacedInstanceProps {
   instance: WidgetInstance;
@@ -57,6 +61,11 @@ export interface PlacedInstanceProps {
    *  dashboard owns the mutation (useRemoveWidget: client-direct RLS delete + optimistic cache update).
    *  Connections survive — removing a card never disconnects its service. */
   onRemove(instanceId: string): void;
+  /** AOD-146 (Many Skies §1d): while dragging in arrange, the finger reached a SCREEN edge ('left'/'right')
+   *  or left it (null). The dashboard arms a short "hold" dwell on a non-null edge to carry THIS card to the
+   *  neighbour sky (the dwell disambiguates it from a normal near-edge reposition). Optional: this card stays
+   *  sky-agnostic (AOD-8 §10 seam) and the wall / read-only callers never arrange, so they never wire it. */
+  onCarryEdge?(instanceId: string, edge: 'left' | 'right' | null): void;
 }
 
 export function PlacedInstance({
@@ -69,6 +78,7 @@ export function PlacedInstance({
   onArrangeCancel,
   onRequestConfigure,
   onRemove,
+  onCarryEdge,
 }: PlacedInstanceProps) {
   const registry = useRegistry();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
@@ -121,6 +131,12 @@ export function PlacedInstance({
   const lastDy = useSharedValue(instance.rect.y);
   const lastRw = useSharedValue(instance.rect.w);
   const lastRh = useSharedValue(instance.rect.h);
+  // AOD-146: the last reported screen-edge state (-1 left / 0 none / 1 right), so the drag worklet crosses to
+  // JS only when the edge actually changes — the same throttle discipline as the slot reporters above.
+  const edgeState = useSharedValue(0);
+  // The display width (px) captured for the edge test in the drag worklet (a plain number, workletizable like
+  // the module constants the gestures already close over). Arrange is portrait; AOD-190 device-tunes the band.
+  const screenWidth = Dimensions.get('window').width;
 
   // The rect this card should be showing: the reflow PREVIEW while a sibling gesture is active, else its
   // committed rect. Driving the shared values here (short timing) is how a neighbour eases into its
@@ -145,6 +161,10 @@ export function PlacedInstance({
     const s = snapDrag(instance.rect, dxPx, dyPx);
     onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
   };
+  // AOD-146: forward a screen-edge crossing to the dashboard's carry-to-neighbour dwell. Maps the worklet's
+  // numeric edge (-1/0/1) to the direction the dashboard reasons about; null clears any armed dwell.
+  const reportEdge = (edge: number) =>
+    onCarryEdge?.(instance.instanceId, edge < 0 ? 'left' : edge > 0 ? 'right' : null);
   // Resize is snapped on the JS thread (not the worklet) so the "nearest supported footprint" search never
   // has to run over a captured array on the UI thread: the worklet only does inline number math (the RAW
   // round-to-slot, like drag) and hands the raw slot here at footprint-change granularity. supportedSlotFor
@@ -228,6 +248,14 @@ export function PlacedInstance({
         lastDy.value = ty;
         runOnJS(reportMove)(tx, ty, tw, h.value);
       }
+      // AOD-146 (Many Skies §1d): additively report when the FINGER is carried to a screen edge, so the
+      // dashboard can arm the hold dwell that carries this card to the neighbour sky. Screen-space
+      // (absoluteX), independent of the slot snap above; edge-change granularity, like the slot report.
+      const edge = e.absoluteX <= EDGE_BAND_PX ? -1 : e.absoluteX >= screenWidth - EDGE_BAND_PX ? 1 : 0;
+      if (edge !== edgeState.value) {
+        edgeState.value = edge;
+        runOnJS(reportEdge)(edge);
+      }
     })
     .onEnd((e) => {
       'worklet';
@@ -241,6 +269,12 @@ export function PlacedInstance({
     .onFinalize((_e, success) => {
       'worklet';
       lift.value = withTiming(0, LIFT);
+      // AOD-146: the finger is lifting (or the gesture cancelled) — clear any armed edge-hold so a pending
+      // carry never fires after the drag ends. A no-op report unless an edge was actually held.
+      if (edgeState.value !== 0) {
+        edgeState.value = 0;
+        runOnJS(reportEdge)(0);
+      }
       if (!success) {
         // Cancelled (not completed): restore to the committed rect, drop the preview, commit nothing.
         x.value = withTiming(instance.rect.x, SETTLE);

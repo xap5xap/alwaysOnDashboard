@@ -23,7 +23,7 @@
 // dashboard INTERIOR: the arranging header shows the Preview pill, the per-sky empty branch composes the
 // shell EmptyState (now inside SkyPager's pages), and the canvas / picker / config sheet are the polished
 // editor surfaces.
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,6 +35,7 @@ import { AddGallery } from '../layout/AddGallery';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
+import { useMoveInstance } from '../layout/useMoveInstance';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
 import { WallPreview } from '../kiosk/WallPreview';
@@ -46,6 +47,11 @@ import { PageAltitude } from './PageAltitude';
 import { PageCapsule } from './PageCapsule';
 import { SkyPager } from './SkyPager';
 import { useChromeAwake } from './useChromeAwake';
+
+// AOD-146 (Many Skies §1d): how long a held card must DWELL at a screen edge before it carries to the
+// neighbour sky. The hold is what separates a deliberate cross-sky move from a normal near-edge reposition.
+// A device-tuned seed (AOD-190), like PlacedInstance's motion timings + edge band.
+const EDGE_HOLD_DWELL_MS = 600;
 
 export function Dashboard() {
   const { session } = useAuth();
@@ -67,6 +73,7 @@ export function Dashboard() {
     deleteDashboard,
   } = useDashboards();
   const { removeWidget } = useRemoveWidget();
+  const { moveInstance } = useMoveInstance();
   const [arranging, setArranging] = useState(false);
   // AOD-145: the SECOND Arrange altitude. `arranging` gates Glance vs Arrange; within Arrange this flag gates
   // card altitude (edit one sky, the shipped surface) vs page altitude (manage the skies as thumbnails). Only
@@ -87,6 +94,17 @@ export function Dashboard() {
   // The instance whose config form is open (AOD-10 §4). Owned here like `picking`/`arranging` so both
   // reconfigure entries (arrange-mode "Configure" and the host's needs_config prompt) route through it.
   const [configuring, setConfiguring] = useState<WidgetInstance | null>(null);
+  // AOD-146 (Many Skies §1d): the cross-sky "carry to the edge and hold" dwell timer. A held card reported at
+  // a screen edge (onCarryCardToEdge) arms it; holding past the dwell carries the card to the neighbour sky.
+  // Any edge change / drop cancels it, and it is cleared on unmount so a pending carry never fires after the
+  // drag or the screen is gone.
+  const edgeHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (edgeHoldTimer.current) clearTimeout(edgeHoldTimer.current);
+    },
+    [],
+  );
 
   // AOD-144: enter Arrange on a specific sky. Setting it active first means Arrange (which renders the active
   // sky's LayoutCanvas) edits the sky you were viewing — the dial flip from page K, or a long-press on a card
@@ -146,6 +164,44 @@ export function Dashboard() {
   // AOD-145: after a Pro create at page altitude, createDashboard has already set the new empty sky active
   // (§1g), so "descend into it" is just dropping back to card altitude.
   const onCreated = () => setAtPageAltitude(false);
+
+  // AOD-146 (Many Skies §1d): re-parent a carried card to the neighbour sky, then FOLLOW. moveInstance
+  // optimistically drops it from this sky (rolling back on failure); on success we seed the neighbour's
+  // already-loaded instances into the active-sky cache and flip it active (the AOD-144 seed-before-setActive
+  // pattern), so the active-sky surface re-resolves to the neighbour and the moved card lands there. A denied
+  // move already restored the card on this sky, so we simply stay put.
+  const carryCardToSky = async (instanceId: string, neighborId: string) => {
+    try {
+      await moveInstance(instanceId, neighborId);
+    } catch {
+      return;
+    }
+    seedActiveFromSky(queryClient, userId, neighborId);
+    setActive(neighborId);
+  };
+
+  // AOD-146 (Many Skies §1d): a held card was carried to a screen edge ('left'/'right') or off it (null),
+  // reported by PlacedInstance's drag. The DWELL (a deliberate hold, armed here) is what disambiguates a
+  // cross-sky move from a normal near-edge reposition — any edge change or the drop (edge=null) cancels it
+  // before it fires. Right edge -> next sky by position, left -> previous; clamp (no-op) at the ends and for
+  // a single-sky account (no neighbour). The move + follow "without ever leaving your finger" runs mid-drag;
+  // the seamless slide is device polish (AOD-190). Only reachable from card-altitude Arrange (the wall / Glance
+  // pager never wire onCarryEdge), so no extra mode guard is needed.
+  const onCarryCardToEdge = (instanceId: string, edge: 'left' | 'right' | null) => {
+    if (edgeHoldTimer.current) {
+      clearTimeout(edgeHoldTimer.current);
+      edgeHoldTimer.current = null;
+    }
+    if (!edge) return;
+    const from = dashboards.findIndex((d) => d.id === activeId);
+    if (from < 0) return;
+    const neighbor = edge === 'right' ? dashboards[from + 1] : dashboards[from - 1];
+    if (!neighbor) return; // clamp: no sky beyond this edge (covers the single-sky case too)
+    edgeHoldTimer.current = setTimeout(() => {
+      edgeHoldTimer.current = null;
+      void carryCardToSky(instanceId, neighbor.id);
+    }, EDGE_HOLD_DWELL_MS);
+  };
 
   // AOD-145: pinch-in on the card-altitude surface is the device fast-lane to page altitude (the capsule press
   // is the deliberate, testable entry). Inert under jest — gestures need the native event system — so the
@@ -237,6 +293,7 @@ export function Dashboard() {
                   onCommit={commit}
                   onRequestConfigure={setConfiguring}
                   onRemove={(instanceId) => void removeWidget(instanceId)}
+                  onCarryEdge={onCarryCardToEdge}
                 />
                 {/* AOD-145: the grown page-dots capsule, floating at the bottom over the canvas and riding the
                     chrome-awake state (box-none so only the capsule captures; the canvas keeps the rest). Press

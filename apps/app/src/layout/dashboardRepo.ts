@@ -234,3 +234,19 @@ export async function deleteWidgetInstance(instanceId: string): Promise<void> {
   const { error } = await supabase.from('widget_instances').delete().eq('id', instanceId);
   if (error) throw error;
 }
+
+/** Re-parent ONE widget instance to another dashboard the user owns (AOD-146, Many Skies §1d: carry a held
+ *  card to the screen edge to move it between skies). The ONLY writer that changes a card's parent sky.
+ *  Client-direct under RLS with no schema/RLS change: widget_instances_rw_own (`for all using (user_id =
+ *  auth.uid())`) already covers UPDATE, and the §8 dashboard-ownership WITH CHECK (`dashboard_id in (select
+ *  id from dashboards where user_id = auth.uid())`) already PERMITS re-parenting to another OWNED dashboard —
+ *  a move to a sky the user does not own is rejected by that same check. Mirrors persistInstanceLayout's
+ *  shape (update().eq('id', ...)) but writes dashboard_id; RLS scopes both the row and the destination to
+ *  the owner, so no dashboard_id-ownership check is needed here. */
+export async function moveInstanceToDashboard(instanceId: string, newDashboardId: string): Promise<void> {
+  const { error } = await supabase
+    .from('widget_instances')
+    .update({ dashboard_id: newDashboardId })
+    .eq('id', instanceId);
+  if (error) throw error;
+}
