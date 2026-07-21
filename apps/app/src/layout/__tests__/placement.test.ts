@@ -185,4 +185,15 @@ describe('defaultSeedFor', () => {
     const seed = defaultSeedFor(def(), [], { name: 'chosen' });
     expect(seed.config).toEqual({ name: 'chosen' });
   });
+
+  it('honors an explicit size override for both the size and the derived rect (AOD-148 size-by-seeing)', () => {
+    const seed = defaultSeedFor(def(), [], undefined, 'S');
+    expect(seed.size).toBe('S');
+    expect(seed.rect).toEqual({ x: 0, y: 0, w: 1, h: 1, z: 0 }); // the S 1x1 footprint, not the default W 2x1
+  });
+
+  it('falls back to defaultPlacementSize when the size override is omitted', () => {
+    expect(defaultSeedFor(def(), []).size).toBe('W'); // supportedSizes ['S','W','L'] prefers W
+    expect(defaultSeedFor(def(), [], { name: 'x' }, undefined).size).toBe('W');
+  });
 });

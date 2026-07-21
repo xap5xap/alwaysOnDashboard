@@ -203,3 +203,32 @@ describe('useAddWidget optimistic insert (AOD-139)', () => {
     expect(cellsOverlap(gridCell(after[0].rect), gridCell(after[1].rect))).toBe(false);
   });
 });
+
+describe('the optional size override (AOD-148 size-by-seeing)', () => {
+  it('lands the card at the overridden size and its matching footprint (not the default placement size)', async () => {
+    const client = seededClient([]); // empty board
+    const { result } = renderAdd(client);
+
+    await act(async () => {
+      await result.current.addWidget(def(), undefined, 'S');
+    });
+
+    // The seed the repo received carries the SELECTED size + its 1x1 footprint, not the default W 2x1.
+    const seed = (addWidgetInstance as jest.Mock).mock.calls[0][2] as InstanceSeed;
+    expect(seed.size).toBe('S');
+    expect(seed.rect).toEqual({ x: 0, y: 0, w: 1, h: 1, z: 0 });
+  });
+
+  it('keeps the default placement size when no override is passed (no behavior change for other callers)', async () => {
+    const client = seededClient([]);
+    const { result } = renderAdd(client);
+
+    await act(async () => {
+      await result.current.addWidget(def());
+    });
+
+    const seed = (addWidgetInstance as jest.Mock).mock.calls[0][2] as InstanceSeed;
+    expect(seed.size).toBe('W'); // supportedSizes ['S','W','L'] prefers W
+    expect(seed.rect).toEqual({ x: 0, y: 0, w: 2, h: 1, z: 0 });
+  });
+});

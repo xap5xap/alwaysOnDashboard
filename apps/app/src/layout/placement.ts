@@ -74,18 +74,22 @@ export function requiresConfiguration(schema: WidgetConfigSchema): boolean {
 
 /** Build the InstanceSeed for adding `def` to a board that already holds `existing`. `config` overrides
  *  the schema defaults when the configure-on-add form collected values (AOD-10 §4); omit for the
- *  add-with-defaults path (AOD-51). Geometry is always derived. */
+ *  add-with-defaults path (AOD-51). `size` overrides the default placement size (AOD-148 size-by-seeing:
+ *  the gallery lands the card at the SELECTED S/M/W/L, not just the default); omit to keep
+ *  `defaultPlacementSize`, so no other caller changes. The rect is always re-derived from the chosen size,
+ *  so a bigger override still lands non-overlapping (firstFreeSlot). Geometry is always derived. */
 export function defaultSeedFor(
   def: WidgetDefinition,
   existing: WidgetInstance[],
   config?: Record<string, unknown>,
+  size?: WidgetSize,
 ): InstanceSeed {
-  const size = defaultPlacementSize(def.supportedSizes);
+  const chosen = size ?? defaultPlacementSize(def.supportedSizes);
   return {
     serviceId: def.serviceId,
     widgetType: def.type,
     config: config ?? defaultConfig(def.configSchema),
-    size,
-    rect: defaultPlacementRect(size, existing),
+    size: chosen,
+    rect: defaultPlacementRect(chosen, existing),
   };
 }

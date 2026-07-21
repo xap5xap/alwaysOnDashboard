@@ -215,6 +215,27 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
     await waitFor(() => expect(screen.getByTestId('add-gallery')).toBeTruthy());
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('carries the size picked BEFORE the form through the config round-trip (AOD-148 + configure-on-add)', async () => {
+    // Focus the config-required tile, pick S (its default is W), THEN Add -> the form opens carrying S; the
+    // size must survive the round-trip and land the card at S, not the default W (WYSIWYG through the form).
+    renderGallery(new Map([['cfg', conn('cfg')]]), { reg: cfgRegistry });
+    fireEvent.press(await screen.findByTestId('add-gallery-tile-cfg-configured'));
+    fireEvent.press(screen.getByTestId('segmented-S'));
+    fireEvent.press(screen.getByTestId('add-gallery-add-cfg-configured'));
+    fireEvent.changeText(await screen.findByTestId('config-field-name'), 'My Board');
+    fireEvent.press(screen.getByTestId('config-submit'));
+
+    await waitFor(() =>
+      expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
+        serviceId: 'cfg',
+        widgetType: 'configured',
+        config: { name: 'My Board' },
+        size: 'S', // the size chosen before the form, carried through — not the default W
+        rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, // the S 1x1 footprint at the origin
+      }),
+    );
+  });
 });
 
 describe('the on-sky preview (focus a tile -> the real card at its firstFreeSlot landing)', () => {
@@ -231,6 +252,117 @@ describe('the on-sky preview (focus a tile -> the real card at its firstFreeSlot
     const style = StyleSheet.flatten(preview.props.style);
     expect(style.left).toBe(0); // column 0
     expect(style.top).toBeGreaterThan(0); // row >= 1: it landed BELOW the occupied row (firstFreeSlot)
+  });
+});
+
+describe('already-added state (AOD-148 §2 "Added is visible": a quiet mark + "Add again")', () => {
+  const withStubOnSky = {
+    dashboardId: 'dash-1',
+    name: 'Wall',
+    instances: [inst('a', { x: 0, y: 0, w: 2, h: 1, z: 0 })], // a stub-placeholder already on this sky
+  } as LoadedDashboard;
+
+  it('marks a widget already on the sky with "• ON THIS SKY" and relabels its action "Add again"', async () => {
+    renderGallery(new Map([['stub', conn('stub')]]), { dashboard: withStubOnSky });
+    expect(await screen.findByTestId('add-gallery-onsky-stub-placeholder')).toBeTruthy();
+    expect(screen.getByText('• ON THIS SKY')).toBeTruthy();
+    expect(screen.getByText('Add again')).toBeTruthy();
+  });
+
+  it('"Add again" still inserts a duplicate below the first (never silent, never disabled)', async () => {
+    renderGallery(new Map([['stub', conn('stub')]]), { dashboard: withStubOnSky });
+    fireEvent.press(await screen.findByTestId('add-gallery-add-stub-placeholder'));
+    // A second stub-placeholder lands at the first free slot below the existing one — the duplicate is real.
+    await waitFor(() =>
+      expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
+        serviceId: 'stub',
+        widgetType: 'placeholder',
+        config: {},
+        size: 'W',
+        rect: { x: 0, y: 1, w: 2, h: 1, z: 1 },
+      }),
+    );
+  });
+
+  it('a widget NOT on the sky shows neither the mark nor "Add again"', async () => {
+    renderGallery(new Map([['stub', conn('stub')]])); // empty sky
+    await screen.findByTestId('add-gallery-tile-stub-placeholder');
+    expect(screen.queryByTestId('add-gallery-onsky-stub-placeholder')).toBeNull();
+    expect(screen.getByText('Add')).toBeTruthy();
+    expect(screen.queryByText('Add again')).toBeNull();
+  });
+});
+
+describe('size-by-seeing (AOD-148 §2: S/M/W/L flips the tile + the on-sky preview together)', () => {
+  it('shows the S/M/W/L selector of the widget supportedSizes (canonical order) only once a tile is focused', async () => {
+    renderGallery(new Map([['stub', conn('stub')]]));
+    await screen.findByTestId('add-gallery-tile-stub-placeholder');
+    expect(screen.queryByTestId('add-gallery-size-stub-placeholder')).toBeNull(); // sizes wait until it's lit
+
+    fireEvent.press(screen.getByTestId('add-gallery-tile-stub-placeholder'));
+    expect(await screen.findByTestId('add-gallery-size-stub-placeholder')).toBeTruthy();
+    // supportedSizes ['S','W','L'] -> S, W, L are offered; M (unsupported) is not.
+    expect(screen.getByTestId('segmented-S')).toBeTruthy();
+    expect(screen.getByTestId('segmented-W')).toBeTruthy();
+    expect(screen.getByTestId('segmented-L')).toBeTruthy();
+    expect(screen.queryByTestId('segmented-M')).toBeNull();
+  });
+
+  it('flips the on-sky preview footprint when the size changes (tile + preview move together)', async () => {
+    renderGallery(new Map([['stub', conn('stub')]])); // empty sky
+    fireEvent.press(await screen.findByTestId('add-gallery-tile-stub-placeholder'));
+
+    // Default focus size is W (2x1). Capture the preview footprint, then flip to S (1x1) and L (2x2).
+    const w = StyleSheet.flatten((await screen.findByTestId('add-gallery-sky-preview')).props.style);
+    fireEvent.press(screen.getByTestId('segmented-S'));
+    const s = StyleSheet.flatten(screen.getByTestId('add-gallery-sky-preview').props.style);
+    fireEvent.press(screen.getByTestId('segmented-L'));
+    const l = StyleSheet.flatten(screen.getByTestId('add-gallery-sky-preview').props.style);
+
+    expect(s.width).toBeLessThan(w.width); // S 1x1 is narrower than W 2x1 -> the preview rect really changed
+    expect(l.height).toBeGreaterThan(w.height); // L 2x2 is taller than W 2x1
+  });
+
+  it('lands the card at the SELECTED size, not the default (the selected size flows to the added seed)', async () => {
+    renderGallery(new Map([['stub', conn('stub')]])); // empty sky
+    fireEvent.press(await screen.findByTestId('add-gallery-tile-stub-placeholder')); // focus (default W)
+    fireEvent.press(screen.getByTestId('segmented-S')); // flip to S
+    fireEvent.press(screen.getByTestId('add-gallery-add-stub-placeholder'));
+
+    await waitFor(() =>
+      expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
+        serviceId: 'stub',
+        widgetType: 'placeholder',
+        config: {},
+        size: 'S', // the SELECTED size, not the default W
+        rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, // the S 1x1 footprint at the origin
+      }),
+    );
+  });
+
+  it('resets the selected size to the widget default when focus moves to a different widget', async () => {
+    renderGallery(
+      new Map([
+        ['stub', conn('stub')],
+        ['cal', conn('cal')],
+      ]),
+    );
+    // Focus stub and flip it to S, then focus cal (which also supports S). cal must preview + add at ITS
+    // default (W), proving the S pick did not leak across widgets.
+    fireEvent.press(await screen.findByTestId('add-gallery-tile-stub-placeholder'));
+    fireEvent.press(screen.getByTestId('segmented-S'));
+    fireEvent.press(screen.getByTestId('add-gallery-tile-cal-agenda'));
+    fireEvent.press(screen.getByTestId('add-gallery-add-cal-agenda'));
+
+    await waitFor(() =>
+      expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
+        serviceId: 'cal',
+        widgetType: 'agenda',
+        config: {},
+        size: 'W', // reset to cal's default, NOT the leaked S
+        rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+      }),
+    );
   });
 });
 
