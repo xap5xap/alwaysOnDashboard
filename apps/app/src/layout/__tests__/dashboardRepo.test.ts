@@ -17,6 +17,7 @@ import {
   deleteWidgetInstance,
   loadDashboardById,
   loadDashboards,
+  moveInstanceToDashboard,
   renameDashboard,
   reorderDashboards,
 } from '../dashboardRepo';
@@ -140,6 +141,43 @@ describe('deleteWidgetInstance: client-direct RLS delete by id', () => {
     (supabase.from as jest.Mock).mockReset().mockReturnValue({ delete: jest.fn(() => ({ eq })) });
 
     await expect(deleteWidgetInstance('wi-42')).rejects.toThrow('rls denied');
+  });
+});
+
+// AOD-146 (Many Skies §1d): the client-direct cross-sky re-parent. The RLS grant + policy
+// widget_instances_rw_own (`for all using (user_id = auth.uid())`) already cover UPDATE, and the §8
+// dashboard-ownership WITH CHECK already permits re-parenting to another OWNED dashboard, so the repo only
+// issues update({ dashboard_id }).eq('id', ...) — like persistInstanceLayout, but writing the parent sky.
+// These lock the id targeting, the dashboard_id-only payload (a move touches no geometry/size/config), and
+// the error-propagation the optimistic move hook relies on to roll the card back.
+describe('moveInstanceToDashboard: client-direct RLS re-parent by id', () => {
+  function mockUpdate(error: Error | null = null) {
+    const eq = jest.fn(async () => ({ error }));
+    const captured: { payload?: Record<string, unknown> } = {};
+    const update = jest.fn((payload: Record<string, unknown>) => {
+      captured.payload = payload;
+      return { eq };
+    });
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ update });
+    return { captured, eq, update };
+  }
+
+  it('updates only dashboard_id, targeting the instance by id, and resolves', async () => {
+    const { captured, eq, update } = mockUpdate();
+
+    await expect(moveInstanceToDashboard('wi-7', 'd-dest')).resolves.toBeUndefined();
+
+    expect(supabase.from).toHaveBeenCalledWith('widget_instances');
+    expect(update).toHaveBeenCalledTimes(1);
+    // The ONLY column touched is the parent sky — a move re-parents, it does not re-lay-out.
+    expect(captured.payload).toEqual({ dashboard_id: 'd-dest' });
+    // Targets by id (never dashboard_id in the filter), so RLS + the §8 ownership WITH CHECK hold trivially.
+    expect(eq).toHaveBeenCalledWith('id', 'wi-7');
+  });
+
+  it('throws when RLS/network rejects (e.g. a move to a sky the user does not own), so the hook can roll back', async () => {
+    mockUpdate(new Error('rls denied'));
+    await expect(moveInstanceToDashboard('wi-7', 'd-dest')).rejects.toThrow('rls denied');
   });
 });
 

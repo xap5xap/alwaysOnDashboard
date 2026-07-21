@@ -32,6 +32,10 @@ export interface LayoutCanvasProps {
   /** Delete one instance (AOD-141); the dashboard owns the mutation. Fired from the arrange-mode
    *  in-place "Remove?" confirm. The wall callers pass a noop (they never arrange). */
   onRemove(instanceId: string): void;
+  /** AOD-146 (Many Skies §1d): a held card was carried to a screen edge ('left'/'right') or off it (null)
+   *  while dragging. The dashboard arms the cross-sky carry dwell. Optional and forwarded straight to each
+   *  card: the wall / read-only pager callers never arrange, so they simply omit it (the seam is untouched). */
+  onCarryEdge?(instanceId: string, edge: 'left' | 'right' | null): void;
 }
 
 export function LayoutCanvas({
@@ -42,6 +46,7 @@ export function LayoutCanvas({
   onCommit,
   onRequestConfigure,
   onRemove,
+  onCarryEdge,
 }: LayoutCanvasProps) {
   const { theme } = useUnistyles();
   // The live arrange session: the active target (for the hairline), the per-card reflow preview, and the
@@ -84,6 +89,7 @@ export function LayoutCanvas({
           onArrangeCancel={reflow.onArrangeCancel}
           onRequestConfigure={onRequestConfigure}
           onRemove={onRemove}
+          onCarryEdge={onCarryEdge}
         />
       ))}
     </View>
