@@ -60,6 +60,62 @@ describe('defaultPlacementRect (AOD-10 §5.1 nominal geometry, non-overlap)', ()
   });
 });
 
+describe('defaultPlacementRect first-free placement (AOD-139, resolves AOD-103)', () => {
+  it('lands a new S in the second column (x=1) when the first column of a row is taken', () => {
+    // The old 1-D append always used x=0 and stacked below; first-free fills column 1 of the same row.
+    const existing = [inst({ x: 0, y: 0, w: 1, h: 1, z: 0 })];
+    expect(defaultPlacementRect('S', existing)).toEqual({ x: 1, y: 0, w: 1, h: 1, z: 1 });
+  });
+
+  it('walks an S across col0 -> col1 -> the next row as the grid fills (reading order)', () => {
+    const a = inst({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 'a');
+    const b = inst({ x: 1, y: 0, w: 1, h: 1, z: 1 }, 'b');
+    expect(defaultPlacementRect('S', [a])).toEqual({ x: 1, y: 0, w: 1, h: 1, z: 1 }); // col1, same row
+    expect(defaultPlacementRect('S', [a, b])).toEqual({ x: 0, y: 1, w: 1, h: 1, z: 2 }); // next row
+  });
+
+  it('drops an M (1x2) into the first column that has two free rows', () => {
+    // A lone S at col0 row0 leaves col1 (rows 0-1) as the first two-row-tall gap.
+    expect(defaultPlacementRect('M', [inst({ x: 0, y: 0, w: 1, h: 1, z: 0 })])).toEqual({
+      x: 1, y: 0, w: 1, h: 2, z: 1,
+    });
+  });
+
+  it('places a W (2x1) only in a fully-free row, else appends below (a single S blocks the row)', () => {
+    expect(defaultPlacementRect('W', [inst({ x: 0, y: 0, w: 1, h: 1, z: 0 })])).toEqual({
+      x: 0, y: 1, w: 2, h: 1, z: 1,
+    });
+  });
+
+  it('appends an L (2x2) below any occupant (it needs the whole grid)', () => {
+    expect(defaultPlacementRect('L', [inst({ x: 0, y: 0, w: 1, h: 1, z: 0 })])).toEqual({
+      x: 0, y: 1, w: 2, h: 2, z: 1,
+    });
+  });
+
+  it('stacks a new W below a full column of W rows when the grid is full (append)', () => {
+    const rows = [
+      inst({ x: 0, y: 0, w: 2, h: 1, z: 0 }, 'a'),
+      inst({ x: 0, y: 1, w: 2, h: 1, z: 1 }, 'b'),
+    ];
+    expect(defaultPlacementRect('W', rows)).toEqual({ x: 0, y: 2, w: 2, h: 1, z: 2 });
+  });
+
+  it('fills an interior hole in reading order before appending', () => {
+    // M in col0 (rows 0-1) + S in col1 row0 -> the first free S slot is the hole at col1 row1.
+    const existing = [
+      inst({ x: 0, y: 0, w: 1, h: 2, z: 0 }, 'm'),
+      inst({ x: 1, y: 0, w: 1, h: 1, z: 1 }, 's'),
+    ];
+    expect(defaultPlacementRect('S', existing)).toEqual({ x: 1, y: 1, w: 1, h: 1, z: 2 });
+  });
+
+  it('lands the first widget of an empty board at the origin (matches the bootstrap seed)', () => {
+    expect(defaultPlacementRect('W', [])).toEqual({ x: 0, y: 0, w: 2, h: 1, z: 0 });
+    expect(defaultPlacementRect('S', [])).toEqual({ x: 0, y: 0, w: 1, h: 1, z: 0 });
+  });
+});
+
 describe('defaultConfig (AOD-10 §4.1)', () => {
   it('is empty for a schema with no fields (the stub)', () => {
     expect(defaultConfig({ fields: [] })).toEqual({});
