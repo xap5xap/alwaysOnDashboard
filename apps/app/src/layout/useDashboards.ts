@@ -7,7 +7,7 @@
 // re-keyed by sky id. Switching the active sky flips WHICH sky the single ['dashboard', userId] key holds (by
 // persisting the pointer + invalidating that key), not the key itself, so the untouchable wall render path
 // (kiosk/KioskWall.tsx, which calls useDashboard()) keeps working with zero edits.
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
 import {
@@ -74,6 +74,21 @@ export function useDashboards(): UseDashboardsResult {
     () => queryClient.invalidateQueries({ queryKey: dashboardsQueryKey(userId) }),
     [queryClient, userId],
   );
+
+  // AOD-144 coherence heal. The sky LIST and the active-sky query are independent, so a brand-new user can
+  // resolve the list to [] (one SELECT) BEFORE the active-sky query's bootstrapDashboard commits its INSERTs
+  // — and with staleTime:Infinity that empty list would stick for the whole session, blanking the Glance
+  // pager AND (worse) fooling the second-sky Pro gate into thinking 0 dashboards exist. When the resolved
+  // active sky is absent from a RESOLVED list, refetch the list ONCE. Loop-safe: the active-sky query awaits
+  // the bootstrap before it publishes activeId, so by the time this fires the row is committed and the
+  // refetch returns it — the `!some(...)` condition then goes false and never re-arms; invalidateQueries also
+  // dedups concurrent refetches. Covers any missing-active case (e.g. a cross-device create), not just
+  // bootstrap.
+  useEffect(() => {
+    if (activeId && listQuery.isSuccess && !dashboards.some((d) => d.id === activeId)) {
+      void refetchList();
+    }
+  }, [activeId, dashboards, listQuery.isSuccess, refetchList]);
 
   const setActive = useCallback(
     (id: string) => {
