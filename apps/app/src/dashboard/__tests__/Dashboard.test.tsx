@@ -62,6 +62,46 @@ jest.mock('../../layout/LayoutCanvas', () => {
 jest.mock('../../layout/WidgetPicker', () => ({ WidgetPicker: () => null }));
 jest.mock('../../layout/ConfigureInstanceModal', () => ({ ConfigureInstanceModal: () => null }));
 jest.mock('../../kiosk/WallPreview', () => ({ WallPreview: () => null }));
+// gesture-handler: the AOD-145 pinch-in wrapper on the card-altitude surface. Passthrough — GestureDetector
+// renders its child; the pinch is device-only (AOD-190), so the capsule press is the entry these tests drive.
+jest.mock('react-native-gesture-handler', () => {
+  const make = () => {
+    const g: Record<string, () => unknown> = {};
+    ['enabled', 'onStart', 'onUpdate', 'onEnd', 'onFinalize', 'onBegin', 'onChange', 'minDuration', 'activateAfterLongPress', 'scaleTo'].forEach((m) => {
+      g[m] = () => g;
+    });
+    return g;
+  };
+  return {
+    GestureDetector: ({ children }: { children: React.ReactNode }) => children,
+    Gesture: { Pinch: make, Pan: make, LongPress: make },
+  };
+});
+// AOD-145 page altitude is stubbed to expose the props the shell wires (the ordered skies + active id it
+// received, and a control that fires onTapSky — tap-to-descend). Its real internals (thumbnails / reorder /
+// label / delete / the + Pro fork) are tested in PageAltitude's own suite.
+jest.mock('../PageAltitude', () => {
+  const React = require('react');
+  const { View, Text, Pressable } = require('react-native');
+  return {
+    PageAltitude: ({
+      dashboards,
+      activeId,
+      onTapSky,
+    }: {
+      dashboards: { id: string }[];
+      activeId: string | null;
+      onTapSky: (id: string) => void;
+    }) =>
+      React.createElement(
+        View,
+        { testID: 'page-altitude' },
+        React.createElement(Text, { testID: 'pa-active' }, activeId ?? 'none'),
+        React.createElement(Text, { testID: 'pa-count' }, String(dashboards.length)),
+        React.createElement(Pressable, { testID: 'pa-tap-d2', onPress: () => onTapSky('d2') }, React.createElement(Text, null, 'tap')),
+      ),
+  };
+});
 // The cache hand-offs are stubbed so the shell's wiring/ORDER of them is assertable (their real cache copies
 // are covered in useSkyInstances.test).
 jest.mock('../../layout/useSkyInstances', () => ({
@@ -95,6 +135,9 @@ const loaded = (overrides: Record<string, unknown> = {}) => ({
   commit: jest.fn(),
   setActive: jest.fn(),
   createDashboard: jest.fn().mockResolvedValue('d3'),
+  renameDashboard: jest.fn(),
+  reorderDashboards: jest.fn(),
+  deleteDashboard: jest.fn(),
   ...overrides,
 });
 
@@ -126,10 +169,11 @@ describe('Dashboard — the Glance-pager / Arrange split §1a/§1e', () => {
     // The dial replaced the Done pill; Preview is arrange-only.
     expect(screen.queryByTestId('dashboard-done')).toBeNull();
     expect(screen.queryByTestId('dashboard-preview')).toBeNull();
-    // The Glance hub cluster is intact.
+    // The Glance hub cluster is Add + Settings. The AOD-68 dashboards-switcher chevron is RETIRED (AOD-145):
+    // the pager + page altitude replace the /dashboards modal, so there is no chevron.
     expect(screen.getByTestId('dashboard-add-widget')).toBeTruthy();
     expect(screen.getByTestId('dashboard-settings')).toBeTruthy();
-    expect(screen.getByTestId('dashboard-switcher')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-switcher')).toBeNull();
   });
 
   it('passes the ordered skies + the active id into the pager', () => {
@@ -257,5 +301,61 @@ describe('Dashboard — the Glance-pager / Arrange split §1a/§1e', () => {
     expect(screen.queryByTestId('sky-pager')).toBeNull();
     fireEvent.press(screen.getByTestId('screen-error-retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+});
+
+describe('Dashboard — the two Arrange altitudes §1b (AOD-145)', () => {
+  // Enter Arrange (card altitude), then press the grown page-dots capsule to rise to page altitude.
+  const rise = () => {
+    fireEvent.press(screen.getByTestId('segmented-arrange'));
+    fireEvent.press(screen.getByTestId('page-capsule-press'));
+  };
+
+  it('card altitude carries the page-dots capsule (the door up); Glance does not', () => {
+    renderDashboard();
+    expect(screen.queryByTestId('page-capsule')).toBeNull(); // Glance: no capsule
+
+    fireEvent.press(screen.getByTestId('segmented-arrange'));
+    expect(canvasMode()).toBe('arrange');
+    expect(screen.getByTestId('page-capsule')).toBeTruthy(); // card altitude: the capsule appears
+    expect(screen.getByTestId('page-capsule-press')).toBeTruthy();
+  });
+
+  it('pressing the capsule RISES to page altitude (thumbnails), swapping out the card canvas', () => {
+    renderDashboard();
+    rise();
+
+    expect(screen.getByTestId('page-altitude')).toBeTruthy();
+    expect(screen.queryByTestId('layout-canvas')).toBeNull(); // the card surface yields to page altitude
+    expect(screen.getByTestId('pa-count').props.children).toBe('2'); // the ordered skies are passed down
+    // The dial still reads Arrange (page altitude is inside Arrange), and Preview is hidden here (it previews
+    // one sky's wall, which page altitude is above).
+    expect(screen.getByTestId('segmented-arrange').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId('dashboard-preview')).toBeNull();
+  });
+
+  it('the dial EXITS to Glance from page altitude (either altitude leaves Arrange)', () => {
+    renderDashboard();
+    rise();
+    expect(screen.getByTestId('page-altitude')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('segmented-glance'));
+    expect(screen.getByTestId('sky-pager')).toBeTruthy();
+    expect(screen.queryByTestId('page-altitude')).toBeNull();
+    expect(screen.queryByTestId('layout-canvas')).toBeNull();
+  });
+
+  it('tapping a sky at page altitude DESCENDS: sets it active and lands at card altitude', () => {
+    const setActive = jest.fn();
+    mockUseDashboards.mockReturnValue(loaded({ setActive }));
+    renderDashboard();
+    rise();
+
+    // Tap sky d2 (not the active d1): descend into its cards.
+    fireEvent.press(screen.getByTestId('pa-tap-d2'));
+    expect(setActive).toHaveBeenCalledWith('d2');
+    expect(mockSeedActiveFromSky).toHaveBeenCalledWith(expect.anything(), 'u1', 'd2'); // paints d2 at once
+    expect(canvasMode()).toBe('arrange'); // back at card altitude
+    expect(screen.queryByTestId('page-altitude')).toBeNull();
   });
 });

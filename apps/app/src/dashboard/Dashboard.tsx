@@ -24,10 +24,12 @@
 // shell EmptyState (now inside SkyPager's pages), and the canvas / picker / config sheet are the polished
 // editor surfaces.
 import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { runOnJS } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
@@ -39,8 +41,9 @@ import { WallPreview } from '../kiosk/WallPreview';
 import type { WidgetInstance } from '../registry/types';
 import { AppBar, ErrorState, LoadingState, Screen } from '../shell';
 import { Button } from '../ui/Button';
-import { ChevronGlyph } from '../ui/glyphs';
 import { ModeDial } from './ModeDial';
+import { PageAltitude } from './PageAltitude';
+import { PageCapsule } from './PageCapsule';
 import { SkyPager } from './SkyPager';
 import { useChromeAwake } from './useChromeAwake';
 
@@ -48,11 +51,27 @@ export function Dashboard() {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const queryClient = useQueryClient();
-  const { instances, isLoading, isError, error, refetch, commit, dashboards, activeId, setActive, createDashboard } =
-    useDashboards();
+  const {
+    instances,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    commit,
+    dashboards,
+    activeId,
+    setActive,
+    createDashboard,
+    renameDashboard,
+    reorderDashboards,
+    deleteDashboard,
+  } = useDashboards();
   const { removeWidget } = useRemoveWidget();
-  const { theme } = useUnistyles();
   const [arranging, setArranging] = useState(false);
+  // AOD-145: the SECOND Arrange altitude. `arranging` gates Glance vs Arrange; within Arrange this flag gates
+  // card altitude (edit one sky, the shipped surface) vs page altitude (manage the skies as thumbnails). Only
+  // meaningful while arranging; every path OUT of Arrange (the dial to Glance) also resets it.
+  const [atPageAltitude, setAtPageAltitude] = useState(false);
   // AOD-144: the pager's current page (a mirror of SkyPager's local scroll position, reported via
   // onPageChange). It drives which sky the dial arranges — the sky on screen, NOT activeId (which lags
   // setActive, AOD-143). Persists across the arrange round-trip (SkyPager unmounts in Arrange), and SkyPager
@@ -84,6 +103,8 @@ export function Dashboard() {
       setActive(skyId);
     }
     setArranging(true);
+    // AOD-145: entering Arrange always lands at card altitude (edit this sky), never page altitude.
+    setAtPageAltitude(false);
   };
 
   // AOD-144: an empty page's "Add a card". For the active sky (the single-sky common case, and any freshly
@@ -102,19 +123,50 @@ export function Dashboard() {
     if (mode === 'arrange') {
       const sky = dashboards[currentPage];
       if (sky) enterArrange(sky.id);
-      else setArranging(true);
+      else {
+        setArranging(true);
+        setAtPageAltitude(false);
+      }
     } else {
+      // AOD-145: the dial to Glance EXITS Arrange from EITHER altitude — drop the altitude too. Then hand the
+      // just-edited active-sky layout back to the pager's per-sky cache so the page repaints the edit at once.
       setArranging(false);
+      setAtPageAltitude(false);
       if (activeId) seedSkyFromActive(queryClient, userId, activeId);
     }
   };
 
-  // AOD-142: the hub trailing cluster. The Glance | Arrange dial is the PERSISTENT mode control (present in
-  // both modes — flipping it to Glance is how you leave Arrange), riding the chrome-awake state so it sinks
-  // when the surface is idle. Its mode-specific siblings follow it: while arranging, only the wall Preview
-  // pill (AOD-81 §6, ghost; the Done pill it once paired with is gone — the dial replaces it); otherwise
-  // Add + Settings + the dashboards-switcher chevron. The dial + Add appear once the board has loaded (there
-  // is nothing to arrange while loading/erroring); Settings + the switcher stay put as before.
+  // AOD-145: the card-altitude capsule press / a pinch-in RISES to page altitude (manage the skies).
+  const rise = () => setAtPageAltitude(true);
+
+  // AOD-145: tap a thumbnail at page altitude -> DESCEND into that sky's cards. enterArrange seeds + sets it
+  // active and lands at card altitude (atPageAltitude=false), so the tapped sky paints from frame one.
+  const descendToSky = (skyId: string) => enterArrange(skyId);
+
+  // AOD-145: after a Pro create at page altitude, createDashboard has already set the new empty sky active
+  // (§1g), so "descend into it" is just dropping back to card altitude.
+  const onCreated = () => setAtPageAltitude(false);
+
+  // AOD-145: pinch-in on the card-altitude surface is the device fast-lane to page altitude (the capsule press
+  // is the deliberate, testable entry). Inert under jest — gestures need the native event system — so the
+  // capsule carries the unit contract; the scale threshold keeps a small accidental pinch from rising.
+  const pinchToRise = Gesture.Pinch().onEnd((e, success) => {
+    'worklet';
+    if (success && e.scale < 0.85) runOnJS(rise)();
+  });
+
+  // The index of the sky being arranged (the resolved active sky) — the capsule's lit dot at card altitude.
+  const arrangedIndex = Math.max(
+    0,
+    dashboards.findIndex((d) => d.id === activeId),
+  );
+
+  // AOD-142/145: the hub trailing cluster. The Glance | Arrange dial is the PERSISTENT mode control (present
+  // in both modes AND both Arrange altitudes — flipping it to Glance is how you leave Arrange), riding the
+  // chrome-awake state so it sinks when the surface is idle. Its siblings follow the surface: at CARD altitude
+  // the wall Preview pill (AOD-81 §6); at PAGE altitude nothing but the dial (Preview previews one sky's wall,
+  // which page altitude is above); in Glance, Add + Settings. The AOD-68 dashboards-switcher chevron is RETIRED
+  // (AOD-145): the pager + page altitude replace the /dashboards modal, so there is no chevron and no route.
   const canArrange = !isLoading && !isError;
   const headerRight = (
     <>
@@ -122,22 +174,15 @@ export function Dashboard() {
         <ModeDial mode={arranging ? 'arrange' : 'glance'} awake={awake} onChange={onDialChange} />
       ) : null}
       {arranging ? (
-        <Button label="Preview" variant="ghost" size="sm" pill onPress={() => setPreviewing(true)} testID="dashboard-preview" />
+        atPageAltitude ? null : (
+          <Button label="Preview" variant="ghost" size="sm" pill onPress={() => setPreviewing(true)} testID="dashboard-preview" />
+        )
       ) : (
         <>
           {canArrange ? (
             <Button label="Add" variant="ghost" size="sm" onPress={() => setPicking(true)} testID="dashboard-add-widget" />
           ) : null}
           <Button label="Settings" variant="ghost" size="sm" onPress={() => router.push('/settings')} testID="dashboard-settings" />
-          <Pressable
-            onPress={() => router.push('/dashboards')}
-            accessibilityRole="button"
-            accessibilityLabel="Switch dashboard"
-            hitSlop={8}
-            testID="dashboard-switcher"
-          >
-            <ChevronGlyph color={theme.colors.textMuted} />
-          </Pressable>
         </>
       )}
     </>
@@ -158,23 +203,49 @@ export function Dashboard() {
             <LoadingState />
           ) : isError ? (
             <ErrorState line="Could not load your dashboard." detail={error?.message} onRetry={() => void refetch()} />
-          ) : arranging ? (
-            // AOD-144: ARRANGE renders the single active-sky LayoutCanvas (as before AOD-144). An empty board
-            // still renders the canvas (nothing to show, but the add/exit affordances live here).
+          ) : arranging && atPageAltitude ? (
+            // AOD-145: PAGE altitude — the skies as thumbnail tiles (reorder / label / delete / +). It retires
+            // the /dashboards switcher modal; the dial (above) still exits to Glance from here, and tapping a
+            // tile descends into that sky's cards. Data + mutations come from useDashboards; the descend + the
+            // post-create drop are Dashboard's altitude concerns.
             <View style={styles.body}>
-              {/* AOD-142: the arrange-only hint. The old Glance instruction is gone — the dial is the visible
-                  control now. Glance stays wordless and calm. */}
-              <Text style={styles.hint}>Drag to move. Drag a corner to resize. Flip to Glance to finish.</Text>
-              <LayoutCanvas
-                instances={instances}
-                arranging
-                onEnterArrange={() => setArranging(true)}
-                onExitArrange={() => setArranging(false)}
-                onCommit={commit}
-                onRequestConfigure={setConfiguring}
-                onRemove={(instanceId) => void removeWidget(instanceId)}
+              <PageAltitude
+                dashboards={dashboards}
+                activeId={activeId}
+                onTapSky={descendToSky}
+                createDashboard={createDashboard}
+                onCreated={onCreated}
+                renameDashboard={renameDashboard}
+                reorderDashboards={reorderDashboards}
+                deleteDashboard={deleteDashboard}
               />
             </View>
+          ) : arranging ? (
+            // AOD-144/145: CARD altitude ARRANGE — the single active-sky LayoutCanvas (as before AOD-144), now
+            // wrapped in a pinch-in gesture and carrying the page-dots CAPSULE (the door up to page altitude).
+            // An empty board still renders the canvas. GestureDetector needs one child, so the body View is it.
+            <GestureDetector gesture={pinchToRise}>
+              <View style={styles.body}>
+                {/* AOD-142: the arrange-only hint. The old Glance instruction is gone — the dial is the visible
+                    control now. Glance stays wordless and calm. */}
+                <Text style={styles.hint}>Drag to move. Drag a corner to resize. Flip to Glance to finish.</Text>
+                <LayoutCanvas
+                  instances={instances}
+                  arranging
+                  onEnterArrange={() => setArranging(true)}
+                  onExitArrange={() => setArranging(false)}
+                  onCommit={commit}
+                  onRequestConfigure={setConfiguring}
+                  onRemove={(instanceId) => void removeWidget(instanceId)}
+                />
+                {/* AOD-145: the grown page-dots capsule, floating at the bottom over the canvas and riding the
+                    chrome-awake state (box-none so only the capsule captures; the canvas keeps the rest). Press
+                    (or pinch-in) rises to page altitude. */}
+                <View style={styles.capsuleBar} pointerEvents="box-none">
+                  <PageCapsule count={dashboards.length} current={arrangedIndex} awake={awake} onRise={rise} />
+                </View>
+              </View>
+            </GestureDetector>
           ) : (
             // AOD-144: GLANCE is a horizontal pager over the skies. Each page renders its sky read-only; the
             // dots + the second-sky Pro gate live inside. A single bootstrapped sky is the common case and
@@ -215,5 +286,15 @@ const styles = StyleSheet.create((theme) => ({
     ...theme.type.meta,
     paddingHorizontal: theme.spacing(4),
     paddingVertical: theme.spacing(3),
+  },
+  // AOD-145 the capsule bar: the page-dots capsule floats at the bottom-center of the card-altitude surface
+  // (like the Glance dots), over the canvas. box-none on the wrapper so only the capsule itself captures.
+  capsuleBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    paddingVertical: theme.spacing(4),
   },
 }));

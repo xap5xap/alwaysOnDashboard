@@ -4,7 +4,8 @@
 // per-screen builds REPLACE these bodies inside the same shell frame:
 //   Themes                -> AOD-28
 // BUILT + moved out of here: Onboarding + Paywall -> AOD-29 (src/onboarding/Onboarding + src/paywall/Paywall);
-// the Dashboards switcher -> src/dashboard/DashboardsSwitcher (AOD-27 / AOD-69); the Kiosk wall -> AOD-72
+// the Dashboards switcher was RETIRED into page altitude (AOD-145; formerly src/dashboard/DashboardsSwitcher,
+// AOD-27 / AOD-69); the Kiosk wall -> AOD-72
 // (src/kiosk/KioskWall, the AOD-39 presentation; NOT a shell application, so it is not a placeholder here).
 import React from 'react';
 import { router } from 'expo-router';
