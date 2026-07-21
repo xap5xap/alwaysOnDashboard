@@ -13,9 +13,11 @@ export interface SizeClassSpec {
 }
 
 // The slot grid is two columns wide; slots are at most two rows tall (L/M). Rows extend downward
-// without bound (the sky scrolls); columns do not.
+// without bound (the sky scrolls); columns do not. Both bounds are exported so the discrete snap/slot
+// algebra (layout/geometry.ts snapDrag/snapResize, layout/grid.ts) shares one source of truth for the
+// grid's shape rather than re-declaring 2 in three places (AOD-138).
 export const GRID_COLUMNS = 2;
-const MAX_SLOT_H = 2;
+export const MAX_SLOT_H = 2;
 
 // The Many Skies §1c slot contract (nominal units; aspect = w/h). Exactly four slots, no 3-wide.
 export const SIZE_CATALOGUE: Record<WidgetSize, SizeClassSpec> = {
