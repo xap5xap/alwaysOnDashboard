@@ -1,52 +1,51 @@
-// The Soundings face's pure, React-free selectors (AOD-134; design-linear.md §4, claude-design/prompts/
-// linear.md "the priority glyph = My Issues' distinctive mark", the RB-M2 runbook §5 AOD-134 card). The
-// centerpiece of Soundings is a priority-mark SILHOUETTE: every assigned issue's priority glyph in ONE
-// horizontal row, sorted HEAVY→LIGHT, capped to what fits the width (never clipped). These helpers are kept
-// out of the leaf (the transit.ts / range.ts precedent) so the sort order + the packing cap are
-// unit-testable, and so no partial payload slips a NaN through the comparator. NO colour here — the marks
-// are drawn bone / shape-only by PriorityGlyph at the draw site (§4.2: priority is carried by SHAPE, never
-// hue; a coloured-priority-dot rainbow would break the one-accent rule + the status-hue reservation), so
-// this stays a pure function of numbers.
+// The Soundings face's pure, React-free selector (AOD-134; design-linear.md §4, claude-design/prompts/
+// linear.md "the priority glyph = My Issues' distinctive mark", the RB-M2 runbook §5 AOD-134 card + the
+// 2026-07-20 device RETUNE). Soundings now carries priority TWO ways: the per-row priority glyph inline next
+// to each issue (so a mark is tied to a name), and — where there are no rows (S/W) or as an all-issue tally
+// above them (L) — a worded priority SUMMARY ("9 High · 1 Med"): a textual histogram in heavy→light order.
+// The RETUNE replaced the earlier aggregate priority-mark SILHOUETTE (one glyph per issue in a sorted row):
+// on real data (9 High + 1 Med) the silhouette read as ~9 identical marks with no link to the named rows, so
+// its sort/pack helpers were retired with it. This helper is kept out of the leaf (the transit.ts / range.ts
+// precedent) so the bucketing + order are unit-testable, and so no partial payload slips a NaN through. NO
+// colour here — the summary is drawn bone / monochrome at the draw site (numerals colors.text, labels
+// colors.textMuted; §4.2 priority is carried by SHAPE/word, never a hue), so this stays a pure function.
 
-/**
- * The heavy→light sort WEIGHT for a Linear priority. Linear's numbering is INVERTED (integration-linear.md
- * §4.1: 0 none, 1 urgent, 2 high, 3 medium, 4 low), so a plain numeric sort is WRONG — urgent(1) is the
- * HEAVIEST and none(0) is the LIGHTEST, not the other way round. The weight is ASCENDING over the four real
- * levels (urgent 1 … low 4) with none — and any out-of-range / NaN value, which priorityShape() also
- * collapses to 'none' — mapped to Infinity so it sorts LAST. Mirroring priorityShape's none-bucket keeps the
- * sort and the drawn glyph in agreement (a value that renders as the none-dashes also sorts as none).
- */
-export function priorityWeight(priority: number): number {
-  return priority >= 1 && priority <= 4 ? priority : Infinity; // 1..4 real; else (0 none / NaN / oob) → last
+/** One nonzero priority bucket in the worded summary: the level, its compact label, and how many issues fall
+ *  in it. Only buckets with count ≥ 1 are returned, already ordered heavy→light. */
+export interface PrioritySummarySegment {
+  priority: number; // the Linear level this bucket counts (1 urgent, 2 high, 3 medium, 4 low, 0 none)
+  label: string; // the compact display label ('Urgent' | 'High' | 'Med' | 'Low' | 'None')
+  count: number; // issues in this bucket (always ≥ 1 in the returned list)
 }
 
-/**
- * Sort issues HEAVY→LIGHT by priority (urgent > high > medium > low > none), STABLE for ties (equal
- * priorities keep their original relative order). Pure: returns a NEW array and never mutates the input (the
- * query data). Generic over the priority-bearing shape so it is testable with a minimal fixture. Stability
- * is explicit via an index decoration, which also dodges the Infinity − Infinity = NaN trap that a bare
- * subtractive comparator would hit on two 'none' issues.
- */
-export function sortByPriorityHeavyToLight<T extends { priority: number }>(issues: readonly T[]): T[] {
-  return issues
-    .map((issue, index) => ({ issue, index }))
-    .sort((a, b) => {
-      const wa = priorityWeight(a.issue.priority);
-      const wb = priorityWeight(b.issue.priority);
-      if (wa !== wb) return wa - wb; // ascending weight = heavy→light (Infinity − finite is +∞ → none trails)
-      return a.index - b.index; // tie (incl. Infinity === Infinity for two nones): keep source order → stable
-    })
-    .map((d) => d.issue);
-}
+// The heavy→light display order + compact labels (integration-linear.md §4.1: Linear's numbering is INVERTED,
+// so urgent(1) is HEAVIEST and none(0) LIGHTEST — none trails, NOT leads). 'Med' matches the RETUNE example
+// "9 High · 1 Med"; the rest read in full since those buckets are usually short.
+const SUMMARY_ORDER: readonly { priority: number; label: string }[] = [
+  { priority: 1, label: 'Urgent' },
+  { priority: 2, label: 'High' },
+  { priority: 3, label: 'Med' },
+  { priority: 4, label: 'Low' },
+  { priority: 0, label: 'None' },
+];
 
 /**
- * How many silhouette marks of `markSize` (px, DP) with `gap` between them fit in `width` (px, DP), so the
- * silhouette NEVER clips: n marks occupy n·markSize + (n−1)·gap ≤ width, so n = ⌊(width + gap) / (markSize +
- * gap)⌋. Clamped at 0 (a degenerate / zero width shows no marks, never a negative count). The caller caps the
- * heavy→light list to this, so the HEAVIEST marks are the ones kept when there are more issues than fit — the
- * count carries the true total; the silhouette is the priority TEXTURE, not the tally.
+ * Tally issues into the worded priority summary — the nonzero buckets in heavy→light order (urgent > high >
+ * medium > low > none). Pure: never mutates the input (the query data). Any out-of-range / NaN priority folds
+ * into 'none' (mirroring priorityShape()'s default, so a value that draws as the none-dashes also tallies as
+ * none). Generic over the priority-bearing shape so it is testable with a minimal fixture. The count hero
+ * carries the true total; this is the priority TEXTURE, in words that stay legible when every issue shares a
+ * level (the failure the silhouette had).
  */
-export function silhouetteCapacity(width: number, markSize: number, gap: number): number {
-  if (!(width > 0) || !(markSize > 0)) return 0;
-  return Math.max(0, Math.floor((width + gap) / (markSize + gap)));
+export function prioritySummary(issues: readonly { priority: number }[]): PrioritySummarySegment[] {
+  const counts = new Map<number, number>();
+  for (const { priority } of issues) {
+    const bucket = priority >= 1 && priority <= 4 ? priority : 0; // 1..4 real; else (none / NaN / oob) → none
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+  }
+  return SUMMARY_ORDER.filter((b) => (counts.get(b.priority) ?? 0) > 0).map((b) => ({
+    priority: b.priority,
+    label: b.label,
+    count: counts.get(b.priority)!,
+  }));
 }

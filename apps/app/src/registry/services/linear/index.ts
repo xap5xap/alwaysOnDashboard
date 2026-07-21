@@ -14,7 +14,7 @@ const myIssues: WidgetDefinition = {
   type: 'my_issues',
   serviceId: 'linear',
   title: 'My Issues',
-  // AOD-134 Soundings: adds S (count over the silhouette, the glance). Order S→M→W→L (the S/M/W/L catalogue).
+  // AOD-134 Soundings: adds S (count over the worded priority summary, the glance). Order S→M→W→L (the catalogue).
   supportedSizes: ['S', 'M', 'W', 'L'],
   defaultRefresh: { seconds: 300 }, // device asks every 5 min (AOD-10 §6.2)
   cacheTtlSeconds: 120, // provider hit at most once per 2 min across devices (AOD-10 §6.1)

@@ -279,18 +279,15 @@ const priorityIcon = {
   offOpacity: 0.3, // unfilled bars -> colors.textMuted at this intensity, so level is read by filled-bar count
 } as const;
 
-// AOD-134 §soundings: the My Issues SOUNDINGS silhouette geometry (the priority-mark row that is the new
-// hero mark; design-linear.md §4, the RB-M2 runbook §5 AOD-134). The analog of priorityIcon/transit/range —
-// a per-render-context NUMBERS-ONLY group; the marks are drawn bone / shape-only by PriorityGlyph at the
-// draw site (filled = colors.text, ghost bars / none-dashes = colors.textMuted @ priorityIcon.offOpacity),
-// so this adds NO colour token (the §4.2 priority-is-shape rule + the one-accent + status-hue reservation
-// forbid a priority hue). `mark` is the silhouette glyph edge; `gap` the horizontal space between marks (the
-// packing unit — soundings.ts caps the row to what fits so it never clips); `rowHeight` the silhouette band
-// reserved above the L rows in the height-fit (fitCount lead). Test-locked in __tests__/soundings-tokens.test.ts.
+// AOD-134 §soundings: the My Issues SOUNDINGS geometry (design-linear.md §4, the RB-M2 runbook §5 AOD-134 +
+// the 2026-07-20 device RETUNE). The analog of priorityIcon/transit/range — a per-render-context NUMBERS-ONLY
+// group; adds NO colour token (the §4.2 priority-is-shape rule + the one-accent + status-hue reservation
+// forbid a priority hue). The RETUNE retired the aggregate priority-mark silhouette (its `mark`/`gap` packing
+// geometry went with it — the inline row glyph now uses priorityIcon.size), leaving one reserve: `summaryBand`
+// is the worded priority-summary line ("9 High · 1 Med") reserved above the L rows in the height-fit (fitCount
+// lead), so the rows shed into "+N more" rather than collide with it. Test-locked in soundings-tokens.test.ts.
 const soundings = {
-  mark: 14, // the silhouette glyph edge (the priorityIcon.size weight; its own token so the silhouette can tune)
-  gap: 4, // spacing(1): the horizontal gap between marks (the packing unit)
-  rowHeight: 18, // the silhouette band reserved above the L rows (fitCount lead): the mark + a little breathing
+  summaryBand: 18, // the worded-summary line reserved above the L rows (fitCount lead): a type.meta line + breathing
 } as const;
 
 // AOD-30 §9.2 progress: the Current Cycle progress bar sizing + intensity (design-linear.md §6, §9.2). One

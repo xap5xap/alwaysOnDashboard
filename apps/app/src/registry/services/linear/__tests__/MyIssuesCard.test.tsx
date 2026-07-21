@@ -82,9 +82,9 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     });
   });
 
-  it('at W leads with the count over the priority silhouette — no rows, no "+N more" (AOD-134)', async () => {
-    // W (2x1) is the count + silhouette banner: the priority marks carry the texture and the rows are an M/L
-    // affordance, so there are no issue rows and no "+N more" here (both fit the 168dp width → 2 marks).
+  it('at W leads with the count over the worded priority summary — no rows, no "+N more" (AOD-134)', async () => {
+    // W (2x1) is the count + summary banner: the worded histogram carries priority where there are no rows,
+    // so there are no issue rows and no "+N more" here. sampleData is 1 High + 1 Medium.
     const source: WidgetDataSource = {
       fetch: jest.fn().mockResolvedValue({ data: sampleData, fetchedAt: Date.now() }),
       resolveOptions: jest.fn().mockResolvedValue(projectChoices),
@@ -92,9 +92,9 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
     renderHost(source); // W (baseInstance)
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open'); // the value leads
-    expect(screen.getByTestId('linear-myissues-silhouette')).toBeTruthy();
-    expect(screen.getAllByTestId('linear-myissues-mark')).toHaveLength(2); // one mark per issue
-    expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // W shows no rows
+    expect(screen.getByTestId('linear-myissues-summary')).toHaveTextContent('1 High · 1 Med'); // heavy→light
+    expect(screen.queryByTestId('linear-myissues-rowglyph')).toBeNull(); // W shows no rows
+    expect(screen.queryByText('Wire Linear My Issues')).toBeNull();
     expect(screen.queryByTestId('linear-myissues-more')).toBeNull();
   });
 
@@ -166,7 +166,7 @@ describe('Linear My Issues through the host lifecycle (AOD-55)', () => {
   });
 });
 
-// --- AOD-134 Soundings: the priority silhouette + the S/M/W/L layouts + the overdue-vs-Today due split ----
+// --- AOD-134 Soundings: inline row glyphs + the worded summary, the S/M/W/L layouts, overdue-vs-Today due ----
 const sInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-s', size: 'S', rect: { x: 0, y: 0, w: 1, h: 1, z: 0 } };
 const mInstance: WidgetInstance = { ...baseInstance, instanceId: 'li-m', size: 'M', rect: { x: 0, y: 0, w: 1, h: 2, z: 0 } };
 
@@ -192,39 +192,38 @@ function todayYmd(): string {
   return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`;
 }
 
-describe('Soundings priority silhouette + S/M/W/L layouts (AOD-134)', () => {
-  it('at S is the glance: the count over the silhouette, no rows', async () => {
+describe('Soundings inline glyphs + worded summary + S/M/W/L layouts (AOD-134)', () => {
+  it('at S is the glance: the count over the worded summary, no rows', async () => {
     renderHost(sourceFor(sampleData), baseInstance.config, sInstance);
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
-    expect(screen.getByTestId('linear-myissues-silhouette')).toBeTruthy();
-    expect(screen.getAllByTestId('linear-myissues-mark')).toHaveLength(2);
-    expect(screen.queryByText('Wire Linear My Issues')).toBeNull(); // S shows no rows
+    expect(screen.getByTestId('linear-myissues-summary')).toHaveTextContent('1 High · 1 Med');
+    expect(screen.queryByTestId('linear-myissues-rowglyph')).toBeNull(); // S shows no rows
+    expect(screen.queryByText('Wire Linear My Issues')).toBeNull();
     expect(screen.queryByTestId('linear-myissues-more')).toBeNull();
   });
 
-  it('at M is the reading size: the count over identifier·title rows, and the rows DROP their glyphs (no silhouette, no marks)', async () => {
+  it('at M is the reading size: count over glyph · title rows (id dropped), and NO worded summary', async () => {
     renderHost(sourceFor(sampleData), baseInstance.config, mInstance);
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
-    // M is the one size with NO silhouette; since the per-row glyph is gone too, there is no priority mark at all
-    expect(screen.queryByTestId('linear-myissues-silhouette')).toBeNull();
-    expect(screen.queryAllByTestId('linear-myissues-mark')).toHaveLength(0);
-    // the rows themselves are present (identifier · title)
-    expect(screen.getByText('AOD-55')).toBeTruthy();
-    expect(screen.getByText('Wire Linear My Issues')).toBeTruthy();
+    // M is the one size with NO worded summary — the inline row glyphs carry priority instead (one per row)
+    expect(screen.queryByTestId('linear-myissues-summary')).toBeNull();
+    expect(screen.getAllByTestId('linear-myissues-rowglyph')).toHaveLength(2);
+    expect(screen.getByText('Wire Linear My Issues')).toBeTruthy(); // the title reads
+    expect(screen.queryByText('AOD-55')).toBeNull(); // the identifier is an L affordance (the narrow M drops it)
   });
 
-  it('at L carries BOTH the silhouette and the issue rows (count + silhouette + rows)', async () => {
+  it('at L carries BOTH the worded summary and the glyph rows (count + summary + inline-glyph rows)', async () => {
     renderHost(sourceFor(sampleData), largeInstance.config, largeInstance);
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
     expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('2 open');
-    expect(screen.getByTestId('linear-myissues-silhouette')).toBeTruthy();
-    expect(screen.getAllByTestId('linear-myissues-mark')).toHaveLength(2);
-    expect(screen.getByText('AOD-55')).toBeTruthy(); // rows present alongside the silhouette
+    expect(screen.getByTestId('linear-myissues-summary')).toHaveTextContent('1 High · 1 Med');
+    expect(screen.getAllByTestId('linear-myissues-rowglyph')).toHaveLength(2); // one inline glyph per row
+    expect(screen.getByText('AOD-55')).toBeTruthy(); // rows present alongside the summary
   });
 
-  it('sorts the silhouette HEAVY→LIGHT and CAPS it to the width — the heaviest survive, never clipped', async () => {
+  it('the worded summary tallies ALL issues heavy→light (never capped); the rows stay source order (AOD-134)', async () => {
     // 12 issues, source order deliberately NOT heavy→light: [low×3, med×2, none×2, high×2, urgent×2, none].
     const many: MyIssuesData = {
       issues: [
@@ -233,13 +232,15 @@ describe('Soundings priority silhouette + S/M/W/L layouts (AOD-134)', () => {
       ],
       totalCount: 12,
     };
-    renderHost(sourceFor(many), largeInstance.config, largeInstance); // L: 168dp width → capacity 9
+    renderHost(sourceFor(many), largeInstance.config, largeInstance);
     await waitFor(() => expect(screen.getByTestId('linear-myissues')).toBeTruthy());
-    const labels = screen.getAllByTestId('linear-myissues-mark').map((m) => m.props.accessibilityLabel);
-    // heavy→light, capped to 9: urgent, urgent, high, high, medium, medium, low, low, low — the 3 nones drop
-    expect(labels).toEqual(['Urgent', 'Urgent', 'High', 'High', 'Medium', 'Medium', 'Low', 'Low', 'Low']);
-    expect(labels).not.toContain('No priority'); // the lightest are the dropped ones (heaviest survive)
+    // the summary is the WHOLE tally in heavy→light order (urgent 2, high 2, med 2, low 3, none 3) — not capped
+    expect(screen.getByTestId('linear-myissues-summary')).toHaveTextContent('2 Urgent · 2 High · 2 Med · 3 Low · 3 None');
     expect(screen.getByTestId('linear-myissues-count')).toHaveTextContent('12 open'); // the count carries the total
+    // the rows keep SOURCE order (only the summary is ordered): the first visible row is issue 'a' = Low
+    const rowGlyphs = screen.getAllByTestId('linear-myissues-rowglyph');
+    expect(rowGlyphs.length).toBeGreaterThanOrEqual(1);
+    expect(rowGlyphs[0].props.accessibilityLabel).toBe('Low'); // issue 'a' (priority 4), not the sorted-first Urgent
   });
 
   it('warms the due ONLY on a breach: overdue → warning ink, Today → text, future → muted (L, §5.2)', async () => {
