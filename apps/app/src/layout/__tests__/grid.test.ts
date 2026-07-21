@@ -134,9 +134,23 @@ describe('reflow: pinned card stays put, neighbours re-pack, overlap becomes imp
     expect(anyOverlap(cellsOf(out))).toBe(false);
   });
 
-  it('is deterministic — the same input reflows to the same output', () => {
-    const rects = [rect(0, 0, 2, 1, 2), rect(0, 1, 1, 1, 0), rect(1, 1, 1, 2, 1), rect(0, 3, 2, 2, 3)];
-    expect(reflow(rects, 2)).toEqual(reflow(rects, 2));
+  it('is deterministic — repeated reflow is identical and ties resolve by array index, not sort stability', () => {
+    // Two 1x1 cards tied at the same origin (0,1); the pin sits at (0,0). The (y,x) sort cannot separate
+    // the tie, so the index tiebreak must — deterministically, and NOT by leaning on V8 sort stability.
+    const a = rect(0, 1, 1, 1, 5);
+    const b = rect(0, 1, 1, 1, 6);
+    const pin = rect(0, 0, 1, 1, 9);
+
+    const out1 = reflow([pin, a, b], 0);
+    expect(out1).toEqual(reflow([pin, a, b], 0)); // referentially deterministic
+    // `a` is earlier in the array, so it packs into the earlier reading-order slot (col1 row0) and `b`
+    // into the next (col0 row1). Swapping their array order swaps which slot each card gets.
+    expect(out1[1]).toEqual(rect(1, 0, 1, 1, 5)); // a -> (col1, row0)
+    expect(out1[2]).toEqual(rect(0, 1, 1, 1, 6)); // b -> (col0, row1)
+
+    const out2 = reflow([pin, b, a], 0);
+    expect(out2[1]).toEqual(rect(1, 0, 1, 1, 6)); // now b is earlier -> b takes (col1, row0)
+    expect(out2[2]).toEqual(rect(0, 1, 1, 1, 5)); // a -> (col0, row1)
   });
 
   it('preserves array order, footprint (w/h) and z for every card — only x/y move', () => {

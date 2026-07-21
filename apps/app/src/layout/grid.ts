@@ -92,6 +92,11 @@ export function firstFreeSlot(footprint: Footprint, occupied: GridRect[]): GridR
  * Reflow is a pure algebra over an already-legal grid; it does not re-snap fractional input.
  */
 export function reflow(rects: LayoutRect[], pinnedIndex: number): LayoutRect[] {
+  // A caller must name a real card as the pin. Out of range there is nothing to pin, so return a copy
+  // untouched rather than spreading `undefined` into a NaN-origin rect that would silently corrupt the
+  // layout — a keystone guard, since every downstream gesture path routes through here.
+  if (pinnedIndex < 0 || pinnedIndex >= rects.length) return rects.slice();
+
   const result = rects.slice();
 
   // Pin: keep the moved/resized card's footprint and z; clamp only its origin onto the grid.

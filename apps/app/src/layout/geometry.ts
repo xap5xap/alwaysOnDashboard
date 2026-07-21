@@ -98,7 +98,7 @@ export function snapResize(rect: LayoutRect, dwPx: number, dhPx: number): Layout
   const h = snapClamp(rect.h + dhPx / UNIT_PX, MIN_H, MAX_SLOT_H);
   return {
     ...rect,
-    x: Math.max(0, Math.min(rect.x, GRID_COLUMNS - w)),
+    x: snapClamp(rect.x, 0, GRID_COLUMNS - w),
     w,
     h,
   };
