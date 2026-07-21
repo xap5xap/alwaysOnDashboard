@@ -1,8 +1,10 @@
 // The free-form layout engine (AOD-7): a generic surface that places WidgetInstances absolutely and,
 // in arrange mode, lets each be dragged and resized. It is generic over WidgetInstance/LayoutRect and
-// imports NO service (AOD-8 §10 seam): adding an integration never touches this file. Arrange mode is
-// entered by a long-press on any card (AOD-49 UX choice) and left by tapping empty canvas or the
-// header's Done control; the parent (Dashboard) owns the arranging flag so both exits are possible.
+// imports NO service (AOD-8 §10 seam): adding an integration never touches this file. The parent
+// (Dashboard) owns the arranging flag and drives it with the AOD-142 Glance | Arrange dial; a long-press
+// on any card (AOD-49) is a shortcut INTO arrange, and the tap-empty-canvas catcher below is a convenience
+// exit (onExitArrange) that sits alongside the dial. The wall callers (KioskWall / WallPreview) pass a noop
+// exit and never arrange, so the catcher is inert there.
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
