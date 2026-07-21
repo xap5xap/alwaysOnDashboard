@@ -27,8 +27,10 @@ export const SIZE_CATALOGUE: Record<WidgetSize, SizeClassSpec> = {
   L: { id: 'L', nominalW: 2, nominalH: 2, nominalAspect: 1.0 },
 };
 
-/** The slot id for an exact snapped extent. Total over w,h in {1,2}: 1x1 S, 1x2 M, 2x1 W, 2x2 L. */
-function slotIdFor(w: number, h: number): WidgetSize {
+/** The slot id for an exact snapped extent. Total over w,h in {1,2}: 1x1 S, 1x2 M, 2x1 W, 2x2 L.
+ *  Exported for the arrange commit path (AOD-140, layout/arrange.ts): after a reflow every rect is a
+ *  legal slot (integer x/y, w/h in {1,2}), so its size id is exactly this — no reconcileSize search. */
+export function slotIdFor(w: number, h: number): WidgetSize {
   if (w === 1) return h === 1 ? 'S' : 'M';
   return h === 1 ? 'W' : 'L';
 }
@@ -60,8 +62,9 @@ export function coerceToSlotGrid(rect: LayoutRect): { rect: LayoutRect; size: Wi
 /**
  * Pick the supported slot whose nominal geometry best matches the rect (the AOD-10 §5.2 rule over the
  * AOD-122 catalogue). Distance is scale-invariant: aspect proximity dominates (primary), area proximity
- * breaks ties. supported[0] is the fallback seed. Still used by the live arrange path, which resizes
- * continuously and derives its size hint on release.
+ * breaks ties. supported[0] is the fallback seed. The general best-supported-slot matcher for a
+ * free-form rect; since AOD-140 the live arrange resize snaps DISCRETELY to a supported footprint (it
+ * derives its size id straight from the snapped extent, slotIdFor), so it no longer routes through here.
  */
 export function reconcileSize(rect: Pick<LayoutRect, 'w' | 'h'>, supported: WidgetSize[]): WidgetSize {
   const aspect = rect.w / rect.h;
