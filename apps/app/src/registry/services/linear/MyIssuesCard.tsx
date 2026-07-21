@@ -1,34 +1,40 @@
 // The "My Issues" leaf renderer — the SOUNDINGS face (AOD-134; design-linear.md §4-5, claude-design/
-// prompts/linear.md, the RB-M2 runbook §5 AOD-134). Reached only on data-bearing lifecycle states (fresh /
-// stale / error-with-data); the generic host draws every other state's chrome, including the host-drawn
-// `empty` phase (isMyIssuesEmpty, the AOD-125 seam). It receives only { data, config, size, box } and never
-// branches on auth, loading, or errors.
+// prompts/linear.md, the RB-M2 runbook §5 AOD-134 + the 2026-07-20 device RETUNE). Reached only on
+// data-bearing lifecycle states (fresh / stale / error-with-data); the generic host draws every other
+// state's chrome, including the host-drawn `empty` phase (isMyIssuesEmpty, the AOD-125 seam). It receives
+// only { data, config, size, box } and never branches on auth, loading, or errors.
 //
-// Soundings keeps the §5.1 COUNT as the hero (the total bright + the filter qualifier muted) and adds the
-// card's distinctive mark: a priority-mark SILHOUETTE — a horizontal row of every issue's PriorityGlyph,
-// sorted HEAVY→LIGHT (soundings.ts; urgent > high > medium > low > none, Linear's inverted numbering), capped
-// to what fits the width so it NEVER clips (the count carries the true total; the silhouette is the priority
-// TEXTURE). Priority is carried by SHAPE, never hue — the marks are bone / monochrome (filled = colors.text,
-// ghost bars / none-dashes = colors.textMuted @ priorityIcon.offOpacity); the card spends NO blue accent (a
-// dense work list reads calmest as neutral monochrome, §5.1). Because the silhouette now carries priority,
-// the M/L issue rows DROP their per-row glyph and read as identifier · title (· due at L).
+// Soundings keeps the §5.1 COUNT as the hero (the total bright + the filter qualifier muted) and carries
+// priority TWO ways after the RETUNE:
+//   1. INLINE per issue row: each M/L row leads with its own PriorityGlyph (M: glyph · title; L: glyph ·
+//      identifier · title · due — the id/due are L affordances the narrow M column can't carry), so a mark is
+//      tied to a name (the fix for the retired silhouette, whose aggregate marks floated above the rows).
+//   2. A worded priority SUMMARY where there are no rows to carry the inline glyph (S/W) or as an all-issue
+//      tally above them (L): "9 High · 1 Med" — prioritySummary (soundings.ts), the nonzero buckets in
+//      heavy→light order. It stays legible when every issue shares a level (the failure the one-glyph-per-
+//      issue silhouette had on real 9-High data), because it is WORDS, not repeated shapes.
+// Priority is carried by SHAPE (the glyph) and WORD (the summary), never hue — both are bone / monochrome
+// (glyph: filled = colors.text, ghost bars / none-dashes = colors.textMuted @ priorityIcon.offOpacity;
+// summary: numerals colors.text, labels colors.textMuted). The card spends NO blue accent (a dense work list
+// reads calmest as neutral monochrome, §5.1).
 //
-// Sizes (S/M/W/L): S count over the silhouette (the glance); W count + silhouette; M the count "spine" over
-// identifier·title rows (no silhouette — the tall-narrow reading size); L count + silhouette + up to a few
-// rows with due dates + "+N more". The row count stays HEIGHT-DRIVEN (fitCount, AOD-123) so a short cell
-// never overflows: the count is the held lead, and at L the silhouette band is reserved above the rows.
+// Sizes (S/M/W/L): S count over the summary (the glance); W count + summary; M the count "spine" over
+// glyph · title rows (no summary — the tall-narrow reading size, the inline glyph carries priority); L count +
+// summary + up to a few glyph · id · title · due rows + "+N more". The row count stays HEIGHT-DRIVEN (fitCount,
+// AOD-123) so a short cell never overflows: the count is the held lead, and at L the summary band is reserved
+// above the rows.
 //
 // Due colour WARMS ONLY ON A BREACH (§5.2): Today → colors.text (bone-bright), future → colors.textMuted,
-// overdue → colors.warning (amber, the one status ink; the sole hue this card spends). `formatDue` returns a
-// three-way `tone` so overdue splits from Today at the draw site. (`+blocked` would need a server query
-// change → out of v1 scope; overdue is the only breach — see the AOD-134 report.)
+// overdue → colors.warning (amber, the one status ink; the sole hue this card spends — the summary never
+// wears it). `formatDue` returns a three-way `tone` so overdue splits from Today at the draw site.
+// (`+blocked` would need a server query change → out of v1 scope; overdue is the only breach — see AOD-134.)
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetRenderProps, WidgetSize } from '../../types';
 import { fitCount } from '../../../widgets/fitLadder';
 import { PriorityGlyph } from './glyphs';
-import { sortByPriorityHeavyToLight, silhouetteCapacity } from './soundings';
+import { prioritySummary } from './soundings';
 
 // The normalized payload the proxy delivers (integration-linear.md §4.1). This mirrors the server-side
 // operations.ts `normalizeMyIssues` output: it is the data contract between the broker's normalize step
@@ -52,12 +58,12 @@ export interface MyIssuesData {
 
 // The no-box fallback (a direct render / a test without a host box): how many ROWS a glance shows per size.
 // The real hot path derives the count from the body HEIGHT (fitCount) so it never clips; these are the
-// defensive floor. Rows are an M/L affordance (S/W lead with the silhouette, no rows), so S/W are 0.
+// defensive floor. Rows are an M/L affordance (S/W lead with the summary, no rows), so S/W are 0.
 const ROWS_BY_SIZE: Record<WidgetSize, number> = { S: 0, M: 4, W: 0, L: 4 };
 
 // Row-fit chrome for the M/L issue rows (DP, conservative so it never under-counts height -> never clips): a
-// single body-line row (identifier · title · due), the type.title count line as the held lead, and the
-// "+N more" footer. At L the silhouette band is ADDED to the lead (see rowLead) so the rows never overlap it.
+// single body-line row (glyph · identifier · title · due), the type.title count line as the held lead, and
+// the "+N more" footer. At L the summary band is ADDED to the lead (see rowLead) so the rows never overlap it.
 const ROW_FIT = { rowHeight: 22, footerHeight: 20 } as const;
 const COUNT_LEAD = 24; // the §5.1 count line (type.title) reserved above everything
 
@@ -120,22 +126,20 @@ export function MyIssuesCard({ data, config, size, box }: WidgetRenderProps) {
   const qualifier = filterQualifier(config?.filter);
   const now = new Date();
 
-  const showSilhouette = size === 'S' || size === 'W' || size === 'L'; // M is the reading size (rows, no silhouette)
+  const showSummary = size === 'S' || size === 'W' || size === 'L'; // M is the reading size (rows carry priority)
   const showRows = size === 'M' || size === 'L';
   const isLarge = size === 'L';
 
-  // The silhouette: every issue's mark, sorted heavy→light, capped to the width so it NEVER clips. When more
-  // issues than fit, the HEAVIEST survive (the slice of a heavy-first sort); the count carries the total.
-  const sorted = sortByPriorityHeavyToLight(issues);
-  const marks = showSilhouette
-    ? sorted.slice(0, box ? silhouetteCapacity(box.width, theme.soundings.mark, theme.soundings.gap) : sorted.length)
-    : [];
+  // The worded priority summary ("9 High · 1 Med"): the nonzero buckets, heavy→light. A tally of ALL loaded
+  // issues (not capped like the rows), so at L it says something the visible rows can't. Legible on uniform
+  // data because it is words, not repeated marks (the RETUNE fix for the retired silhouette).
+  const summary = showSummary ? prioritySummary(issues) : [];
 
   // The visible ROW count is HEIGHT-DRIVEN (fitCount) so a short cell never overflows: the count is the held
-  // lead, and at L the silhouette band is reserved above the rows (rowLead), so rows shed into "+N more"
-  // rather than colliding with the silhouette. Falls back to the fixed per-size count on a direct render.
+  // lead, and at L the summary band is reserved above the rows (rowLead), so rows shed into "+N more" rather
+  // than colliding with the summary. Falls back to the fixed per-size count on a direct render.
   const gap = theme.spacing(1.5);
-  const rowLead = isLarge ? COUNT_LEAD + gap + theme.soundings.rowHeight : COUNT_LEAD;
+  const rowLead = isLarge ? COUNT_LEAD + gap + theme.soundings.summaryBand : COUNT_LEAD;
   const visibleRowCount = showRows
     ? box
       ? fitCount(totalCount, box.height, { rowHeight: ROW_FIT.rowHeight, gap, leadHeight: rowLead, footerHeight: ROW_FIT.footerHeight })
@@ -152,37 +156,45 @@ export function MyIssuesCard({ data, config, size, box }: WidgetRenderProps) {
         <Text style={styles.countQual}> {qualifier}</Text>
       </Text>
 
-      {/* §4 the priority silhouette: heavy→light marks, bone / shape-only, capped to the width (never clipped).
-          Each mark carries its priority label (the shape is invisible to a screen reader), as the old per-row
-          glyph did. */}
-      {showSilhouette && marks.length > 0 ? (
-        <View style={styles.silhouette} testID="linear-myissues-silhouette">
-          {marks.map((issue) => (
-            <View key={issue.id} style={styles.mark} testID="linear-myissues-mark" accessibilityLabel={issue.priorityLabel}>
-              <PriorityGlyph
-                priority={issue.priority}
-                size={theme.soundings.mark}
-                onColor={theme.colors.text}
-                offColor={theme.colors.textMuted}
-                offOpacity={theme.priorityIcon.offOpacity}
-                knockoutColor={theme.colors.surface}
-              />
-            </View>
+      {/* The worded priority summary: "9 High · 1 Med", heavy→light, numerals bright + labels muted. Shown at
+          S/W (no rows) and L (an all-issue tally above the rows). Monochrome — it never spends the amber. */}
+      {showSummary && summary.length > 0 ? (
+        <Text style={styles.summary} numberOfLines={1} testID="linear-myissues-summary">
+          {summary.map((seg, i) => (
+            <Text key={seg.priority} accessibilityLabel={`${seg.count} ${seg.label}`}>
+              {i > 0 ? <Text style={styles.summarySep}> · </Text> : null}
+              <Text style={styles.summaryNum}>{seg.count}</Text>
+              <Text style={styles.summaryLabel}> {seg.label}</Text>
+            </Text>
           ))}
-        </View>
+        </Text>
       ) : null}
 
-      {/* M/L issue rows: identifier · title (· due at L). The per-row glyph is GONE — the silhouette carries
-          priority now — so the row reads as clean id + title. Height-fit, shedding into "+N more". */}
+      {/* M/L issue rows: the per-row PriorityGlyph (bone / shape-only) · identifier · title (· due at L). The
+          inline glyph is back after the RETUNE — a mark tied to its issue. Height-fit, shedding into "+N more". */}
       {showRows ? (
         <View style={styles.list}>
           {visibleRows.map((issue) => {
             const due = isLarge ? formatDue(issue.dueDate, now) : null;
             return (
               <View key={issue.id} style={styles.row}>
-                <Text style={styles.identifier} numberOfLines={1}>
-                  {issue.identifier}
-                </Text>
+                <View style={styles.rowGlyph} testID="linear-myissues-rowglyph" accessibilityLabel={issue.priorityLabel}>
+                  <PriorityGlyph
+                    priority={issue.priority}
+                    size={theme.priorityIcon.size}
+                    onColor={theme.colors.text}
+                    offColor={theme.colors.textMuted}
+                    offOpacity={theme.priorityIcon.offOpacity}
+                    knockoutColor={theme.colors.surface}
+                  />
+                </View>
+                {/* The identifier is an L affordance: the narrow M column (1 unit) can't carry glyph · id ·
+                    title without truncating the id itself, so M reads glyph · title (priority + what). */}
+                {isLarge ? (
+                  <Text style={styles.identifier} numberOfLines={1}>
+                    {issue.identifier}
+                  </Text>
+                ) : null}
                 <Text style={styles.title} numberOfLines={1}>
                   {issue.title}
                 </Text>
@@ -218,13 +230,18 @@ const styles = StyleSheet.create((theme) => ({
   countNum: { color: theme.colors.text, fontWeight: '700', fontVariant: ['tabular-nums'] },
   countQual: { ...theme.type.meta, color: theme.colors.textMuted },
 
-  // §4 the silhouette: a single horizontal row of marks, heavy→light. overflow hidden is a backstop — the
-  // width cap (silhouetteCapacity) already keeps the row inside the box, so nothing should reach it.
-  silhouette: { flexDirection: 'row', alignItems: 'center', gap: theme.soundings.gap, overflow: 'hidden' },
-  mark: { width: theme.soundings.mark, alignItems: 'center' },
+  // The worded priority summary: one line, type.meta. Numerals step up to bone-bright + tabular; the labels
+  // and the middot separator recede to muted (the count/qualifier split, applied per bucket). No accent, no
+  // amber — priority here is a word, not a status.
+  summary: { ...theme.type.meta },
+  summaryNum: { color: theme.colors.text, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  summaryLabel: { color: theme.colors.textMuted },
+  summarySep: { color: theme.colors.textMuted },
 
-  // §5.2 the row: identifier (muted tabular caption) · title (bright body, ellipsized) · due (L).
+  // §5.2 the row: glyph (fixed slot) · identifier (muted tabular caption) · title (bright body, ellipsized) ·
+  // due (L). The glyph slot is priorityIcon.size wide so the identifiers align down the column.
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing(2) },
+  rowGlyph: { width: theme.priorityIcon.size, alignItems: 'center' },
   identifier: {
     ...theme.type.caption,
     letterSpacing: 0,
