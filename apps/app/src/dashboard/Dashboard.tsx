@@ -1,49 +1,65 @@
-// The dashboard screen (AOD-8 §8 DashboardLayout, rendered). It loads the signed-in user's real layout
-// from Supabase under RLS (useDashboard: load + bootstrap-if-empty + persist), and mounts the free-form
-// layout engine (LayoutCanvas) which renders each instance through the generic WidgetHost. The screen
-// owns the arrange-mode flag; the AOD-142 Glance | Arrange dial is the explicit control that drives it
-// (flipping to Glance leaves Arrange), with a long-press on a card as a shortcut and tap-empty-canvas as a
-// convenience exit. It never names a service: the AOD-8 seam holds end to end.
+// The dashboard screen (AOD-8 §8 DashboardLayout, rendered). It loads the signed-in user's real skies from
+// Supabase under RLS (useDashboards: the active sky's live surface + the ordered sky list + create) and, per
+// the AOD-142 dial, shows ONE of two surfaces: in GLANCE a horizontal sky pager (SkyPager) with one
+// read-only page per sky; in ARRANGE the single active-sky LayoutCanvas (the free-form layout engine). The
+// screen owns the arrange-mode flag and the pager's current page; it never names a service (the AOD-8 seam
+// holds end to end).
+//
+// AOD-144 (design "Many Skies" §1a/§1f): the Glance surface becomes a pager over the skies. The dial GATES
+// the surface, which makes "swipe never edits" structural (a page turn can never reach an edit) and dodges
+// the swipe-vs-card-drag gesture conflict (there is no horizontal paging while arranging). Entering Arrange
+// from page K sets that sky active so Arrange edits the sky you are viewing; leaving Arrange hands the edited
+// layout back to the pager's per-sky cache (seedSkyFromActive) and returns to the pager at page K. The page
+// dots + the Pro gate on the second sky live inside SkyPager.
 //
 // AOD-142 (design "The sky fills in" §1e): the arranging Done pill is REPLACED by the persistent Glance |
-// Arrange dial in the hub header; the wall Preview pill stays (AOD-81). The dial rides a single "chrome
-// awake" idle state (useChromeAwake) wired to the surface's touch callbacks, so the hub chrome sinks when
-// idle (calm Glance) and wakes on any touch — one mechanism, reused by AOD-144's page dots.
+// Arrange dial in the hub header; the wall Preview pill stays (AOD-81). The dial AND the page dots ride a
+// single "chrome awake" idle state (useChromeAwake) wired to the surface's touch callbacks, so the hub chrome
+// sinks when idle (calm Glance) and wakes on any touch — one mechanism.
 //
-// AOD-68 canonicalization (design-core-navigation §3, §5, §8, §12 drift 1-2): the inline header is now the
-// shell HUB AppBar (the vela wordmark + Add + Settings + the dashboards-switcher chevron), sign out is
-// RELOCATED to Account (dropped here), and the ad-hoc ActivityIndicator / inline error / empty CTA become
-// the shell screen-level states.
-// AOD-69 fills the AOD-27 dashboard INTERIOR: the arranging header shows the Preview pill (the Done pill it
-// once paired with is now the AOD-142 dial), the empty branch composes the shell EmptyState into the §5
-// calm add-first-widget CTA (glyph + subline),
-// and the canvas (LayoutCanvas), the picker (WidgetPicker) and the per-instance config sheet
-// (ConfigureInstanceModal) are the polished editor surfaces this task canonicalizes to the design.
+// AOD-68 canonicalization (design-core-navigation §3, §5, §8, §12 drift 1-2): the inline header is the shell
+// HUB AppBar (the vela wordmark + Add + Settings + the dashboards-switcher chevron), sign out is RELOCATED to
+// Account, and the ad-hoc load / error become the shell screen-level states. AOD-69 fills the AOD-27
+// dashboard INTERIOR: the arranging header shows the Preview pill, the per-sky empty branch composes the
+// shell EmptyState (now inside SkyPager's pages), and the canvas / picker / config sheet are the polished
+// editor surfaces.
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useAuth } from '../auth/AuthProvider';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { WidgetPicker } from '../layout/WidgetPicker';
-import { useDashboard } from '../layout/useDashboard';
+import { useDashboards } from '../layout/useDashboards';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
+import { seedSkyFromActive } from '../layout/useSkyInstances';
 import { WallPreview } from '../kiosk/WallPreview';
 import type { WidgetInstance } from '../registry/types';
-import { AppBar, EmptyState, ErrorState, LoadingState, Screen } from '../shell';
+import { AppBar, ErrorState, LoadingState, Screen } from '../shell';
 import { Button } from '../ui/Button';
 import { ChevronGlyph } from '../ui/glyphs';
-import { AddGlyph } from './glyphs';
 import { ModeDial } from './ModeDial';
+import { SkyPager } from './SkyPager';
 import { useChromeAwake } from './useChromeAwake';
 
 export function Dashboard() {
-  const { instances, isLoading, isError, error, refetch, commit } = useDashboard();
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+  const queryClient = useQueryClient();
+  const { instances, isLoading, isError, error, refetch, commit, dashboards, activeId, setActive, createDashboard } =
+    useDashboards();
   const { removeWidget } = useRemoveWidget();
   const { theme } = useUnistyles();
   const [arranging, setArranging] = useState(false);
+  // AOD-144: the pager's current page (a mirror of SkyPager's local scroll position, reported via
+  // onPageChange). It drives which sky the dial arranges — the sky on screen, NOT activeId (which lags
+  // setActive, AOD-143). Persists across the arrange round-trip (SkyPager unmounts in Arrange), and SkyPager
+  // re-seeds it to the active sky's index on remount.
+  const [currentPage, setCurrentPage] = useState(0);
   // AOD-142: the single "chrome awake" idle state. `wake` is wired to the surface touch callbacks below;
-  // `awake` drives the dial's fade (and, later, AOD-144's page dots). One timer, reset on any touch.
+  // `awake` drives the dial's fade AND the page dots. One timer, reset on any touch.
   const { awake, wake } = useChromeAwake();
   const [picking, setPicking] = useState(false);
   // AOD-81 §6: the wall preview peek. Owned here like `picking`/`arranging` (the app-ia locked fact: a
@@ -52,6 +68,39 @@ export function Dashboard() {
   // The instance whose config form is open (AOD-10 §4). Owned here like `picking`/`arranging` so both
   // reconfigure entries (arrange-mode "Configure" and the host's needs_config prompt) route through it.
   const [configuring, setConfiguring] = useState<WidgetInstance | null>(null);
+
+  // AOD-144: enter Arrange on a specific sky. Setting it active first means Arrange (which renders the active
+  // sky's LayoutCanvas) edits the sky you were viewing — the dial flip from page K, or a long-press on a card
+  // on page K, both land here. The `!== activeId` guard skips a redundant setActive (and its ['dashboard']
+  // invalidate/refetch) when the on-screen sky is already active — the common single-sky case, where flipping
+  // to Arrange must NOT reload the board the way it did before AOD-144. Leaving Arrange is the else-branch below.
+  const enterArrange = (skyId: string) => {
+    if (skyId !== activeId) setActive(skyId);
+    setArranging(true);
+  };
+
+  // AOD-144: an empty page's "Add a card". For the active sky (the single-sky common case, and any freshly
+  // created sky) the picker already targets it via the ['dashboard'] cache, so open it directly — no
+  // setActive lag. For a non-active sky, enter Arrange (setActive + arranging) so the add flow there targets
+  // the right sky without racing the active-sky refetch.
+  const onAddCard = (skyId: string) => {
+    if (skyId === activeId) setPicking(true);
+    else enterArrange(skyId);
+  };
+
+  // AOD-144: the dial flip. Arrange -> enter Arrange on the sky currently on screen (currentPage). Glance ->
+  // leave Arrange AND hand the just-edited active-sky layout back to the pager's per-sky cache, so the page
+  // repaints the edit immediately (no refetch, no debounced-write race).
+  const onDialChange = (mode: 'glance' | 'arrange') => {
+    if (mode === 'arrange') {
+      const sky = dashboards[currentPage];
+      if (sky) enterArrange(sky.id);
+      else setArranging(true);
+    } else {
+      setArranging(false);
+      if (activeId) seedSkyFromActive(queryClient, userId, activeId);
+    }
+  };
 
   // AOD-142: the hub trailing cluster. The Glance | Arrange dial is the PERSISTENT mode control (present in
   // both modes — flipping it to Glance is how you leave Arrange), riding the chrome-awake state so it sinks
@@ -63,7 +112,7 @@ export function Dashboard() {
   const headerRight = (
     <>
       {canArrange ? (
-        <ModeDial mode={arranging ? 'arrange' : 'glance'} awake={awake} onChange={(m) => setArranging(m === 'arrange')} />
+        <ModeDial mode={arranging ? 'arrange' : 'glance'} awake={awake} onChange={onDialChange} />
       ) : null}
       {arranging ? (
         <Button label="Preview" variant="ghost" size="sm" pill onPress={() => setPreviewing(true)} testID="dashboard-preview" />
@@ -92,8 +141,9 @@ export function Dashboard() {
       <Screen>
         {/* AOD-142 the wake surface: any touch re-arms the chrome-awake idle timer. onTouchStart/onTouchMove
             are PASSIVE responder callbacks (they never call setResponder), so they observe the touch without
-            capturing it — they can't move a card ("waking ≠ editing") and never contend with the arrange
-            gestures. Wrapping the whole hub means a touch on the dial, a card, or empty space all wake it. */}
+            capturing it — they can't move a card ("waking ≠ editing") and never contend with the arrange or
+            paging gestures. Wrapping the whole hub means a touch on the dial, a card, the pager, or empty
+            space all wake it. */}
         <View style={styles.surface} onTouchStart={wake} onTouchMove={wake} testID="dashboard-surface">
           <AppBar variant="hub" right={headerRight} testID="dashboard-header" />
 
@@ -101,32 +151,37 @@ export function Dashboard() {
             <LoadingState />
           ) : isError ? (
             <ErrorState line="Could not load your dashboard." detail={error?.message} onRetry={() => void refetch()} />
-          ) : !arranging && instances.length === 0 ? (
-            // AOD-27 §5: the calm empty-dashboard CTA (a soft accent add glyph + line + a quieter subline + one
-            // primary "Add widget"), composing the shell EmptyState. Never an error treatment; the board is new.
-            <EmptyState
-              glyph={<AddGlyph color={theme.colors.accent} />}
-              line="Your dashboard is empty."
-              subline="Add a widget to get started."
-              actionLabel="Add widget"
-              onAction={() => setPicking(true)}
-              testID="dashboard-empty"
-            />
-          ) : (
+          ) : arranging ? (
+            // AOD-144: ARRANGE renders the single active-sky LayoutCanvas (as before AOD-144). An empty board
+            // still renders the canvas (nothing to show, but the add/exit affordances live here).
             <View style={styles.body}>
-              {/* AOD-142: the arrange-only hint. The old Glance instruction ("Long-press a widget to
-                  arrange") is gone — the dial is the visible control now. Glance stays wordless and calm. */}
-              {arranging ? (
-                <Text style={styles.hint}>Drag to move. Drag a corner to resize. Flip to Glance to finish.</Text>
-              ) : null}
+              {/* AOD-142: the arrange-only hint. The old Glance instruction is gone — the dial is the visible
+                  control now. Glance stays wordless and calm. */}
+              <Text style={styles.hint}>Drag to move. Drag a corner to resize. Flip to Glance to finish.</Text>
               <LayoutCanvas
                 instances={instances}
-                arranging={arranging}
+                arranging
                 onEnterArrange={() => setArranging(true)}
                 onExitArrange={() => setArranging(false)}
                 onCommit={commit}
                 onRequestConfigure={setConfiguring}
                 onRemove={(instanceId) => void removeWidget(instanceId)}
+              />
+            </View>
+          ) : (
+            // AOD-144: GLANCE is a horizontal pager over the skies. Each page renders its sky read-only; the
+            // dots + the second-sky Pro gate live inside. A single bootstrapped sky is the common case and
+            // renders as a one-page pager (no dots).
+            <View style={styles.body}>
+              <SkyPager
+                dashboards={dashboards}
+                activeId={activeId}
+                onEnterArrange={enterArrange}
+                onAddCard={onAddCard}
+                createDashboard={createDashboard}
+                awake={awake}
+                wake={wake}
+                onPageChange={setCurrentPage}
               />
             </View>
           )}
