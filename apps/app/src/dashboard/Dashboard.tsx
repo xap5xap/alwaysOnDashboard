@@ -34,7 +34,7 @@ import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { WidgetPicker } from '../layout/WidgetPicker';
 import { useDashboards } from '../layout/useDashboards';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
-import { seedSkyFromActive } from '../layout/useSkyInstances';
+import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
 import { WallPreview } from '../kiosk/WallPreview';
 import type { WidgetInstance } from '../registry/types';
 import { AppBar, ErrorState, LoadingState, Screen } from '../shell';
@@ -75,7 +75,14 @@ export function Dashboard() {
   // invalidate/refetch) when the on-screen sky is already active — the common single-sky case, where flipping
   // to Arrange must NOT reload the board the way it did before AOD-144. Leaving Arrange is the else-branch below.
   const enterArrange = (skyId: string) => {
-    if (skyId !== activeId) setActive(skyId);
+    if (skyId !== activeId) {
+      // Paint the target sky NOW: copy its already-loaded pager instances (['sky', skyId]) into the active-sky
+      // cache BEFORE setActive, whose refetch lags (AOD-143). Without this, Arrange would render the PREVIOUS
+      // active sky for one round-trip and a commit in that window would persist to the wrong sky. The invalidate
+      // that setActive fires then confirms the same data in the background.
+      seedActiveFromSky(queryClient, userId, skyId);
+      setActive(skyId);
+    }
     setArranging(true);
   };
 

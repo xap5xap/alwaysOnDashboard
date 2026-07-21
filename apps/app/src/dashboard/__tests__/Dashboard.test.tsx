@@ -62,13 +62,22 @@ jest.mock('../../layout/LayoutCanvas', () => {
 jest.mock('../../layout/WidgetPicker', () => ({ WidgetPicker: () => null }));
 jest.mock('../../layout/ConfigureInstanceModal', () => ({ ConfigureInstanceModal: () => null }));
 jest.mock('../../kiosk/WallPreview', () => ({ WallPreview: () => null }));
+// The cache hand-offs are stubbed so the shell's wiring/ORDER of them is assertable (their real cache copies
+// are covered in useSkyInstances.test).
+jest.mock('../../layout/useSkyInstances', () => ({
+  useSkyInstances: jest.fn(() => ({ instances: [], isLoading: false, isError: false, refetch: jest.fn() })),
+  seedSkyFromActive: jest.fn(),
+  seedActiveFromSky: jest.fn(),
+}));
 
 import { useDashboards } from '../../layout/useDashboards';
 import { useRemoveWidget } from '../../layout/useRemoveWidget';
+import { seedActiveFromSky } from '../../layout/useSkyInstances';
 import { Dashboard } from '../Dashboard';
 
 const mockUseDashboards = useDashboards as jest.Mock;
 const mockUseRemoveWidget = useRemoveWidget as jest.Mock;
+const mockSeedActiveFromSky = seedActiveFromSky as jest.Mock;
 
 const loaded = (overrides: Record<string, unknown> = {}) => ({
   instances: [{ instanceId: 'i1' }],
@@ -163,6 +172,25 @@ describe('Dashboard — the Glance-pager / Arrange split §1a/§1e', () => {
     fireEvent.press(screen.getByTestId('segmented-arrange'));
     expect(canvasMode()).toBe('arrange'); // arrange is entered
     expect(setActive).not.toHaveBeenCalled(); // ...but d1 is already active, so no invalidate/refetch
+    expect(mockSeedActiveFromSky).not.toHaveBeenCalled(); // ...and no hand-off (['dashboard'] already holds d1)
+  });
+
+  it('entering Arrange on a swiped-to sky seeds the active cache from that sky BEFORE setActive (paints it at once)', () => {
+    const setActive = jest.fn();
+    mockUseDashboards.mockReturnValue(loaded({ setActive }));
+    renderDashboard();
+
+    // Swipe to page 1 (d2, not the active d1), THEN flip the dial to Arrange.
+    fireEvent.press(screen.getByTestId('pager-swipe-to-1'));
+    fireEvent.press(screen.getByTestId('segmented-arrange'));
+
+    // ['dashboard'] is seeded with d2 BEFORE setActive fires its lagging refetch, so Arrange paints d2 (not
+    // the previously-active d1) from frame one and a commit in that window can't persist to the wrong sky.
+    expect(mockSeedActiveFromSky).toHaveBeenCalledWith(expect.anything(), 'u1', 'd2');
+    expect(setActive).toHaveBeenCalledWith('d2');
+    const seedOrder = mockSeedActiveFromSky.mock.invocationCallOrder[0];
+    const setActiveOrder = setActive.mock.invocationCallOrder[0];
+    expect(seedOrder).toBeLessThan(setActiveOrder);
   });
 
   it('flipping the dial back to Glance leaves arrange and returns to the pager', () => {

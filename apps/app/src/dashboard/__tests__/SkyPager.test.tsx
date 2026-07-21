@@ -182,6 +182,18 @@ describe('SkyPager — the second sky Pro gate §1f (the billing gate)', () => {
     expect(screen.queryByTestId('pro-invite')).toBeNull();
     expect(router.push).not.toHaveBeenCalled();
   });
+
+  it('FREE with an empty/incoherent list: the + shows the invite and NEVER creates (defense in depth)', () => {
+    // The new-user list race can transiently resolve []; the gate must refuse to read 0 < 1 as "create is
+    // free" (a billing bypass). useDashboards heals the list; this guard closes the window before it lands.
+    const createDashboard = jest.fn();
+    renderPager([], { dashboards: [], activeId: null, createDashboard });
+
+    fireEvent.press(screen.getByTestId('page-dots-add'));
+    expect(screen.getByTestId('pro-invite')).toBeTruthy();
+    expect(createDashboard).not.toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+  });
 });
 
 describe('SkyPager — per-page states', () => {

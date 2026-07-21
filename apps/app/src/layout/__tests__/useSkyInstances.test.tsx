@@ -13,7 +13,7 @@ jest.mock('../dashboardRepo', () => ({ loadDashboardById: jest.fn() }));
 
 import { loadDashboardById } from '../dashboardRepo';
 import { dashboardQueryKey } from '../useDashboard';
-import { skyQueryKey, useSkyInstances, seedSkyFromActive } from '../useSkyInstances';
+import { skyQueryKey, useSkyInstances, seedSkyFromActive, seedActiveFromSky } from '../useSkyInstances';
 
 const D2 = { dashboardId: 'd2', name: 'Travel', instances: [{ instanceId: 'i1' }, { instanceId: 'i2' }] };
 
@@ -79,5 +79,23 @@ describe('seedSkyFromActive (the arrange-exit hand-off)', () => {
     const client = makeClient();
     seedSkyFromActive(client, 'u1', 'd2');
     expect(client.getQueryData(skyQueryKey('u1', 'd2'))).toBeUndefined();
+  });
+});
+
+describe('seedActiveFromSky (the swipe-then-Arrange hand-off)', () => {
+  it('copies the per-sky cache into the active-sky cache (so Arrange paints the swiped-to sky at once)', () => {
+    const client = makeClient();
+    client.setQueryData(skyQueryKey('u1', 'd2'), D2);
+
+    seedActiveFromSky(client, 'u1', 'd2');
+
+    // ['dashboard'] now holds d2, so a commit in the setActive-lag window persists to d2, not the old sky.
+    expect(client.getQueryData(dashboardQueryKey('u1'))).toEqual(D2);
+  });
+
+  it('is a no-op when the pager has not loaded that sky yet', () => {
+    const client = makeClient();
+    seedActiveFromSky(client, 'u1', 'd2');
+    expect(client.getQueryData(dashboardQueryKey('u1'))).toBeUndefined();
   });
 });

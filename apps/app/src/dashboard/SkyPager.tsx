@@ -98,7 +98,11 @@ export function SkyPager({
   }, [dashboards.length, onPageChange]);
 
   // The client Pro gate (UX only). Free at the limit -> the in-place invite (NOT the paywall); Pro -> create.
-  const canCreate = dashboards.length < entitlements.maxDashboards;
+  // The `>= 1` guard is defense-in-depth for the new-user list race (useDashboards heals it, but this closes
+  // the transient window before the heal lands): an empty/incoherent list must NOT read as "0 < 1 dashboards,
+  // so create is free" — that would let a Free user's + mint a real second sky with no Pro prompt. Empty list
+  // -> the + shows the invite, never creates.
+  const canCreate = dashboards.length >= 1 && dashboards.length < entitlements.maxDashboards;
   const onAdd = useCallback(async () => {
     if (canCreate) {
       pendingScrollToLast.current = true;

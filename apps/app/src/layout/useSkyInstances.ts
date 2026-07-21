@@ -59,3 +59,16 @@ export function seedSkyFromActive(client: QueryClient, userId: string | undefine
   const active = client.getQueryData<LoadedDashboard | null>(dashboardQueryKey(userId));
   if (active) client.setQueryData<LoadedDashboard | null>(skyQueryKey(userId, skyId), active);
 }
+
+/** Seed the active-sky cache from a per-sky read cache (AOD-144; the symmetric partner of seedSkyFromActive).
+ *  Called BEFORE setActive when entering Arrange on a sky you SWIPED to: setActive's active-sky refetch LAGS
+ *  (the documented AOD-143 lag), so without this the Arrange LayoutCanvas would render the PREVIOUS active
+ *  sky's instances for one round-trip — and a drag/commit in that window would patch ['dashboard'] while it
+ *  still held the old sky, persisting the edit to the WRONG sky. The pager already loaded the target sky under
+ *  ['sky', userId, skyId], so copying it into ['dashboard', userId] makes Arrange paint the correct sky from
+ *  frame one; setActive's invalidate then confirms the same data in the background. A no-op if the pager had
+ *  not loaded that sky yet (then setActive's refetch resolves it, the pre-fix behaviour). */
+export function seedActiveFromSky(client: QueryClient, userId: string | undefined, skyId: string): void {
+  const sky = client.getQueryData<LoadedDashboard | null>(skyQueryKey(userId, skyId));
+  if (sky) client.setQueryData<LoadedDashboard | null>(dashboardQueryKey(userId), sky);
+}

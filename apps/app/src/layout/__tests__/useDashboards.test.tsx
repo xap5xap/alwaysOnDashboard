@@ -165,4 +165,35 @@ describe('useDashboards (AOD-143)', () => {
     expect(loadDashboard).toHaveBeenCalled(); // then fell to first
     expect(setActiveDashboardId).toHaveBeenCalledWith('d1'); // healed
   });
+
+  // AOD-144 coherence heal: the LIST and the active-sky query are independent, so a new user's list SELECT can
+  // resolve [] before the active-sky query's bootstrap INSERTs are visible. staleTime:Infinity would freeze
+  // that [] — blanking the pager AND fooling the second-sky Pro gate (0 < 1 reads as "create is free"). The
+  // hook must refetch the list back into coherence.
+  it('heals the new-user list race: refetches the list when the bootstrapped active sky is missing from it', async () => {
+    activePointer = null; // brand-new user, no pointer
+    (loadDashboard as jest.Mock).mockResolvedValue(null); // no first sky yet
+    (bootstrapDashboard as jest.Mock).mockResolvedValue({ dashboardId: 'boot', name: 'Wall', instances: [] });
+    // The list SELECT resolves [] before bootstrap's INSERTs are visible, then includes the sky on refetch.
+    (loadDashboards as jest.Mock).mockReset();
+    (loadDashboards as jest.Mock)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ id: 'boot', name: 'Wall', position: 0 }]);
+
+    const { result } = renderDashboards();
+
+    // Active resolves to the bootstrapped sky, missing from the [] list...
+    await waitFor(() => expect(result.current.activeId).toBe('boot'));
+    // ...so the coherence effect refetched the list into coherence (the pager sees its sky; the gate sees 1).
+    await waitFor(() => expect(result.current.dashboards.map((d) => d.id)).toEqual(['boot']));
+    expect((loadDashboards as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('does NOT refetch the list when the active sky is already in it (the heal never loops)', async () => {
+    const { result } = renderDashboards(); // activePointer 'd1', list [d1, d2] — coherent
+    await waitFor(() => expect(result.current.activeId).toBe('d1'));
+    await waitFor(() => expect(result.current.dashboards).toHaveLength(2));
+    // 'd1' is in [d1, d2], so the coherence effect stays idle — a single list load, no heal refetch.
+    expect((loadDashboards as jest.Mock).mock.calls.length).toBe(1);
+  });
 });
