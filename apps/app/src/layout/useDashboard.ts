@@ -11,15 +11,41 @@ import type { WidgetInstance } from '../registry/types';
 import {
   bootstrapDashboard,
   loadDashboard,
+  loadDashboardById,
   persistInstanceLayout,
   type LoadedDashboard,
 } from './dashboardRepo';
+import { getActiveDashboardId, setActiveDashboardId } from './activeDashboardStore';
 import type { LayoutPatch } from './mapper';
 
 const PERSIST_DEBOUNCE_MS = 500;
 
 export function dashboardQueryKey(userId: string | undefined) {
   return ['dashboard', userId ?? 'anon'] as const;
+}
+
+// Resolve the ACTIVE sky's data (AOD-143, Many Skies §1b). The query KEY stays ['dashboard', userId] (NOT
+// re-keyed by sky id) so KioskWall / Dashboard / the mutation hooks that read this cache keep working
+// untouched (the kiosk-boundary decision); only WHICH sky this key holds now follows the persisted active
+// pointer. Order: (1) the persisted active id, if it still names one of the user's skies; (2) else the first
+// sky by position; (3) else bootstrap the first-run sky. Cases 2/3 HEAL the pointer to the resolved id, so a
+// stale/unset pointer self-repairs to a real sky and every reader agrees on the active sky.
+async function loadActiveDashboard(userId: string): Promise<LoadedDashboard> {
+  const activeId = getActiveDashboardId();
+  if (activeId) {
+    const active = await loadDashboardById(activeId);
+    if (active) return active;
+    // The stored id no longer resolves (sky deleted, possibly on another device): fall through to first.
+  }
+  const first = await loadDashboard();
+  const resolved = first ?? (await bootstrapDashboard(userId));
+  // Heal the pointer to the resolved sky — but only if no concurrent setActive changed it while we awaited.
+  // The queryFn is not abortable, so a heal invocation React Query has already discarded must NOT clobber a
+  // newer selection and silently revert the persisted active sky on the next cold start. Compare-and-set is
+  // safe here: JS is single-threaded and the MMKV read/write are synchronous, so nothing interleaves between
+  // the read and the write below.
+  if (getActiveDashboardId() === activeId) setActiveDashboardId(resolved.dashboardId);
+  return resolved;
 }
 
 function applyPatch(instance: WidgetInstance, patch: LayoutPatch): WidgetInstance {
@@ -54,7 +80,9 @@ export function useDashboard(): UseDashboardResult {
     queryKey: dashboardQueryKey(userId),
     enabled: !!userId,
     staleTime: Infinity,
-    queryFn: async () => (await loadDashboard()) ?? (await bootstrapDashboard(userId as string)),
+    // Resolve the active sky (persisted pointer -> first -> bootstrap), NOT hard position-0, so setActive can
+    // flip which sky this key holds by invalidating it (useDashboards). Shape + key are unchanged.
+    queryFn: async () => loadActiveDashboard(userId as string),
   });
 
   // One debounce timer per instance so rapid drag/resize end-events coalesce into a single write.

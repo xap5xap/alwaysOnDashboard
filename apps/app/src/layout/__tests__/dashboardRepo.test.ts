@@ -10,7 +10,16 @@
 // the legacy five words, so the mapper serializes W to its exact geometric twin on write — while the
 // MAPPED result locks 'W', the read-time coercion's output. Same DB bytes as pre-AOD-122; only the
 // app-side vocabulary changed.
-import { bootstrapDashboard, deleteWidgetInstance } from '../dashboardRepo';
+import {
+  bootstrapDashboard,
+  createDashboard,
+  deleteDashboard,
+  deleteWidgetInstance,
+  loadDashboardById,
+  loadDashboards,
+  renameDashboard,
+  reorderDashboards,
+} from '../dashboardRepo';
 import { getWidgetDef } from '../../registry/registry';
 import { SIZE_CATALOGUE } from '../../widgets/sizes';
 import { validateConfig } from '../../widgets/config';
@@ -131,5 +140,215 @@ describe('deleteWidgetInstance: client-direct RLS delete by id', () => {
     (supabase.from as jest.Mock).mockReset().mockReturnValue({ delete: jest.fn(() => ({ eq })) });
 
     await expect(deleteWidgetInstance('wi-42')).rejects.toThrow('rls denied');
+  });
+});
+
+// AOD-143 (Many Skies): the multi-dashboard data layer. These lock the repo's HALF of the contract — the raw
+// RLS-scoped reads/writes — with the same focused per-test chain mocks the deleteWidgetInstance tests use.
+// The last-sky rule and active-pointer policy live in useDashboards (tested there), not the repo.
+describe('loadDashboards: the skies list (ordered by position)', () => {
+  it('returns every dashboard as a summary, in position order, dropping instances', async () => {
+    const rows = [
+      { id: 'd1', name: 'Wall', position: 0 },
+      { id: 'd2', name: '', position: 1 }, // a nameless sky (§1e) round-trips its empty name
+      { id: 'd3', name: 'Travel', position: 2 },
+    ];
+    const order = jest.fn(async () => ({ data: rows, error: null }));
+    const select = jest.fn(() => ({ order }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ select });
+
+    const result = await loadDashboards();
+
+    expect(supabase.from).toHaveBeenCalledWith('dashboards');
+    expect(select).toHaveBeenCalledWith('id, name, position');
+    expect(order).toHaveBeenCalledWith('position', { ascending: true });
+    expect(result).toEqual([
+      { id: 'd1', name: 'Wall', position: 0 },
+      { id: 'd2', name: '', position: 1 },
+      { id: 'd3', name: 'Travel', position: 2 },
+    ]);
+  });
+
+  it('returns an empty list (never throws) when the user has no dashboards', async () => {
+    const order = jest.fn(async () => ({ data: null, error: null }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ select: jest.fn(() => ({ order })) });
+    await expect(loadDashboards()).resolves.toEqual([]);
+  });
+});
+
+describe('loadDashboardById: the active-sky loader (by id)', () => {
+  // Two tables: the dashboard row (by id) then its instances (by dashboard_id), like loadDashboard but keyed.
+  function mockById(dash: { id: string; name: string } | null, wiRows: unknown[]) {
+    const dashMaybeSingle = jest.fn(async () => ({ data: dash, error: null }));
+    const dashEq = jest.fn(() => ({ maybeSingle: dashMaybeSingle }));
+    const wiOrder = jest.fn(async () => ({ data: wiRows, error: null }));
+    const wiEq = jest.fn(() => ({ order: wiOrder }));
+    (supabase.from as jest.Mock).mockReset().mockImplementation((table: string) =>
+      table === 'dashboards'
+        ? { select: jest.fn(() => ({ eq: dashEq })) }
+        : { select: jest.fn(() => ({ eq: wiEq })) },
+    );
+    return { dashEq, wiEq };
+  }
+
+  it('loads a specific sky and its instances, mapped through the boundary', async () => {
+    const { dashEq, wiEq } = mockById({ id: 'd2', name: 'Travel' }, [
+      {
+        id: 'wi-9',
+        dashboard_id: 'd2',
+        service_id: 'clock',
+        widget_type: 'clock',
+        size: 'medium', // the frozen DB word; the mapper re-derives 'W' from the 2x1 rect
+        config: {},
+        rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+        refresh: null,
+        created_at: '2026-07-17T00:00:00Z',
+      },
+    ]);
+
+    const result = await loadDashboardById('d2');
+
+    expect(dashEq).toHaveBeenCalledWith('id', 'd2');
+    expect(wiEq).toHaveBeenCalledWith('dashboard_id', 'd2');
+    expect(result).toEqual({
+      dashboardId: 'd2',
+      name: 'Travel',
+      instances: [
+        {
+          instanceId: 'wi-9',
+          serviceId: 'clock',
+          widgetType: 'clock',
+          config: {},
+          size: 'W',
+          rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+        },
+      ],
+    });
+  });
+
+  it('returns null when the id no longer resolves (a stale active pointer)', async () => {
+    mockById(null, []);
+    await expect(loadDashboardById('ghost')).resolves.toBeNull();
+  });
+});
+
+describe('createDashboard: a new EMPTY sky at max(position)+1 (§1g)', () => {
+  // from('dashboards') answers BOTH the max-position read (select->order->limit->maybeSingle) and the insert
+  // (insert->select->single); the top-level select is the position read, the insert brings its own select.
+  function mockCreate(lastPosition: number | null, echoed: { id: string; name: string; position: number }) {
+    const posMaybeSingle = jest.fn(async () => ({
+      data: lastPosition == null ? null : { position: lastPosition },
+      error: null,
+    }));
+    const posLimit = jest.fn(() => ({ maybeSingle: posMaybeSingle }));
+    const posOrder = jest.fn(() => ({ limit: posLimit }));
+    const insertSingle = jest.fn(async () => ({ data: echoed, error: null }));
+    const captured: { payload?: Record<string, unknown> } = {};
+    const insert = jest.fn((payload: Record<string, unknown>) => {
+      captured.payload = payload;
+      return { select: jest.fn(() => ({ single: insertSingle })) };
+    });
+    (supabase.from as jest.Mock)
+      .mockReset()
+      .mockReturnValue({ select: jest.fn(() => ({ order: posOrder })), insert });
+    return { captured, posOrder, posLimit };
+  }
+
+  it('inserts nameless at max+1 with no widget seed, and returns the summary', async () => {
+    const { captured, posOrder, posLimit } = mockCreate(2, { id: 'd-new', name: '', position: 3 });
+
+    const result = await createDashboard('u1');
+
+    expect(posOrder).toHaveBeenCalledWith('position', { ascending: false });
+    expect(posLimit).toHaveBeenCalledWith(1);
+    // Nameless by default (§1e), appended at the end (§1g), with user_id for the §8 owner WITH CHECK.
+    expect(captured.payload).toEqual({ user_id: 'u1', name: '', position: 3 });
+    expect(result).toEqual({ id: 'd-new', name: '', position: 3 });
+    // EMPTY: a new sky seeds NO Clock (only first-run bootstrapDashboard does) — no widget_instances write.
+    expect(supabase.from).not.toHaveBeenCalledWith('widget_instances');
+  });
+
+  it('uses the provided name and positions after the current last sky', async () => {
+    const { captured } = mockCreate(0, { id: 'd-2', name: 'Travel', position: 1 });
+    const result = await createDashboard('u1', 'Travel');
+    expect(captured.payload).toEqual({ user_id: 'u1', name: 'Travel', position: 1 });
+    expect(result).toEqual({ id: 'd-2', name: 'Travel', position: 1 });
+  });
+
+  it('starts at position 0 when the user somehow has no existing sky', async () => {
+    const { captured } = mockCreate(null, { id: 'd-0', name: '', position: 0 });
+    await createDashboard('u1');
+    expect(captured.payload).toEqual({ user_id: 'u1', name: '', position: 0 });
+  });
+});
+
+describe('renameDashboard: update name by id (§1e)', () => {
+  function mockUpdate() {
+    const eq = jest.fn(async () => ({ error: null }));
+    const captured: { payload?: Record<string, unknown> } = {};
+    const update = jest.fn((payload: Record<string, unknown>) => {
+      captured.payload = payload;
+      return { eq };
+    });
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ update });
+    return { captured, eq };
+  }
+
+  it('updates the name, targeting by id', async () => {
+    const { captured, eq } = mockUpdate();
+    await expect(renameDashboard('d1', 'Travel')).resolves.toBeUndefined();
+    expect(supabase.from).toHaveBeenCalledWith('dashboards');
+    expect(captured.payload).toEqual({ name: 'Travel' });
+    expect(eq).toHaveBeenCalledWith('id', 'd1');
+  });
+
+  it('an empty string returns a sky to nameless', async () => {
+    const { captured } = mockUpdate();
+    await renameDashboard('d1', '');
+    expect(captured.payload).toEqual({ name: '' });
+  });
+});
+
+describe('reorderDashboards: write each row position to its index (§1e)', () => {
+  it('writes position = array index for every id, in order', async () => {
+    const eq = jest.fn(async () => ({ error: null }));
+    const updates: Record<string, unknown>[] = [];
+    const update = jest.fn((payload: Record<string, unknown>) => {
+      updates.push(payload);
+      return { eq };
+    });
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ update });
+
+    await reorderDashboards(['d3', 'd1', 'd2']);
+
+    expect(updates).toEqual([{ position: 0 }, { position: 1 }, { position: 2 }]);
+    expect(eq.mock.calls).toEqual([
+      ['id', 'd3'],
+      ['id', 'd1'],
+      ['id', 'd2'],
+    ]);
+  });
+});
+
+describe('deleteDashboard: a single row delete (children cascade)', () => {
+  it('deletes the dashboards row by id and touches no child table', async () => {
+    const eq = jest.fn(async () => ({ error: null }));
+    const del = jest.fn(() => ({ eq }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ delete: del });
+
+    await expect(deleteDashboard('d1')).resolves.toBeUndefined();
+
+    expect(supabase.from).toHaveBeenCalledWith('dashboards');
+    expect(del).toHaveBeenCalledTimes(1);
+    expect(eq).toHaveBeenCalledWith('id', 'd1');
+    // widget_instances + kiosk_configs cascade on dashboard_id (core_tables.sql §5.5/§5.6): no manual cleanup.
+    expect(supabase.from).not.toHaveBeenCalledWith('widget_instances');
+    expect(supabase.from).not.toHaveBeenCalledWith('kiosk_configs');
+  });
+
+  it('throws when RLS/network rejects', async () => {
+    const eq = jest.fn(async () => ({ error: new Error('rls denied') }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ delete: jest.fn(() => ({ eq })) });
+    await expect(deleteDashboard('d1')).rejects.toThrow('rls denied');
   });
 });
