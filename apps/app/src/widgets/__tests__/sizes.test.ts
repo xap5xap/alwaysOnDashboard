@@ -3,7 +3,7 @@
 // grid). The coercion cases below ARE the legacy migration table — there is no write-time migration,
 // so these locks are the contract for how pre-slot rows render.
 import type { LayoutRect } from '../../registry/types';
-import { GRID_COLUMNS, SIZE_CATALOGUE, coerceToSlotGrid, reconcileSize } from '../sizes';
+import { GRID_COLUMNS, MAX_SLOT_H, SIZE_CATALOGUE, coerceToSlotGrid, reconcileSize } from '../sizes';
 
 const rect = (x: number, y: number, w: number, h: number, z = 0): LayoutRect => ({ x, y, w, h, z });
 
@@ -22,6 +22,15 @@ describe('SIZE_CATALOGUE (AOD-122, Many Skies §1c)', () => {
       expect(spec.nominalW).toBeLessThanOrEqual(GRID_COLUMNS);
       expect(spec.nominalH).toBeLessThanOrEqual(2);
     }
+  });
+
+  it('exports the grid bounds as the single source of truth for the slot algebra (AOD-138)', () => {
+    // GRID_COLUMNS + MAX_SLOT_H are consumed by geometry.snapDrag/snapResize and layout/grid.ts; they
+    // must equal the widest/tallest slot in the catalogue so all three modules agree on the grid shape.
+    expect(GRID_COLUMNS).toBe(2);
+    expect(MAX_SLOT_H).toBe(2);
+    expect(Math.max(...Object.values(SIZE_CATALOGUE).map((s) => s.nominalW))).toBe(GRID_COLUMNS);
+    expect(Math.max(...Object.values(SIZE_CATALOGUE).map((s) => s.nominalH))).toBe(MAX_SLOT_H);
   });
 });
 
