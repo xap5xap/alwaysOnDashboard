@@ -1,15 +1,28 @@
 // The add-widget mutation: derive a default placement for a WidgetDefinition and insert it into the
-// user's current dashboard under RLS, then invalidate the dashboard query so the board repaints and the
+// user's current dashboard under RLS, then reconcile the dashboard query so the board repaints and the
 // AOD-47 host begins driving the new instance through the proxy. The current dashboard (id + instances)
 // is read from the TanStack Query cache (dashboardQueryKey) that useDashboard already populates, so the
 // picker needs only the WidgetDefinition. Registry-free at the data layer: the caller passes the def and
 // placement.ts derives size/rect/config. This is the writer side of the connect -> add -> arrange ->
 // render loop (data-model §8: the client is the natural writer of layout state).
+//
+// AOD-139 (resolves AOD-103): the write is now OPTIMISTIC, mirroring useRemoveWidget. Before awaiting the
+// insert it synchronously appends a PROVISIONAL instance (the computed seed under a client-only
+// placeholder id) into the cache. That closes the rapid-add overlap: a second addWidget fired before the
+// first insert resolves reads the cache WITH the provisional, so placement.ts sees the new slot as taken
+// and picks the NEXT free slot instead of the same stale one. On resolve it swaps the provisional for the
+// returned real row; on failure it rolls the provisional back out (by id, so a concurrent add's own
+// provisional survives) and rethrows.
+//   Coupling worth naming (as useRemoveWidget also relies on): this optimism is safe because the dashboard
+// query is staleTime:Infinity with no refetchInterval (useDashboard), so no background refetch lands during
+// the insert window to wipe an in-flight provisional. Lowering staleTime or adding a poll here without a
+// cancelQueries would silently reintroduce a lost-card race.
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
-import type { WidgetDefinition } from '../registry/types';
+import type { WidgetDefinition, WidgetInstance } from '../registry/types';
 import { addWidgetInstance, type LoadedDashboard } from './dashboardRepo';
+import type { InstanceSeed } from './mapper';
 import { defaultSeedFor } from './placement';
 import { dashboardQueryKey } from './useDashboard';
 
@@ -20,6 +33,29 @@ export interface UseAddWidgetResult {
   addWidget(def: WidgetDefinition, config?: Record<string, unknown>): Promise<void>;
   pending: boolean;
   error: Error | null;
+}
+
+// A process-wide monotonic counter for placeholder ids. Uniqueness (not cryptographic randomness) is all
+// the provisional needs — it lives only in the client cache until the swap and is never persisted (the DB
+// owns the real id). The counter guarantees two adds in the same millisecond still get distinct ids; the
+// `pending-`/timestamp parts just make a stray placeholder obvious in a cache dump.
+let provisionalSeq = 0;
+function nextProvisionalId(): string {
+  provisionalSeq += 1;
+  return `pending-${Date.now()}-${provisionalSeq}`;
+}
+
+/** A provisional WidgetInstance from a seed + placeholder id (the seed carries rect/size/config already). */
+function provisionalInstance(seed: InstanceSeed, instanceId: string): WidgetInstance {
+  return {
+    instanceId,
+    serviceId: seed.serviceId,
+    widgetType: seed.widgetType,
+    config: seed.config,
+    rect: seed.rect,
+    size: seed.size,
+    ...(seed.refresh !== undefined ? { refresh: seed.refresh } : {}),
+  };
 }
 
 export function useAddWidget(): UseAddWidgetResult {
@@ -36,15 +72,53 @@ export function useAddWidget(): UseAddWidgetResult {
       const dashboard = queryClient.getQueryData<LoadedDashboard | null>(key);
       if (!dashboard) throw new Error('No dashboard loaded');
 
+      // Derive placement from the CURRENT cache, then write the provisional SYNCHRONOUSLY (before any
+      // await) so a concurrent second add sees this slot occupied. The provisional may briefly render as a
+      // loading tile at its computed slot until the swap below replaces it with the real row.
+      const seed = defaultSeedFor(def, dashboard.instances, config);
+      const placeholderId = nextProvisionalId();
+      const provisional = provisionalInstance(seed, placeholderId);
+      queryClient.setQueryData<LoadedDashboard | null>(key, (prev) =>
+        prev ? { ...prev, instances: [...prev.instances, provisional] } : prev,
+      );
+
       setPending(true);
       setError(null);
       try {
-        const seed = defaultSeedFor(def, dashboard.instances, config);
-        await addWidgetInstance(dashboard.dashboardId, userId, seed);
-        // Repaint and let the host drive the new instance. The host reacts to the proxy, not the
-        // connections table (AOD-47), so a fresh dashboard load is what mounts and fetches the new row.
-        await queryClient.invalidateQueries({ queryKey: key });
+        const inserted = await addWidgetInstance(dashboard.dashboardId, userId, seed);
+        // Reconcile. Happy path: swap the provisional for the real row (real id + server-coerced rect),
+        // keeping every other tile's object identity, so the host drives the true instance without a
+        // refetch (like useRemoveWidget, no invalidate). If the row could not be mapped back
+        // (inserted === null, the should-not-happen mapper drop), the row still landed server-side, so drop
+        // the provisional and invalidate to reconcile the truth on the next load.
+        if (inserted) {
+          queryClient.setQueryData<LoadedDashboard | null>(key, (prev) =>
+            prev
+              ? {
+                  ...prev,
+                  instances: prev.instances.map((instance) =>
+                    instance.instanceId === placeholderId ? inserted : instance,
+                  ),
+                }
+              : prev,
+          );
+        } else {
+          queryClient.setQueryData<LoadedDashboard | null>(key, (prev) =>
+            prev
+              ? { ...prev, instances: prev.instances.filter((i) => i.instanceId !== placeholderId) }
+              : prev,
+          );
+          await queryClient.invalidateQueries({ queryKey: key });
+        }
       } catch (err) {
+        // Roll the provisional back out by id (NOT a wholesale snapshot restore like useRemoveWidget: a
+        // concurrent add may have added its own provisional we must not clobber). The picker keeps its form
+        // open on the rethrow.
+        queryClient.setQueryData<LoadedDashboard | null>(key, (prev) =>
+          prev
+            ? { ...prev, instances: prev.instances.filter((i) => i.instanceId !== placeholderId) }
+            : prev,
+        );
         setError(err as Error);
         throw err;
       } finally {

@@ -13,6 +13,7 @@ import type {
   WidgetInstance,
   WidgetSize,
 } from '../registry/types';
+import { firstFreeSlot } from './grid';
 import type { InstanceSeed } from './mapper';
 
 /**
@@ -28,16 +29,23 @@ export function defaultPlacementSize(supported: WidgetSize[]): WidgetSize {
 }
 
 /**
- * A non-overlapping rect for a new instance: the chosen size's nominal w/h (SIZE_CATALOGUE) placed at
- * x=0 directly below every existing instance and on top of the z-stack. Stacking below guarantees the
- * new rect cannot overlap an existing one (its top is at or past every existing bottom). On an empty
- * board the first widget lands at the origin, matching the bootstrap seed.
+ * A non-overlapping rect for a new instance: the chosen size's nominal w/h (SIZE_CATALOGUE) placed in
+ * the FIRST FREE SLOT of the 2-column grid — reading order (row-major, top-to-bottom, left column first),
+ * appending a fresh row below when no interior gap fits (grid.firstFreeSlot, AOD-138). This is the exact
+ * rule the arrange reflow shows (Many Skies §2a: "lands at the first spot its size fits, the same rule the
+ * reflow shows"), so a freshly added card and a reflowed card obey one law. It supersedes the AOD-103
+ * 1-D append (`x=0`, stack below every instance), which never used column 2 and columned S/M cards.
+ * The occupied set is every existing instance's grid CELL (z is irrelevant to fit — the scan reasons over
+ * covered cells, not stacking). z keeps the top-of-stack rule (empty board = 0, else max z + 1): overlap
+ * is impossible on the first-free grid, but the read path still orders any legacy overlap by z, so a new
+ * card sits on top. On an empty board firstFreeSlot returns the origin, matching the bootstrap seed.
  */
 export function defaultPlacementRect(size: WidgetSize, existing: WidgetInstance[]): LayoutRect {
   const spec = SIZE_CATALOGUE[size];
-  const y = existing.length ? Math.max(...existing.map((i) => i.rect.y + i.rect.h)) : 0;
+  const occupied = existing.map((i) => ({ x: i.rect.x, y: i.rect.y, w: i.rect.w, h: i.rect.h }));
+  const slot = firstFreeSlot({ w: spec.nominalW, h: spec.nominalH }, occupied);
   const z = existing.length ? Math.max(...existing.map((i) => i.rect.z)) + 1 : 0;
-  return { x: 0, y, w: spec.nominalW, h: spec.nominalH, z };
+  return { x: slot.x, y: slot.y, w: spec.nominalW, h: spec.nominalH, z };
 }
 
 /**
