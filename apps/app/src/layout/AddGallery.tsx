@@ -18,11 +18,20 @@
 // light silhouette of your cards — the AOD-145 approach the runbook allows, "judge the room, not the
 // furniture"), with the focused widget dropped onto it as a RINGED live preview at its firstFreeSlot landing
 // (the exact rect useAddWidget will use); a search field; then a horizontal SHELF of tiles. Focusing a tile
-// (tap; device auto-center-on-scroll is AOD-190) previews it above. Add lands it at the default size and — "Add
-// never leaves Arrange" — the gallery STAYS for the next card. A required-no-default widget still routes through
-// the config form first (configure-on-add, AOD-10 §4). A ghost tile's action is the current connect-via-Settings
-// path (the in-place ghost-connect is AOD-149, deferred). The S/M/W/L size selector + the "• ON THIS SKY"
-// already-added mark are AOD-148 (next); this gallery uses the default size and shows no already-added marks.
+// (tap; device auto-center-on-scroll is AOD-190) previews it above. Add lands it and — "Add never leaves
+// Arrange" — the gallery STAYS for the next card. A required-no-default widget still routes through the config
+// form first (configure-on-add, AOD-10 §4). A ghost tile's action is the current connect-via-Settings path
+// (the in-place ghost-connect is AOD-149, deferred).
+//
+// AOD-148 (size-by-seeing + already-added, resolves AOD-102) adds two generic marks over the AOD-147 shelf,
+// both derived from the registry + the current sky, never per-service:
+//   - A tile whose widget already sits on THIS sky (matched on serviceId + widgetType against the live
+//     instances) wears a quiet "• ON THIS SKY" mark and its action becomes "Add again" — a duplicate stays
+//     possible, never silent (§2 "Added is visible").
+//   - The FOCUSED tile carries an S/M/W/L selector of the widget's supportedSizes. The selected size drives
+//     BOTH the tile's own face AND the on-sky preview (the previewInstance rect/size), so they flip together
+//     (§2 "Size is chosen by seeing … the card lands exactly as shown"); Add then lands the card at that size
+//     via useAddWidget's optional size override. The selection resets to the default on focusing a new widget.
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -32,10 +41,16 @@ import { useConnections } from '../connections/useConnections';
 import { WidgetHost } from '../host/WidgetHost';
 import { WidgetHostView } from '../host/WidgetHostView';
 import { useRegistry } from '../registry/RegistryProvider';
-import type { AuthClass, ServiceDefinition, WidgetDefinition, WidgetInstance } from '../registry/types';
+import type {
+  AuthClass,
+  ServiceDefinition,
+  WidgetDefinition,
+  WidgetInstance,
+  WidgetSize,
+} from '../registry/types';
 import { GRID_COLUMNS } from '../widgets/sizes';
 import { ResolvedConfigFormModal } from '../widgets/ResolvedConfigFormModal';
-import { Button, Input, Sheet } from '../ui';
+import { Button, Input, Segmented, Sheet, type SegmentedOption } from '../ui';
 import { UNIT_PX } from './geometry';
 import { slotToPixels } from './grid';
 import { defaultConfig, defaultPlacementRect, defaultPlacementSize, requiresConfiguration } from './placement';
@@ -87,6 +102,14 @@ function widgetKey(serviceId: string, type: string): string {
   return `${serviceId}:${type}`;
 }
 
+// The size-by-seeing selector's canonical S·M·W·L order (Many Skies §1c/§2). A widget's `supportedSizes` may
+// declare any subset in any order; the selector always reads S → M → W → L, filtered to what the widget
+// supports, so the row is stable across widgets. Generic: it names no service.
+const SIZE_ORDER: readonly WidgetSize[] = ['S', 'M', 'W', 'L'];
+function sizeOptions(supported: WidgetSize[]): SegmentedOption<WidgetSize>[] {
+  return SIZE_ORDER.filter((s) => supported.includes(s)).map((s) => ({ label: s, value: s }));
+}
+
 export function AddGallery({ onClose }: AddGalleryProps) {
   const registry = useRegistry();
   const { connections, isLoading, isError } = useConnections();
@@ -99,9 +122,13 @@ export function AddGallery({ onClose }: AddGalleryProps) {
   // The focused (centered) widget → its live preview on the sky. Null = browsing: the sky shows exactly what
   // you have (§2a). Only an ADDABLE widget focuses (a ghost has no live card; its action is Connect).
   const [focused, setFocused] = useState<{ serviceId: string; type: string } | null>(null);
+  // AOD-148 size-by-seeing: the size the focused widget previews + lands at. Reset to the focused widget's
+  // default whenever focus moves to a DIFFERENT widget (focusTile), so a pick never leaks across widgets.
+  const [selectedSize, setSelectedSize] = useState<WidgetSize | null>(null);
   // configure-on-add: a required-no-default widget routes through the config form before insert (AOD-10 §4);
-  // everything else adds with schema defaults (AOD-51).
-  const [configuring, setConfiguring] = useState<WidgetDefinition | null>(null);
+  // everything else adds with schema defaults (AOD-51). Carries the selected size so it still applies on
+  // submit (AOD-148 — the size chosen before the form opened lands with the configured card).
+  const [configuring, setConfiguring] = useState<{ def: WidgetDefinition; size?: WidgetSize } | null>(null);
 
   const connected = connectedServiceIds(connections);
   const addableKeys = new Set(registry.addableWidgets(connected).map((w) => widgetKey(w.serviceId, w.type)));
@@ -118,43 +145,60 @@ export function AddGallery({ onClose }: AddGalleryProps) {
     )
     .map(({ def, service }) => ({ def, service, addable: addableKeys.has(widgetKey(def.serviceId, def.type)) }));
 
-  // The focused widget's live preview instance, placed at the EXACT slot useAddWidget will use (firstFreeSlot at
-  // the default size — the same rule the arrange reflow shows, placement.ts/AOD-139). firstFreeSlot never
-  // overlaps an existing card, so the neighbours never move for a default-size add; the reflow-if-displaced path
-  // is exercised by the AOD-148 size flip. A ghost never previews (guarded on the addable set).
+  // The focused widget's live preview instance, placed at the EXACT slot useAddWidget will use (firstFreeSlot
+  // at the SELECTED size — the same rule the arrange reflow shows, placement.ts/AOD-139). firstFreeSlot never
+  // overlaps an existing card, so the neighbours never move; a larger flipped size that displaces them reflows
+  // via the same rule (AOD-148 size-by-seeing). A ghost never previews (guarded on the addable set).
   const focusedDef = focused ? registry.getWidgetDef(focused.serviceId, focused.type) : undefined;
   const previewable =
     focusedDef && addableKeys.has(widgetKey(focusedDef.serviceId, focusedDef.type)) ? focusedDef : undefined;
+  // The size the focused preview + its own tile render at (AOD-148). Defaults to the widget's default
+  // placement size, guarded so a size carried from a prior focus this widget does not support falls back to
+  // the default (belt-and-braces with the focusTile reset, so the preview never renders an unsupported slot).
+  const effectiveSize: WidgetSize | null = previewable
+    ? selectedSize && previewable.supportedSizes.includes(selectedSize)
+      ? selectedSize
+      : defaultPlacementSize(previewable.supportedSizes)
+    : null;
   let previewInstance: WidgetInstance | null = null;
-  if (previewable) {
-    const size = defaultPlacementSize(previewable.supportedSizes);
+  if (previewable && effectiveSize) {
     previewInstance = {
       instanceId: '__add_preview__',
       serviceId: previewable.serviceId,
       widgetType: previewable.type,
       config: defaultConfig(previewable.configSchema),
-      rect: defaultPlacementRect(size, instances),
-      size,
+      rect: defaultPlacementRect(effectiveSize, instances),
+      size: effectiveSize,
     };
   }
 
+  // Focus a tile → preview it on the sky. Reset the size selection to the widget's default ONLY when focus
+  // moves to a DIFFERENT widget (§2 size-by-seeing), so re-tapping the tile you are already previewing keeps
+  // your pick, and a size never leaks from the previous widget.
+  const focusTile = (def: WidgetDefinition) => {
+    const same = focused?.serviceId === def.serviceId && focused?.type === def.type;
+    setFocused({ serviceId: def.serviceId, type: def.type });
+    if (!same) setSelectedSize(defaultPlacementSize(def.supportedSizes));
+  };
+
   // Add-and-STAY: insert, then keep the gallery open for the next card ("Add never leaves Arrange"). A failure
-  // is surfaced via `error`; the gallery (or the config form) stays so the user can retry.
-  const addStay = async (def: WidgetDefinition, config?: Record<string, unknown>) => {
+  // is surfaced via `error`; the gallery (or the config form) stays so the user can retry. `size` lands the
+  // card at the selected S/M/W/L (AOD-148); omitted keeps the default placement size.
+  const addStay = async (def: WidgetDefinition, config?: Record<string, unknown>, size?: WidgetSize) => {
     try {
-      await addWidget(def, config);
+      await addWidget(def, config, size);
       setConfiguring(null);
     } catch {
       /* surfaced via `error`; stay open */
     }
   };
 
-  const onAdd = (def: WidgetDefinition) => {
+  const onAdd = (def: WidgetDefinition, size?: WidgetSize) => {
     if (requiresConfiguration(def.configSchema)) {
-      setConfiguring(def);
+      setConfiguring({ def, size });
       return;
     }
-    void addStay(def);
+    void addStay(def, undefined, size);
   };
 
   const goToSettings = () => {
@@ -163,17 +207,18 @@ export function AddGallery({ onClose }: AddGalleryProps) {
   };
 
   // When configuring-on-add the config sheet takes over; a cancel returns to the gallery (setConfiguring null).
+  // The size chosen before the form opened rides through and lands with the configured card (AOD-148).
   if (configuring) {
     return (
       <ResolvedConfigFormModal
-        serviceId={configuring.serviceId}
-        schema={configuring.configSchema}
-        initial={defaultConfig(configuring.configSchema)}
-        title={`Configure ${configuring.title}`}
+        serviceId={configuring.def.serviceId}
+        schema={configuring.def.configSchema}
+        initial={defaultConfig(configuring.def.configSchema)}
+        title={`Configure ${configuring.def.title}`}
         submitLabel="Add"
         pending={pending}
         submitError={error ? error.message : null}
-        onSubmit={(values) => void addStay(configuring, values)}
+        onSubmit={(values) => void addStay(configuring.def, values, configuring.size)}
         onCancel={() => setConfiguring(null)}
       />
     );
@@ -227,19 +272,35 @@ export function AddGallery({ onClose }: AddGalleryProps) {
               contentContainerStyle={styles.shelf}
               testID="add-gallery-shelf"
             >
-              {tiles.map((tile) => (
-                <ShelfTile
-                  key={widgetKey(tile.def.serviceId, tile.def.type)}
-                  tile={tile}
-                  focused={
-                    focused?.serviceId === tile.def.serviceId && focused?.type === tile.def.type
-                  }
-                  pending={pending}
-                  onFocus={() => setFocused({ serviceId: tile.def.serviceId, type: tile.def.type })}
-                  onAdd={() => onAdd(tile.def)}
-                  onConnect={goToSettings}
-                />
-              ))}
+              {tiles.map((tile) => {
+                const isFocused =
+                  focused?.serviceId === tile.def.serviceId && focused?.type === tile.def.type;
+                // §2 "Added is visible": does an instance of THIS widget already sit on the current sky? A
+                // generic membership test — serviceId + widgetType, never a service name.
+                const alreadyAdded = instances.some(
+                  (i) => i.serviceId === tile.def.serviceId && i.widgetType === tile.def.type,
+                );
+                // The focused tile renders its face at the SELECTED size (it flips with the preview); every
+                // other tile (and every ghost, which is never focused) reads its default placement size.
+                const tileSize =
+                  isFocused && effectiveSize
+                    ? effectiveSize
+                    : defaultPlacementSize(tile.def.supportedSizes);
+                return (
+                  <ShelfTile
+                    key={widgetKey(tile.def.serviceId, tile.def.type)}
+                    tile={tile}
+                    focused={isFocused}
+                    size={tileSize}
+                    alreadyAdded={alreadyAdded}
+                    pending={pending}
+                    onFocus={() => focusTile(tile.def)}
+                    onSelectSize={setSelectedSize}
+                    onAdd={() => onAdd(tile.def, isFocused ? effectiveSize ?? undefined : undefined)}
+                    onConnect={goToSettings}
+                  />
+                );
+              })}
             </ScrollView>
           )}
         </>
@@ -321,27 +382,35 @@ function SkyPreview({
 }
 
 /** One shelf tile: the widget's own card via the generic WidgetHostView. A CONNECTED widget shows its live
- *  face and is pressable to focus (preview) + carries an Add. A GHOST (unconnected) shows the not-yet-lit
- *  state (the AOD-125 `ghost` the lifecycle DESIGN FLAG reserves for exactly this preview) and states its
- *  price + a Connect that routes to Settings (the in-place connect is AOD-149). No per-service code. */
+ *  face (rendered at `size` — the SELECTED size when focused, so the face flips with the preview) and is
+ *  pressable to focus (preview) + carries an Add. When focused it also shows the S/M/W/L size selector
+ *  (AOD-148). A widget already on the sky wears the "• ON THIS SKY" mark and its action becomes "Add again"
+ *  (`alreadyAdded`) — a duplicate is still allowed. A GHOST (unconnected) shows the not-yet-lit state (the
+ *  AOD-125 `ghost` the lifecycle DESIGN FLAG reserves for exactly this preview) and states its price + a
+ *  Connect that routes to Settings (the in-place connect is AOD-149). No per-service code. */
 function ShelfTile({
   tile,
   focused,
+  size,
+  alreadyAdded,
   pending,
   onFocus,
+  onSelectSize,
   onAdd,
   onConnect,
 }: {
   tile: Tile;
   focused: boolean;
+  size: WidgetSize;
+  alreadyAdded: boolean;
   pending: boolean;
   onFocus(): void;
+  onSelectSize(size: WidgetSize): void;
   onAdd(): void;
   onConnect(): void;
 }) {
   const { theme } = useUnistyles();
   const { def, service, addable } = tile;
-  const size = defaultPlacementSize(def.supportedSizes);
   const config = defaultConfig(def.configSchema);
   const idBase = `${def.serviceId}-${def.type}`;
 
@@ -378,7 +447,35 @@ function ShelfTile({
           <WidgetHostView state={{ phase: 'live', data: undefined, fetchedAt: Date.now() }} def={def} size={size} config={config} serviceName={service.displayName} />
         </View>
       </Pressable>
-      <Button label="Add" variant="primary" size="sm" onPress={onAdd} disabled={pending} testID={`add-gallery-add-${idBase}`} />
+
+      {/* §2 "Added is visible": a quiet mark when this widget already sits on the sky. The action below stays
+          live as "Add again" — a duplicate is allowed, never silent, never disabled. */}
+      {alreadyAdded && (
+        <Text style={styles.onSky} numberOfLines={1} testID={`add-gallery-onsky-${idBase}`}>
+          • ON THIS SKY
+        </Text>
+      )}
+
+      {/* §2 "Size is chosen by seeing": only the focused tile carries the S/M/W/L selector ("sizes wait until
+          it's lit"). Selecting flips this face AND the on-sky preview together (the parent recomputes both
+          from the size). Options are the widget's supportedSizes in canonical order — no per-service code. */}
+      {focused && (
+        <Segmented
+          options={sizeOptions(def.supportedSizes)}
+          value={size}
+          onChange={onSelectSize}
+          testID={`add-gallery-size-${idBase}`}
+        />
+      )}
+
+      <Button
+        label={alreadyAdded ? 'Add again' : 'Add'}
+        variant="primary"
+        size="sm"
+        onPress={onAdd}
+        disabled={pending}
+        testID={`add-gallery-add-${idBase}`}
+      />
     </View>
   );
 }
@@ -432,6 +529,13 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
   },
   price: {
+    ...theme.type.caption,
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  // §2 the "• ON THIS SKY" already-added mark: a quiet caption, same weight as the ghost price so it reads
+  // as an annotation on the tile, not an alarm (device legibility judged in AOD-190).
+  onSky: {
     ...theme.type.caption,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',

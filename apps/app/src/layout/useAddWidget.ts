@@ -20,7 +20,7 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
-import type { WidgetDefinition, WidgetInstance } from '../registry/types';
+import type { WidgetDefinition, WidgetInstance, WidgetSize } from '../registry/types';
 import { addWidgetInstance, type LoadedDashboard } from './dashboardRepo';
 import type { InstanceSeed } from './mapper';
 import { defaultSeedFor } from './placement';
@@ -29,8 +29,10 @@ import { dashboardQueryKey } from './useDashboard';
 export interface UseAddWidgetResult {
   /** Insert `def` into the current dashboard with a default placement, then repaint. Throws on failure
    *  (also surfaced via `error`) so the caller can keep the picker open. `config` overrides the schema
-   *  defaults when the configure-on-add form collected values (AOD-10 §4); omit for add-with-defaults. */
-  addWidget(def: WidgetDefinition, config?: Record<string, unknown>): Promise<void>;
+   *  defaults when the configure-on-add form collected values (AOD-10 §4); omit for add-with-defaults.
+   *  `size` overrides the default placement size (AOD-148: the gallery lands the card at the selected
+   *  S/M/W/L); omit to keep `defaultPlacementSize` — no behavior change for other callers. */
+  addWidget(def: WidgetDefinition, config?: Record<string, unknown>, size?: WidgetSize): Promise<void>;
   pending: boolean;
   error: Error | null;
 }
@@ -66,7 +68,7 @@ export function useAddWidget(): UseAddWidgetResult {
   const [error, setError] = useState<Error | null>(null);
 
   const addWidget = useCallback(
-    async (def: WidgetDefinition, config?: Record<string, unknown>) => {
+    async (def: WidgetDefinition, config?: Record<string, unknown>, size?: WidgetSize) => {
       if (!userId) throw new Error('Not signed in');
       const key = dashboardQueryKey(userId);
       const dashboard = queryClient.getQueryData<LoadedDashboard | null>(key);
@@ -74,8 +76,9 @@ export function useAddWidget(): UseAddWidgetResult {
 
       // Derive placement from the CURRENT cache, then write the provisional SYNCHRONOUSLY (before any
       // await) so a concurrent second add sees this slot occupied. The provisional may briefly render as a
-      // loading tile at its computed slot until the swap below replaces it with the real row.
-      const seed = defaultSeedFor(def, dashboard.instances, config);
+      // loading tile at its computed slot until the swap below replaces it with the real row. `size`, when
+      // the gallery passes the selected S/M/W/L (AOD-148), lands the card at that size; omitted -> default.
+      const seed = defaultSeedFor(def, dashboard.instances, config, size);
       const placeholderId = nextProvisionalId();
       const provisional = provisionalInstance(seed, placeholderId);
       queryClient.setQueryData<LoadedDashboard | null>(key, (prev) =>
