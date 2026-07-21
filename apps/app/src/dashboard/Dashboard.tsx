@@ -31,9 +31,9 @@ import { runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
+import { AddGallery } from '../layout/AddGallery';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
-import { WidgetPicker } from '../layout/WidgetPicker';
 import { useDashboards } from '../layout/useDashboards';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
@@ -264,7 +264,7 @@ export function Dashboard() {
             </View>
           )}
 
-          {picking && <WidgetPicker onClose={() => setPicking(false)} />}
+          {picking && <AddGallery onClose={() => setPicking(false)} />}
           {configuring && <ConfigureInstanceModal instance={configuring} onClose={() => setConfiguring(null)} />}
         </View>
       </Screen>

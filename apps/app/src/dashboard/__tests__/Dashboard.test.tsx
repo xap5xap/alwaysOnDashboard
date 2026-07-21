@@ -59,7 +59,7 @@ jest.mock('../../layout/LayoutCanvas', () => {
   };
 });
 // Overlays that only mount from state we never set here — stub them so the hub renders in isolation.
-jest.mock('../../layout/WidgetPicker', () => ({ WidgetPicker: () => null }));
+jest.mock('../../layout/AddGallery', () => ({ AddGallery: () => null }));
 jest.mock('../../layout/ConfigureInstanceModal', () => ({ ConfigureInstanceModal: () => null }));
 jest.mock('../../kiosk/WallPreview', () => ({ WallPreview: () => null }));
 // gesture-handler: the AOD-145 pinch-in wrapper on the card-altitude surface. Passthrough — GestureDetector
