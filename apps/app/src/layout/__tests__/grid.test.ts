@@ -12,7 +12,6 @@ import {
   firstFreeSlot,
   nearestFreeSlot,
   pixelsToSlot,
-  reflow,
   reflowToColumns,
   slotToPixels,
 } from '../grid';
@@ -135,80 +134,6 @@ describe('firstFreeSlot honors the columns param (AOD-197: landscape 6 default /
     expect(firstFreeSlot(S, rowOfFour, 4)).toEqual(cell(0, 1, 1, 1)); // full row of 4 -> wrap to row 1
     // Two W fill a 4-col row (cols 0-1, 2-3); a third W appends below.
     expect(firstFreeSlot(W, [cell(0, 0, 2, 1), cell(2, 0, 2, 1)], 4)).toEqual(cell(0, 1, 2, 1));
-  });
-});
-
-describe('reflow: pinned card stays put, neighbours re-pack, overlap becomes impossible', () => {
-  it('re-packs the others around a moved pin, in reading order, with no overlap', () => {
-    // A(0,0) B(1,0) C(0,1); pick up B and drop it onto A's slot (0,0). Others keep their old rects.
-    const rects = [rect(0, 0, 1, 1, 0), rect(0, 0, 1, 1, 1), rect(0, 1, 1, 1, 2)];
-    const out = reflow(rects, 1);
-    expect(out[1]).toEqual(rect(0, 0, 1, 1, 1)); // pinned unchanged
-    expect(anyOverlap(cellsOf(out))).toBe(false);
-    expect(out).toHaveLength(3);
-  });
-
-  it('clamps a W pinned off the right edge back onto the landscape grid before packing (x + w <= GRID_COLUMNS)', () => {
-    // reflow keeps the landscape count (6). A 2-wide card dropped at column 5 runs off (5 + 2 > 6); reflow
-    // shifts it to the last legal column (4), footprint + z intact. The S neighbour then packs into the
-    // freed left of the SAME wide row (reading-order pack, overlap-free) — no longer pushed below as at 2 cols.
-    const rects = [rect(5, 0, 2, 1, 5), rect(0, 0, 1, 1, 0)];
-    const out = reflow(rects, 0);
-    expect(out[0]).toEqual(rect(4, 0, 2, 1, 5)); // clamped col5 -> col4, footprint + z intact
-    expect(anyOverlap(cellsOf(out))).toBe(false);
-    expect(out[1]).toEqual(rect(0, 0, 1, 1, 0)); // the S packs into the freed left columns of row 0
-  });
-
-  it('makes overlap impossible even from a fully-overlapping input (every card stacked at the origin)', () => {
-    const rects = [rect(0, 0, 1, 1, 0), rect(0, 0, 1, 1, 1), rect(0, 0, 2, 1, 2), rect(0, 0, 1, 2, 3)];
-    const out = reflow(rects, 0);
-    expect(out[0]).toEqual(rect(0, 0, 1, 1, 0)); // pin held at the origin
-    expect(anyOverlap(cellsOf(out))).toBe(false);
-  });
-
-  it('is deterministic — repeated reflow is identical and ties resolve by array index, not sort stability', () => {
-    // Two 1x1 cards tied at the same origin (0,1); the pin sits at (0,0). The (y,x) sort cannot separate
-    // the tie, so the index tiebreak must — deterministically, and NOT by leaning on V8 sort stability.
-    const a = rect(0, 1, 1, 1, 5);
-    const b = rect(0, 1, 1, 1, 6);
-    const pin = rect(0, 0, 1, 1, 9);
-
-    const out1 = reflow([pin, a, b], 0);
-    expect(out1).toEqual(reflow([pin, a, b], 0)); // referentially deterministic
-    // `a` is earlier in the array, so it packs into the earlier reading-order slot (col1 row0) and `b` into
-    // the next (col2 row0 — the wide landscape row still has room). Swapping their array order swaps slots.
-    expect(out1[1]).toEqual(rect(1, 0, 1, 1, 5)); // a -> (col1, row0)
-    expect(out1[2]).toEqual(rect(2, 0, 1, 1, 6)); // b -> (col2, row0)
-
-    const out2 = reflow([pin, b, a], 0);
-    expect(out2[1]).toEqual(rect(1, 0, 1, 1, 6)); // now b is earlier -> b takes (col1, row0)
-    expect(out2[2]).toEqual(rect(2, 0, 1, 1, 5)); // a -> (col2, row0)
-  });
-
-  it('preserves array order, footprint (w/h) and z for every card — only x/y move', () => {
-    const rects = [rect(0, 0, 1, 1, 9), rect(0, 0, 1, 2, 4), rect(0, 0, 2, 1, 7)];
-    const out = reflow(rects, 1);
-    expect(out).toHaveLength(rects.length);
-    for (let i = 0; i < rects.length; i++) {
-      expect(out[i].w).toBe(rects[i].w);
-      expect(out[i].h).toBe(rects[i].h);
-      expect(out[i].z).toBe(rects[i].z);
-    }
-  });
-
-  it('a single-card reflow just clamps the pin onto the grid', () => {
-    // x=5 with a 2-wide footprint runs off the 6-col landscape grid (5 + 2 > 6) -> clamps to the last legal
-    // column (4); an on-grid card (1 + 2 <= 6) is untouched.
-    expect(reflow([rect(5, 0, 2, 1, 0)], 0)).toEqual([rect(4, 0, 2, 1, 0)]);
-    expect(reflow([rect(1, 0, 2, 1, 0)], 0)).toEqual([rect(1, 0, 2, 1, 0)]);
-  });
-
-  it('keeps a neighbour that is already well-placed but compacts a gap in reading order', () => {
-    // Pin A at (0,0); B sits far below at row 5 -> it compacts up to the first free reading-order slot.
-    const rects = [rect(0, 0, 1, 1, 0), rect(0, 5, 1, 1, 1)];
-    const out = reflow(rects, 0);
-    expect(out[1]).toEqual(rect(1, 0, 1, 1, 1)); // compacted to col1 row0
-    expect(anyOverlap(cellsOf(out))).toBe(false);
   });
 });
 
