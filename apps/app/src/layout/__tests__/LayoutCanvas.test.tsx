@@ -92,6 +92,24 @@ describe('LayoutCanvas fit-to-width scale layer (AOD-197 S4)', () => {
   });
 });
 
+// AOD-195 (sub-decision 6b): the calm menu-driven delete threads confirmingRemoveId down to the matching card,
+// which shows the AOD-141 tile-face confirm WITHOUT arranging. Only the id that matches confirms; the wall
+// (no confirmingRemoveId) never does.
+describe('LayoutCanvas menu-driven delete confirm (AOD-195)', () => {
+  it('shows the confirm face on the calm card whose id matches confirmingRemoveId (no arrange)', () => {
+    renderCanvas({ instances: [inst('a'), inst('b')], cellPx: 48, columns: 6, confirmingRemoveId: 'a' });
+    expect(screen.getByTestId('remove-confirm-face-a')).toBeTruthy();
+    // The non-matching card is untouched, and neither card shows arrange chrome (we never entered Arrange).
+    expect(screen.queryByTestId('remove-confirm-face-b')).toBeNull();
+    expect(screen.queryByTestId('configure-a')).toBeNull();
+  });
+
+  it('shows no confirm face when confirmingRemoveId is absent (the wall / calm rest state)', () => {
+    renderCanvas({ instances: [inst('a')], cellPx: 48, columns: 6 });
+    expect(screen.queryByTestId('remove-confirm-face-a')).toBeNull();
+  });
+});
+
 // AOD-196 (S5): the handheld canvas is a VERTICAL scroll container whose content carries an EXPLICIT layout
 // height = contentRows x cellPx (the VISUAL height — a transform scales the grid but never changes its layout
 // height, so a naive ScrollView would measure the nominal, too-tall extent) plus the bottom safe-area inset;

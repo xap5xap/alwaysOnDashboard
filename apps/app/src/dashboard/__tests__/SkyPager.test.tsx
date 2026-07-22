@@ -14,18 +14,33 @@ import type { WidgetInstance } from '../../registry/types';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../layout/useSkyInstances', () => ({ useSkyInstances: jest.fn() }));
-// The read-only page body is stubbed to a marker + a long-press trigger (its real render is LayoutCanvas's
-// concern). Each page's canvas carries the sky id it was mounted for so the per-sky long-press is assertable.
+// The read-only page body is stubbed to a marker + triggers (its real render is LayoutCanvas's concern). Each
+// page's canvas carries the sky id it was mounted for so the per-sky wiring is assertable: canvas-longpress
+// fires the AOD-195 quick-actions callback (onLongPressCard) with a stub instance + anchor; canvas-confirming
+// echoes the threaded confirmingRemoveId (sub-decision 6b).
 jest.mock('../../layout/LayoutCanvas', () => {
   const React = require('react');
   const { View, Text, Pressable } = require('react-native');
   return {
-    LayoutCanvas: ({ instances, onEnterArrange }: { instances: { instanceId: string }[]; onEnterArrange: () => void }) =>
+    LayoutCanvas: ({
+      instances,
+      onLongPressCard,
+      confirmingRemoveId,
+    }: {
+      instances: { instanceId: string }[];
+      onLongPressCard?: (instance: { instanceId: string }, anchor: { x: number; y: number }) => void;
+      confirmingRemoveId?: string | null;
+    }) =>
       React.createElement(
         View,
         { testID: 'layout-canvas' },
         React.createElement(Text, { testID: 'canvas-count' }, String(instances.length)),
-        React.createElement(Pressable, { testID: 'canvas-longpress', onPress: onEnterArrange }, React.createElement(Text, null, 'lp')),
+        React.createElement(Text, { testID: 'canvas-confirming' }, confirmingRemoveId ?? 'none'),
+        React.createElement(
+          Pressable,
+          { testID: 'canvas-longpress', onPress: () => onLongPressCard && onLongPressCard({ instanceId: 'i1' }, { x: 5, y: 5 }) },
+          React.createElement(Text, null, 'lp'),
+        ),
       ),
   };
 });
@@ -224,12 +239,29 @@ describe('SkyPager — per-page states', () => {
     expect(onAddCard).toHaveBeenCalledWith('d2');
   });
 
-  it('a long-press on a page card drops into Arrange for THAT sky', () => {
-    const onEnterArrange = jest.fn();
-    renderPager([], { onEnterArrange });
-    // The second page's canvas -> sky d2.
+  it('a long-press on a page card opens the quick-actions menu for THAT sky (AOD-195)', () => {
+    const onLongPressCard = jest.fn();
+    renderPager([], { onLongPressCard });
+    // The second page's canvas -> sky d2. SkyPager binds the sky id, so the menu callback carries ('d2',
+    // instance, anchor) — the entry point that replaces the old long-press-into-Arrange.
     fireEvent.press(screen.getAllByTestId('canvas-longpress')[1]);
+    expect(onLongPressCard).toHaveBeenCalledWith('d2', { instanceId: 'i1' }, { x: 5, y: 5 });
+  });
+
+  it('a long-press on an EMPTY sky enters Edit Screen directly (no card to hold, AOD-195)', () => {
+    // d2 is non-active + empty via useSkyInstances -> the empty page carries the long-press catcher.
+    mockUseSkyInstances.mockReturnValue({ instances: [], isLoading: false, isError: false, refetch: jest.fn() });
+    const onEnterArrange = jest.fn();
+    renderPager([], { activeId: 'd1', onEnterArrange });
+    fireEvent(screen.getByTestId('sky-page-d2-empty-longpress'), 'longPress');
     expect(onEnterArrange).toHaveBeenCalledWith('d2');
+  });
+
+  it('threads the menu-driven delete confirm id down to the pages (AOD-195 sub-decision 6b)', () => {
+    renderPager([], { confirmingRemoveId: 'i1' });
+    // Every page's canvas receives confirmingRemoveId; the matching card (in LayoutCanvas' real render) shows
+    // the tile-face confirm. Here the stub echoes it so the thread is assertable.
+    expect(screen.getAllByTestId('canvas-confirming')[0].props.children).toBe('i1');
   });
 
   it("a NON-active page still shows its own ['sky'] loading state; the active page never does", () => {

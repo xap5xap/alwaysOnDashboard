@@ -40,8 +40,11 @@ const EDGE_BAND_PX = 28;
 export interface PlacedInstanceProps {
   instance: WidgetInstance;
   arranging: boolean;
-  /** Long-press anywhere on the card enters arrange mode (the iOS-style "jiggle" affordance). */
-  onLongPress(): void;
+  /** AOD-195: long-press anywhere on the calm card reports the instance + an on-screen anchor (the touch
+   *  point, from the gesture's absoluteX/absoluteY) so the dashboard can open the iPad-style quick-actions
+   *  menu near this card. Enabled only OUTSIDE arrange (inside Arrange the card is draggable). The wall's
+   *  LayoutCanvas passes a nullary fallback (its onEnterArrange noop) so a wall long-press stays inert. */
+  onLongPress(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   /** The reflowed (uncommitted) rect this card should animate to while a SIBLING is being dragged/resized
    *  (AOD-140). Null = rest at the committed rect (this is the active card, or nothing is being dragged).
    *  LayoutCanvas/useArrangeReflow computes it; this card just eases toward it. */
@@ -63,6 +66,14 @@ export interface PlacedInstanceProps {
    *  dashboard owns the mutation (useRemoveWidget: client-direct RLS delete + optimistic cache update).
    *  Connections survive — removing a card never disconnects its service. */
   onRemove(instanceId: string): void;
+  /** AOD-195 (sub-decision 6b): a MENU-driven delete from the calm long-press menu shows the AOD-141
+   *  "Remove?" tile-face confirm WITHOUT entering Arrange. When the dashboard is confirming THIS card's
+   *  removal (confirmingRemoveId === instanceId), it passes true and the same confirm face renders in calm
+   *  mode; Confirm fires onRemove, Keep fires onCancelMenuRemove. Absent (the wall, and the in-arrange
+   *  Remove-pill path, which uses the card's OWN local confirm state) leaves the render byte-identical. */
+  menuConfirmingRemove?: boolean;
+  /** AOD-195: Keep on the menu-driven confirm clears the dashboard-owned confirmingRemoveId. */
+  onCancelMenuRemove?(): void;
   /** AOD-146 (Many Skies §1d): while dragging in arrange, the finger reached a SCREEN edge ('left'/'right')
    *  or left it (null). The dashboard arms a short "hold" dwell on a non-null edge to carry THIS card to the
    *  neighbour sky (the dwell disambiguates it from a normal near-edge reposition). Optional: this card stays
@@ -94,6 +105,8 @@ export function PlacedInstance({
   onArrangeCancel,
   onRequestConfigure,
   onRemove,
+  menuConfirmingRemove = false,
+  onCancelMenuRemove,
   onCarryEdge,
   cellPx = UNIT_PX,
   columns = GRID_COLUMNS,
@@ -131,6 +144,13 @@ export function PlacedInstance({
   useEffect(() => {
     if (!arranging) setConfirmingRemove(false);
   }, [arranging]);
+
+  // AOD-195 (sub-decision 6b): the confirm face shows for EITHER the in-arrange Remove pill (local
+  // confirmingRemove) OR a menu-driven delete on the calm surface (menuConfirmingRemove, dashboard-owned).
+  // In the menu case Keep clears the dashboard's confirmingRemoveId; the in-arrange case keeps its local
+  // reset. (menuConfirmingRemove only arrives in calm mode, so it never collides with the arrange pills.)
+  const showConfirm = menuConfirmingRemove || (arranging && confirmingRemove);
+  const onKeep = menuConfirmingRemove ? onCancelMenuRemove ?? (() => {}) : () => setConfirmingRemove(false);
 
   // Live geometry (nominal slot units) owned by the UI thread.
   const x = useSharedValue(instance.rect.x);
@@ -243,12 +263,16 @@ export function PlacedInstance({
   };
   const cancelGesture = () => onArrangeCancel();
 
+  // AOD-195: report the long-press UP with the touch point (absoluteX/absoluteY, window coords) so the
+  // dashboard can anchor the quick-actions menu near this card. Enabled only in calm mode (inside Arrange
+  // the card is dragged, not menued) and never while its own menu-confirm face is showing.
+  const reportLongPress = (ax: number, ay: number) => onLongPress(instance, { x: ax, y: ay });
   const longPress = Gesture.LongPress()
-    .enabled(!arranging)
+    .enabled(!arranging && !menuConfirmingRemove)
     .minDuration(350)
-    .onStart(() => {
+    .onStart((e) => {
       'worklet';
-      runOnJS(onLongPress)();
+      runOnJS(reportLongPress)(e.absoluteX, e.absoluteY);
     });
 
   const drag = Gesture.Pan()
@@ -448,10 +472,11 @@ export function PlacedInstance({
             </GestureDetector>
           </>
         ) : null}
-        {arranging && confirmingRemove ? (
+        {showConfirm ? (
           // AOD-141 (resolves AOD-104): the tile's OWN face becomes the question — a scrim over the dimmed
           // card, no modal. A sibling of the drag detector (which is frozen while confirming), so its
-          // buttons never start a drag. Confirm fires onRemove; Keep reverts to the arrange affordances.
+          // buttons never start a drag. Confirm fires onRemove; Keep reverts (to the arrange affordances in
+          // arrange, or clears the dashboard's menu-confirm on the calm surface — onKeep, AOD-195).
           <View
             style={[styles.confirmFace, { backgroundColor: arrangeColor(a.confirm.scrim), borderRadius: theme.radius.md }]}
             testID={`remove-confirm-face-${instance.instanceId}`}
@@ -468,7 +493,7 @@ export function PlacedInstance({
                 <Text style={[styles.confirmButtonText, { color: arrangeColor(a.removePill.label) }]}>Remove</Text>
               </Pressable>
               <Pressable
-                onPress={() => setConfirmingRemove(false)}
+                onPress={onKeep}
                 style={styles.keepButton}
                 accessibilityRole="button"
                 accessibilityLabel="Keep widget"

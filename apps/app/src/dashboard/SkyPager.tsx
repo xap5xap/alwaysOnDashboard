@@ -21,7 +21,7 @@
 // Pro" invite; a Pro user creates a real sky (useDashboards.createDashboard, which sets it active) and the
 // pager pages to it. The full paywall is a later chat — the invite's See Pro is the only through-tap to it.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, useWindowDimensions, View } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { router } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -55,8 +55,20 @@ export interface SkyPagerProps {
    *  scale Arrange uses (WYSIWYG, design §7). Absent = the nominal grid (the pre-S4 fallback, tests). */
   cellPx?: number;
   columns?: number;
-  /** Long-press a card on a page -> arrange THAT sky (Dashboard: setActive + arranging). */
+  /** Enter Arrange on a sky (Dashboard: setActive + arranging). Reached from the quick-actions menu's "Edit
+   *  Screen" (AOD-195) and from a long-press on an EMPTY page (no card to hold). */
   onEnterArrange(skyId: string): void;
+  /** AOD-195: long-press a CARD on a page -> open the quick-actions menu for it (Dashboard anchors it near
+   *  the card). Carries the sky id so the menu's actions target the right sky. Absent (tests) leaves the
+   *  card's long-press falling back to onEnterArrange. */
+  onLongPressCard?(skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  /** AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed (Dashboard-owned),
+   *  threaded to each page's canvas so the matching calm card shows the AOD-141 tile-face confirm. */
+  confirmingRemoveId?: string | null;
+  /** AOD-195: remove one instance — the calm menu-confirm's Confirm (Dashboard clears the id + deletes). */
+  onRemove?(instanceId: string): void;
+  /** AOD-195: the calm menu-confirm's Keep clears the Dashboard's confirmingRemoveId. */
+  onCancelRemove?(): void;
   /** An empty page's "Add a card" -> Dashboard opens the add flow for that sky. */
   onAddCard(skyId: string): void;
   /** Create a new sky (Pro only; the hook sets it active). The pager then pages to it. */
@@ -77,6 +89,10 @@ export function SkyPager({
   cellPx,
   columns,
   onEnterArrange,
+  onLongPressCard,
+  confirmingRemoveId,
+  onRemove,
+  onCancelRemove,
   onAddCard,
   createDashboard,
   awake,
@@ -189,6 +205,12 @@ export function SkyPager({
               cellPx={cellPx}
               columns={columns}
               onEnterArrange={() => onEnterArrange(item.id)}
+              // AOD-195: bind this page's sky id so the menu's actions target it; the card supplies the
+              // instance + anchor. Undefined (tests) keeps the card's long-press falling back to onEnterArrange.
+              onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
+              confirmingRemoveId={confirmingRemoveId}
+              onRemove={onRemove}
+              onCancelRemove={onCancelRemove}
               onAddCard={() => onAddCard(item.id)}
             />
           ) : (
@@ -199,6 +221,10 @@ export function SkyPager({
               cellPx={cellPx}
               columns={columns}
               onEnterArrange={() => onEnterArrange(item.id)}
+              onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
+              confirmingRemoveId={confirmingRemoveId}
+              onRemove={onRemove}
+              onCancelRemove={onCancelRemove}
               onAddCard={() => onAddCard(item.id)}
             />
           )
@@ -251,6 +277,10 @@ function SkyPage({
   cellPx,
   columns,
   onEnterArrange,
+  onLongPressCard,
+  confirmingRemoveId,
+  onRemove,
+  onCancelRemove,
   onAddCard,
 }: {
   sky: DashboardSummary;
@@ -259,6 +289,10 @@ function SkyPage({
   cellPx?: number;
   columns?: number;
   onEnterArrange(): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  confirmingRemoveId?: string | null;
+  onRemove?(instanceId: string): void;
+  onCancelRemove?(): void;
   onAddCard(): void;
 }) {
   const { instances, isLoading, isError, refetch } = useSkyInstances(sky.id, orientation);
@@ -271,7 +305,18 @@ function SkyPage({
       ) : isError ? (
         <ErrorState line="Could not load this sky." onRetry={() => refetch()} testID={`sky-page-${sky.id}-error`} />
       ) : (
-        <SkyPageContent skyId={sky.id} instances={instances} cellPx={cellPx} columns={columns} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
+        <SkyPageContent
+          skyId={sky.id}
+          instances={instances}
+          cellPx={cellPx}
+          columns={columns}
+          onEnterArrange={onEnterArrange}
+          onLongPressCard={onLongPressCard}
+          confirmingRemoveId={confirmingRemoveId}
+          onRemove={onRemove}
+          onCancelRemove={onCancelRemove}
+          onAddCard={onAddCard}
+        />
       )}
     </View>
   );
@@ -291,6 +336,10 @@ function ActiveSkyPage({
   cellPx,
   columns,
   onEnterArrange,
+  onLongPressCard,
+  confirmingRemoveId,
+  onRemove,
+  onCancelRemove,
   onAddCard,
 }: {
   sky: DashboardSummary;
@@ -299,11 +348,26 @@ function ActiveSkyPage({
   cellPx?: number;
   columns?: number;
   onEnterArrange(): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  confirmingRemoveId?: string | null;
+  onRemove?(instanceId: string): void;
+  onCancelRemove?(): void;
   onAddCard(): void;
 }) {
   return (
     <View style={{ width }} testID={`sky-page-${sky.id}`}>
-      <SkyPageContent skyId={sky.id} instances={instances} cellPx={cellPx} columns={columns} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
+      <SkyPageContent
+        skyId={sky.id}
+        instances={instances}
+        cellPx={cellPx}
+        columns={columns}
+        onEnterArrange={onEnterArrange}
+        onLongPressCard={onLongPressCard}
+        confirmingRemoveId={confirmingRemoveId}
+        onRemove={onRemove}
+        onCancelRemove={onCancelRemove}
+        onAddCard={onAddCard}
+      />
     </View>
   );
 }
@@ -318,6 +382,10 @@ function SkyPageContent({
   cellPx,
   columns,
   onEnterArrange,
+  onLongPressCard,
+  confirmingRemoveId,
+  onRemove,
+  onCancelRemove,
   onAddCard,
 }: {
   skyId: string;
@@ -325,18 +393,32 @@ function SkyPageContent({
   cellPx?: number;
   columns?: number;
   onEnterArrange(): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  confirmingRemoveId?: string | null;
+  onRemove?(instanceId: string): void;
+  onCancelRemove?(): void;
   onAddCard(): void;
 }) {
   const { theme } = useUnistyles();
   return instances.length === 0 ? (
-    <EmptyState
-      glyph={<AddGlyph color={theme.colors.accent} />}
-      line="Nothing here yet."
-      subline="Add a card to get started."
-      actionLabel="Add a card"
-      onAction={onAddCard}
-      testID={`sky-page-${skyId}-empty`}
-    />
+    // AOD-195: an empty sky has no card to hold, so a long-press on the empty canvas enters Edit Screen
+    // directly (a plain RN Pressable's onLongPress — no gesture-handler needed; the "Add a card" button
+    // still takes taps as the innermost responder). A horizontal swipe still pages (the hold is stationary).
+    <Pressable
+      style={styles.emptyFill}
+      onLongPress={onEnterArrange}
+      delayLongPress={350}
+      testID={`sky-page-${skyId}-empty-longpress`}
+    >
+      <EmptyState
+        glyph={<AddGlyph color={theme.colors.accent} />}
+        line="Nothing here yet."
+        subline="Add a card to get started."
+        actionLabel="Add a card"
+        onAction={onAddCard}
+        testID={`sky-page-${skyId}-empty`}
+      />
+    </Pressable>
   ) : (
     <LayoutCanvas
       instances={instances}
@@ -345,7 +427,11 @@ function SkyPageContent({
       onExitArrange={noop}
       onCommit={noop}
       onRequestConfigure={noop}
-      onRemove={noop}
+      // AOD-195: the calm menu-driven delete removes through Dashboard (onRemove); absent (tests) noops.
+      onRemove={onRemove ?? noop}
+      onLongPressCard={onLongPressCard}
+      confirmingRemoveId={confirmingRemoveId}
+      onCancelRemove={onCancelRemove}
       // AOD-197 (S4): Glance fills the screen width with the same fit-to-width scale Arrange uses (design §7).
       cellPx={cellPx}
       columns={columns}
@@ -356,6 +442,9 @@ function SkyPageContent({
 const styles = StyleSheet.create(() => ({
   container: { flex: 1, position: 'relative' },
   list: { flex: 1 },
+  // AOD-195: the empty-sky long-press catcher fills the page so a hold anywhere on the empty canvas enters
+  // Edit Screen (the EmptyState centers within it; its "Add a card" button still takes taps).
+  emptyFill: { flex: 1 },
   dotsBar: {
     position: 'absolute',
     left: 0,
