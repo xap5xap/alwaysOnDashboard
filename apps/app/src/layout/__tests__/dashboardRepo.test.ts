@@ -458,22 +458,27 @@ describe('moveInstanceToDashboard: client-direct RLS re-parent by id', () => {
 // AOD-143 (Many Skies): the multi-dashboard data layer. These lock the repo's HALF of the contract — the raw
 // RLS-scoped reads/writes — with the same focused per-test chain mocks the deleteWidgetInstance tests use.
 // The last-sky rule and active-pointer policy live in useDashboards (tested there), not the repo.
-describe('loadDashboards: the skies list (ordered by position)', () => {
-  it('returns every dashboard as a summary, in position order, dropping instances', async () => {
+describe('loadDashboards: the skies list (ordered by position, then created_at)', () => {
+  it('returns every dashboard as a summary, in position then created_at order, dropping instances', async () => {
     const rows = [
       { id: 'd1', name: 'Wall', position: 0 },
       { id: 'd2', name: '', position: 1 }, // a nameless sky (§1e) round-trips its empty name
       { id: 'd3', name: 'Travel', position: 2 },
     ];
-    const order = jest.fn(async () => ({ data: rows, error: null }));
-    const select = jest.fn(() => ({ order }));
+    // AOD-191: the query chains .order('position').order('created_at'), so the mock's first order is
+    // chainable — it exposes a second order that RESOLVES to the rows (the terminal of the chain).
+    const orderCreatedAt = jest.fn(async () => ({ data: rows, error: null }));
+    const orderPosition = jest.fn(() => ({ order: orderCreatedAt }));
+    const select = jest.fn(() => ({ order: orderPosition }));
     (supabase.from as jest.Mock).mockReset().mockReturnValue({ select });
 
     const result = await loadDashboards();
 
     expect(supabase.from).toHaveBeenCalledWith('dashboards');
     expect(select).toHaveBeenCalledWith('id, name, position');
-    expect(order).toHaveBeenCalledWith('position', { ascending: true });
+    // BOTH order calls happened, position first then created_at, both ascending — the deterministic tiebreak.
+    expect(orderPosition).toHaveBeenCalledWith('position', { ascending: true });
+    expect(orderCreatedAt).toHaveBeenCalledWith('created_at', { ascending: true });
     expect(result).toEqual([
       { id: 'd1', name: 'Wall', position: 0 },
       { id: 'd2', name: '', position: 1 },
@@ -482,8 +487,10 @@ describe('loadDashboards: the skies list (ordered by position)', () => {
   });
 
   it('returns an empty list (never throws) when the user has no dashboards', async () => {
-    const order = jest.fn(async () => ({ data: null, error: null }));
-    (supabase.from as jest.Mock).mockReset().mockReturnValue({ select: jest.fn(() => ({ order })) });
+    // Same chainable order shape: position -> created_at -> resolves (here to no rows).
+    const orderCreatedAt = jest.fn(async () => ({ data: null, error: null }));
+    const orderPosition = jest.fn(() => ({ order: orderCreatedAt }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({ select: jest.fn(() => ({ order: orderPosition })) });
     await expect(loadDashboards()).resolves.toEqual([]);
   });
 });

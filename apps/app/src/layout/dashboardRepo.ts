@@ -117,12 +117,16 @@ export async function loadDashboardById(
 }
 
 /** Load ALL of the user's dashboards as summaries (no instances), ordered by position — the page-altitude
- *  "skies" list (Many Skies §1b/§1e). RLS scopes the select to auth.uid(); the order is the swipe/dot order. */
+ *  "skies" list (Many Skies §1b/§1e). RLS scopes the select to auth.uid(); the order is the swipe/dot order.
+ *  created_at is a STABLE secondary sort (AOD-191): position carries no per-user unique constraint (two fast
+ *  creates can land equal position), and Postgres orders ties nondeterministically across reads — which would
+ *  flicker the page dots / swipe order. Breaking ties by created_at makes the skies list deterministic. */
 export async function loadDashboards(): Promise<DashboardSummary[]> {
   const { data, error } = await supabase
     .from('dashboards')
     .select('id, name, position')
-    .order('position', { ascending: true });
+    .order('position', { ascending: true })
+    .order('created_at', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((d) => ({ id: d.id, name: d.name, position: d.position }));
 }
