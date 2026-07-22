@@ -27,6 +27,22 @@ export const PORTRAIT_COLUMNS = 4; // portrait placement columns (design §4)
 export const MAX_SLOT_W = 2; // footprint width ceiling (S/M/W/L are <= 2 wide); NOT the column count
 export const MAX_SLOT_H = 2; // footprint height ceiling (S/M/W/L are <= 2 tall)
 
+// AOD-197 per-orientation placement (design §6). A layout stores a POSITION per orientation but ONE
+// SHARED footprint; the column COUNT differs by orientation (landscape 6 / portrait 4). Landscape is the
+// wall's orientation and the default everywhere in S3 — the resolution/persist orientation is a parameter
+// that defaults to 'landscape', so the wall and every current live path stay byte-identical; S4 wires the
+// real device orientation. These live here beside the column constants so there is one source of truth for
+// the grid's shape (mapper/dashboardRepo/placement all read them).
+export type Orientation = 'landscape' | 'portrait';
+
+/** Both orientations in a stable order — landscape first (the wall's orientation and the default). */
+export const ORIENTATIONS: readonly Orientation[] = ['landscape', 'portrait'];
+
+/** The placement column count for an orientation: landscape GRID_COLUMNS (6), portrait PORTRAIT_COLUMNS (4). */
+export function columnsFor(orientation: Orientation): number {
+  return orientation === 'portrait' ? PORTRAIT_COLUMNS : GRID_COLUMNS;
+}
+
 // The Many Skies §1c slot contract (nominal units; aspect = w/h). Exactly four slots, no 3-wide.
 export const SIZE_CATALOGUE: Record<WidgetSize, SizeClassSpec> = {
   S: { id: 'S', nominalW: 1, nominalH: 1, nominalAspect: 1.0 },
