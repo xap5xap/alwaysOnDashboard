@@ -158,6 +158,9 @@ export function Dashboard() {
     setArranging(true);
     // AOD-145: entering Arrange always lands at card altitude (edit this sky), never page altitude.
     setAtPageAltitude(false);
+    // AOD-195: an Edit Screen transition must never carry a pending CALM menu-confirm (armed on another sky
+    // before the transition) — clear it so a stale "Remove?" can't re-appear on returning to that sky.
+    setConfirmingRemoveId(null);
   };
 
   // AOD-195: leave Edit Screen (the Done button, and the tap-empty-canvas exit). Mirrors the old dial-to-Glance
@@ -166,6 +169,9 @@ export function Dashboard() {
   const exitArrange = () => {
     setArranging(false);
     setAtPageAltitude(false);
+    // AOD-195: leaving Edit Screen also drops any pending calm menu-confirm (belt-and-suspenders with the
+    // enter-side clear), so an arrange round-trip can never leave a stale "Remove?" armed.
+    setConfirmingRemoveId(null);
     // AOD-197: hand the edited layout back within the CURRENT orientation's per-sky cache.
     if (activeId) seedSkyFromActive(queryClient, userId, activeId, orientation);
   };

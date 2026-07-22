@@ -414,6 +414,36 @@ describe('Dashboard — the empty-canvas long-press + chrome (AOD-195)', () => {
   });
 });
 
+// AOD-195 hardening (F1): a pending CALM "Remove?" confirm (confirmingRemoveId) must not survive an Edit
+// Screen transition — entering AND leaving Arrange clear it, so a confirm armed on one sky can't re-appear on
+// returning to it after an arrange round-trip. An ordinary swipe (not an edit transition) is left untouched.
+describe('Dashboard — a pending calm menu-confirm is dropped on Edit Screen transitions (AOD-195)', () => {
+  const armCalmConfirm = () => {
+    fireEvent.press(screen.getByTestId('pager-longpress-d1'));
+    fireEvent.press(screen.getByTestId('menu-delete'));
+    expect(screen.getByTestId('pager-confirming').props.children).toBe('i1');
+  };
+
+  it('survives an ordinary swipe (only a new menu open or an arrange transition clears it)', () => {
+    renderDashboard();
+    armCalmConfirm();
+    fireEvent.press(screen.getByTestId('pager-swipe-to-1')); // a page turn is not an edit transition
+    expect(screen.getByTestId('pager-confirming').props.children).toBe('i1'); // still armed
+  });
+
+  it('is cleared across an Edit Screen round-trip (enter via empty-canvas long-press, exit via Done)', () => {
+    renderDashboard();
+    armCalmConfirm();
+    // Enter Edit Screen WITHOUT re-opening the menu — the empty-canvas long-press routes through enterArrange,
+    // so this exercises the enter-side clear (openCardMenu is not involved on this path).
+    fireEvent.press(screen.getByTestId('pager-empty-longpress-d2'));
+    expect(canvasMode()).toBe('arrange');
+    // Leave via Done, and the stale confirm is gone (it would otherwise re-appear on returning to its sky).
+    fireEvent.press(screen.getByTestId('dashboard-done'));
+    expect(screen.getByTestId('pager-confirming').props.children).toBe('none');
+  });
+});
+
 describe('Dashboard — the two Arrange altitudes §1b (AOD-145), entered via the menu', () => {
   // Enter Arrange (card altitude) through the menu, then press the grown page-dots capsule to rise.
   const rise = () => {
