@@ -30,6 +30,7 @@ import { LayoutCanvas } from '../layout/LayoutCanvas';
 import type { DashboardSummary } from '../layout/dashboardRepo';
 import { useSkyInstances } from '../layout/useSkyInstances';
 import type { WidgetInstance } from '../registry/types';
+import type { Orientation } from '../widgets/sizes';
 import { EmptyState, ErrorState, LoadingState } from '../shell';
 import { AddGlyph } from './glyphs';
 import { PageDots } from './PageDots';
@@ -46,6 +47,9 @@ export interface SkyPagerProps {
    *  (Dashboard passes useDashboards().instances). AOD-194: the active page (id === activeId) renders THESE,
    *  never its own ['sky', activeId] cache, so Glance and Arrange can never diverge on the sky you are on. */
   activeInstances: WidgetInstance[];
+  /** The current device orientation (AOD-197). Threaded into the NON-active pages' per-sky read so every page
+   *  resolves the same per-orientation layout the active page (activeInstances) shows. Default landscape. */
+  orientation?: Orientation;
   /** Long-press a card on a page -> arrange THAT sky (Dashboard: setActive + arranging). */
   onEnterArrange(skyId: string): void;
   /** An empty page's "Add a card" -> Dashboard opens the add flow for that sky. */
@@ -64,6 +68,7 @@ export function SkyPager({
   dashboards,
   activeId,
   activeInstances,
+  orientation = 'landscape',
   onEnterArrange,
   onAddCard,
   createDashboard,
@@ -177,6 +182,7 @@ export function SkyPager({
             <SkyPage
               sky={item}
               width={pageWidth}
+              orientation={orientation}
               onEnterArrange={() => onEnterArrange(item.id)}
               onAddCard={() => onAddCard(item.id)}
             />
@@ -225,15 +231,17 @@ export function SkyPager({
 function SkyPage({
   sky,
   width,
+  orientation,
   onEnterArrange,
   onAddCard,
 }: {
   sky: DashboardSummary;
   width: number;
+  orientation: Orientation;
   onEnterArrange(): void;
   onAddCard(): void;
 }) {
-  const { instances, isLoading, isError, refetch } = useSkyInstances(sky.id);
+  const { instances, isLoading, isError, refetch } = useSkyInstances(sky.id, orientation);
   return (
     // Fixed to the pager width so pagingEnabled snaps; height comes from the list's cross-axis stretch,
     // giving the flex:1 LayoutCanvas / centered states a concrete box to fill.

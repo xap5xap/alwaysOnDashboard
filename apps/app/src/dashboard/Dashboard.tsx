@@ -36,6 +36,7 @@ import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
 import { useMoveInstance } from '../layout/useMoveInstance';
+import { useOrientation } from '../layout/useOrientation';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
 import { WallPreview } from '../kiosk/WallPreview';
@@ -57,6 +58,9 @@ export function Dashboard() {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const queryClient = useQueryClient();
+  // AOD-197: the device orientation drives which per-orientation layout the handheld surfaces request + commit
+  // (design §9: you edit the orientation you're holding). Reactive — a rotation re-resolves the whole surface.
+  const orientation = useOrientation();
   const {
     instances,
     isLoading,
@@ -71,7 +75,7 @@ export function Dashboard() {
     renameDashboard,
     reorderDashboards,
     deleteDashboard,
-  } = useDashboards();
+  } = useDashboards(orientation);
   const { removeWidget } = useRemoveWidget();
   const { moveInstance } = useMoveInstance();
   const [arranging, setArranging] = useState(false);
@@ -116,8 +120,9 @@ export function Dashboard() {
       // Paint the target sky NOW: copy its already-loaded pager instances (['sky', skyId]) into the active-sky
       // cache BEFORE setActive, whose refetch lags (AOD-143). Without this, Arrange would render the PREVIOUS
       // active sky for one round-trip and a commit in that window would persist to the wrong sky. The invalidate
-      // that setActive fires then confirms the same data in the background.
-      seedActiveFromSky(queryClient, userId, skyId);
+      // that setActive fires then confirms the same data in the background. AOD-197: seed within the CURRENT
+      // orientation so Arrange paints the per-orientation layout the pager was showing.
+      seedActiveFromSky(queryClient, userId, skyId, orientation);
       setActive(skyId);
     }
     setArranging(true);
@@ -150,7 +155,8 @@ export function Dashboard() {
       // just-edited active-sky layout back to the pager's per-sky cache so the page repaints the edit at once.
       setArranging(false);
       setAtPageAltitude(false);
-      if (activeId) seedSkyFromActive(queryClient, userId, activeId);
+      // AOD-197: hand the edited layout back within the CURRENT orientation's per-sky cache.
+      if (activeId) seedSkyFromActive(queryClient, userId, activeId, orientation);
     }
   };
 
@@ -176,7 +182,7 @@ export function Dashboard() {
     } catch {
       return;
     }
-    seedActiveFromSky(queryClient, userId, neighborId);
+    seedActiveFromSky(queryClient, userId, neighborId, orientation);
     setActive(neighborId);
   };
 
@@ -314,6 +320,9 @@ export function Dashboard() {
                 // AOD-194: the active page renders the ['dashboard'] cache (the same instances Arrange and the
                 // wall read), not its own ['sky', activeId] cache, so Glance and Arrange can never diverge.
                 activeInstances={instances}
+                // AOD-197: the non-active pages read their per-sky cache in the CURRENT device orientation, so
+                // every page shows the same per-orientation resolution the active page (activeInstances) does.
+                orientation={orientation}
                 onEnterArrange={enterArrange}
                 onAddCard={onAddCard}
                 createDashboard={createDashboard}

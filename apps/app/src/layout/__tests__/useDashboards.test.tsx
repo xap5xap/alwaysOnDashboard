@@ -70,7 +70,7 @@ function renderDashboards() {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
-  return renderHook(() => useDashboards(), { wrapper });
+  return { client, ...renderHook(() => useDashboards(), { wrapper }) };
 }
 
 describe('useDashboards (AOD-143)', () => {
@@ -92,10 +92,25 @@ describe('useDashboards (AOD-143)', () => {
     });
 
     expect(setActiveDashboardId).toHaveBeenCalledWith('d2');
-    // The active-sky key re-resolved to d2 (persisted pointer read by useDashboard's queryFn).
+    // The active-sky key re-resolved to d2 (persisted pointer read by useDashboard's queryFn). AOD-197: the
+    // hook default-mounts landscape, so the resolve requests the landscape rect list.
     await waitFor(() => expect(result.current.activeId).toBe('d2'));
-    expect(loadDashboardById).toHaveBeenCalledWith('d2');
+    expect(loadDashboardById).toHaveBeenCalledWith('d2', 'landscape');
     expect(result.current.dashboardName).toBe(''); // d2 is nameless
+  });
+
+  it('setActive invalidates BOTH orientations via the ["dashboard"] prefix (AOD-197)', async () => {
+    const { result, client } = renderDashboards();
+    await waitFor(() => expect(result.current.activeId).toBe('d1'));
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    act(() => {
+      result.current.setActive('d2');
+    });
+
+    // The PREFIX (no orientation) is a partial match, so it invalidates ['dashboard','u1','landscape'] AND
+    // ['dashboard','u1','portrait'] — the active sky is orientation-independent, so both caches must re-resolve.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['dashboard', 'u1'] });
   });
 
   it('createDashboard makes a sky, sets it active (descends into the empty sky), and returns its id', async () => {
@@ -161,7 +176,7 @@ describe('useDashboards (AOD-143)', () => {
     const { result } = renderDashboards();
 
     await waitFor(() => expect(result.current.activeId).toBe('d1'));
-    expect(loadDashboardById).toHaveBeenCalledWith('ghost'); // tried the stale id
+    expect(loadDashboardById).toHaveBeenCalledWith('ghost', 'landscape'); // tried the stale id (landscape)
     expect(loadDashboard).toHaveBeenCalled(); // then fell to first
     expect(setActiveDashboardId).toHaveBeenCalledWith('d1'); // healed
   });

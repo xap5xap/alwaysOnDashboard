@@ -204,10 +204,14 @@ describe('addWidgetInstance: per-orientation insert (AOD-197)', () => {
 });
 
 // AOD-197 (the data-layer keystone): persistInstanceLayout is a per-orientation read-modify-write.
-// - DESIGNED orientation (the S3 LIVE path, always landscape): ONE UPDATE that sets pos[orientation] + the
-//   footprint and PRESERVES the other orientation.
-// - DERIVED orientation (portrait, unit-tested here): MATERIALIZE — stamp every instance's reflowed portrait
-//   position (rect-only, size untouched), then write the edited instance's new position + footprint + size.
+// - DESIGNED orientation MOVE (the common path): ONE cheap UPDATE that sets pos[orientation] + the footprint
+//   and PRESERVES the other orientation, with NO board load.
+// - DESIGNED orientation RESIZE (footprint change) with the OTHER orientation designed: loads the board and
+//   RE-VALIDATES the other orientation's stored position (nearestFreeSlot), so the grown footprint never
+//   overlaps a neighbour there (design §6.2). The edited instance is still the only row written.
+// - DERIVED orientation (portrait): MATERIALIZE — stamp every instance's reflowed portrait position (rect-only,
+//   size untouched), then write the edited instance; a materialize that ALSO resizes re-validates the already-
+//   designed landscape position against the same board.
 describe('persistInstanceLayout: per-orientation read-modify-write (AOD-197)', () => {
   type Row = Partial<Tables<'widget_instances'>>;
   // A select/update mock answering the row-select (select->eq->maybeSingle), the board-load
@@ -239,20 +243,88 @@ describe('persistInstanceLayout: per-orientation read-modify-write (AOD-197)', (
     return { updates, updateEqCalls, selectEqCalls, order };
   }
 
-  it('DESIGNED landscape: ONE UPDATE, sets the landscape position + footprint, PRESERVES portrait', async () => {
-    // The row is already designed in both orientations.
+  it('DESIGNED landscape MOVE (no footprint change): ONE cheap UPDATE, NO board load, PRESERVES portrait', async () => {
+    // Already designed in both orientations; a plain MOVE keeps the 2x1 footprint, so nothing re-validates.
     const stored = { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 }, portrait: { x: 3, y: 2 } } };
     const { updates, updateEqCalls, order } = mockPersist(stored);
 
-    await persistInstanceLayout('wi-1', { rect: { x: 4, y: 1, w: 1, h: 2, z: 0 }, size: 'M' }); // landscape default
+    await persistInstanceLayout('wi-1', { rect: { x: 4, y: 1, w: 2, h: 1, z: 0 }, size: 'W' }); // move, landscape
 
-    expect(order).not.toHaveBeenCalled(); // no board reflow on a designed orientation
+    expect(order).not.toHaveBeenCalled(); // a plain move never loads the board (design §6.2 gate)
     expect(updates).toHaveLength(1);
     expect(updates[0]).toEqual({
-      rect: { w: 1, h: 2, z: 0, pos: { landscape: { x: 4, y: 1 }, portrait: { x: 3, y: 2 } } },
-      size: 'tall', // M's frozen-vocabulary twin
+      rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 4, y: 1 }, portrait: { x: 3, y: 2 } } },
+      size: 'medium', // W's frozen-vocabulary twin
     });
     expect(updateEqCalls).toEqual([['id', 'wi-1']]);
+  });
+
+  it('DESIGNED landscape RESIZE with portrait ALSO designed: loads the board and re-validates portrait (design §6.2)', async () => {
+    // wi-1 is a 1x1 designed in BOTH orientations; a neighbour wi-2 sits at portrait (1,0). Growing wi-1 to a
+    // 2x2 would make its portrait origin (0,0) overlap wi-2, so the write re-validates wi-1's portrait position
+    // to the nearest free 2x2 slot WITHOUT moving wi-2 (gaps preserved).
+    const editedStored = { w: 1, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 }, portrait: { x: 0, y: 0 } } };
+    const boardRows: Row[] = [
+      { id: 'wi-1', service_id: 'clock', widget_type: 'clock', size: 'small', config: {}, rect: editedStored as never, refresh: null },
+      {
+        id: 'wi-2',
+        service_id: 'clock',
+        widget_type: 'clock',
+        size: 'small',
+        config: {},
+        rect: { w: 1, h: 1, z: 0, pos: { landscape: { x: 2, y: 0 }, portrait: { x: 1, y: 0 } } } as never,
+        refresh: null,
+      },
+    ];
+    const { updates, updateEqCalls, order } = mockPersist(editedStored, boardRows);
+
+    await persistInstanceLayout('wi-1', { rect: { x: 2, y: 0, w: 2, h: 2, z: 0 }, size: 'L' }); // resize, landscape
+
+    expect(order).toHaveBeenCalled(); // a footprint change loads the board to re-validate the other orientation
+    expect(updates).toHaveLength(1); // STILL one update — only the edited instance; the neighbour never moves
+    expect(updateEqCalls).toEqual([['id', 'wi-1']]);
+    // landscape = the new edit; portrait re-validated to the nearest free 2x2 (0,1), clear of wi-2 at (1,0).
+    expect(updates[0]).toEqual({
+      rect: { w: 2, h: 2, z: 0, pos: { landscape: { x: 2, y: 0 }, portrait: { x: 0, y: 1 } } },
+      size: 'large',
+    });
+  });
+
+  it('DERIVED portrait RESIZE: materializes portrait AND re-validates the already-designed landscape (design §6.2)', async () => {
+    // wi-1 (1x1) and a neighbour wi-2 (1x1 at landscape (1,0)) are landscape-only (portrait derived). Editing
+    // wi-1 in portrait materializes portrait; because it also RESIZES to 2x2, wi-1's PRESERVED landscape origin
+    // (0,0) would now overlap wi-2 at (1,0), so landscape is re-validated to the nearest free 2x2 slot too.
+    const editedStored = { w: 1, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 } } };
+    const boardRows: Row[] = [
+      { id: 'wi-1', service_id: 'clock', widget_type: 'clock', size: 'small', config: {}, rect: editedStored as never, refresh: null },
+      {
+        id: 'wi-2',
+        service_id: 'clock',
+        widget_type: 'clock',
+        size: 'small',
+        config: {},
+        rect: { w: 1, h: 1, z: 0, pos: { landscape: { x: 1, y: 0 } } } as never,
+        refresh: null,
+      },
+    ];
+    const { updates, updateEqCalls } = mockPersist(editedStored, boardRows);
+
+    await persistInstanceLayout('wi-1', { rect: { x: 0, y: 1, w: 2, h: 2, z: 0 }, size: 'L' }, 'portrait');
+
+    // Materialize order: the non-edited wi-2 first (rect-only, portrait stamped), then the edited wi-1.
+    expect(updateEqCalls).toEqual([
+      ['id', 'wi-2'],
+      ['id', 'wi-1'],
+    ]);
+    // wi-2: rect ONLY (footprint unchanged), portrait stamped from the reflow, landscape preserved.
+    expect(updates[0]).toEqual({
+      rect: { w: 1, h: 1, z: 0, pos: { landscape: { x: 1, y: 0 }, portrait: { x: 1, y: 0 } } },
+    });
+    // wi-1: the new portrait edit (0,1) AND landscape re-validated from (0,0) -> (0,1), clear of wi-2 at (1,0).
+    expect(updates[1]).toEqual({
+      rect: { w: 2, h: 2, z: 0, pos: { landscape: { x: 0, y: 1 }, portrait: { x: 0, y: 1 } } },
+      size: 'large',
+    });
   });
 
   it('DERIVED portrait: MATERIALIZES the board (rect-only for others) then writes the edited instance last', async () => {
