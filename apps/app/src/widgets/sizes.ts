@@ -52,8 +52,8 @@ export const SIZE_CATALOGUE: Record<WidgetSize, SizeClassSpec> = {
 };
 
 /** The slot id for an exact snapped extent. Total over w,h in {1,2}: 1x1 S, 1x2 M, 2x1 W, 2x2 L.
- *  Exported for the arrange commit path (AOD-140, layout/arrange.ts): after a reflow every rect is a
- *  legal slot (integer x/y, w/h in {1,2}), so its size id is exactly this — no reconcileSize search. */
+ *  Exported for the arrange commit path (AOD-140, layout/arrange.ts): after a snap every rect is a
+ *  legal slot (integer x/y, w/h in {1,2}), so its size id is exactly this — a direct lookup. */
 export function slotIdFor(w: number, h: number): WidgetSize {
   if (w === 1) return h === 1 ? 'S' : 'M';
   return h === 1 ? 'W' : 'L';
@@ -88,29 +88,4 @@ export function coerceToSlotGrid(
   const x = clamp(Math.round(rect.x), 0, columns - w);
   const y = Math.max(0, Math.round(rect.y));
   return { rect: { x, y, w, h, z: rect.z }, size: slotIdFor(w, h) };
-}
-
-/**
- * Pick the supported slot whose nominal geometry best matches the rect (the AOD-10 §5.2 rule over the
- * AOD-122 catalogue). Distance is scale-invariant: aspect proximity dominates (primary), area proximity
- * breaks ties. supported[0] is the fallback seed. The general best-supported-slot matcher for a
- * free-form rect; since AOD-140 the live arrange resize snaps DISCRETELY to a supported footprint (it
- * derives its size id straight from the snapped extent, slotIdFor), so it no longer routes through here.
- */
-export function reconcileSize(rect: Pick<LayoutRect, 'w' | 'h'>, supported: WidgetSize[]): WidgetSize {
-  const aspect = rect.w / rect.h;
-  const area = rect.w * rect.h;
-  let best: WidgetSize = supported[0];
-  let bestScore = Infinity;
-  for (const id of supported) {
-    const c = SIZE_CATALOGUE[id];
-    const aspectTerm = Math.abs(Math.log(aspect / c.nominalAspect));
-    const areaTerm = Math.abs(Math.log(area / (c.nominalW * c.nominalH)));
-    const score = aspectTerm + 0.25 * areaTerm; // aspect dominates; area breaks ties
-    if (score < bestScore) {
-      bestScore = score;
-      best = id;
-    }
-  }
-  return best;
 }

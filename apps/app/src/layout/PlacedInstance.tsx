@@ -114,7 +114,11 @@ export function PlacedInstance({
 }: PlacedInstanceProps) {
   const registry = useRegistry();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
-  const supportedSizes = def?.supportedSizes ?? [instance.size];
+  // Every widget declares 1-4 sizes, but an empty supportedSizes is type-possible; guard it so
+  // supportedSlotFor's supportedW[0]/supportedH[0] can never be undefined -> a NaN slot. Fall back to the
+  // instance's own size (AOD-192 hardening; no behaviour change for the normal, non-empty case).
+  const declaredSizes = def?.supportedSizes ?? [instance.size];
+  const supportedSizes = declaredSizes.length > 0 ? declaredSizes : [instance.size];
 
   // The widget's declared footprints as parallel number arrays, so the resize worklet can snap to the
   // nearest SUPPORTED slot on the UI thread (a captured array is workletizable; SIZE_CATALOGUE maps each

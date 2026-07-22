@@ -12,9 +12,9 @@
 //     orientation) and UNBOUNDED downward (the sky scrolls) — rows are never capped, a full grid appends
 //     below rather than blocking.
 //   - Reading order is row-major, top-to-bottom, LEFT-COLUMN-FIRST: slot (r,0) precedes (r,1) ... precedes
-//     (r,columns-1) precedes (r+1,0). firstFreeSlot, reflow and reflowToColumns all walk this order, so
+//     (r,columns-1) precedes (r+1,0). firstFreeSlot and reflowToColumns both walk this order, so
 //     placement is deterministic.
-//   - Overlap is IMPOSSIBLE after a reflow — the whole point of this issue (the read path still tolerates
+//   - Overlap is IMPOSSIBLE after a reflowToColumns — the whole point of this issue (the read path still tolerates
 //     overlap via z, widgets/sizes.ts, but the arrange path no longer produces it).
 import type { LayoutRect } from '../registry/types';
 import { GRID_COLUMNS } from '../widgets/sizes';
@@ -29,7 +29,7 @@ export interface Footprint {
 /**
  * The grid-cell rectangle a card occupies: x = column origin, y = row origin, w/h = span. The discrete
  * face of LayoutRect (a LayoutRect is a GridRect plus a z). All slot algebra speaks GridRect so it stays
- * free of stacking concerns; callers zip z back on themselves (reflow does, preserving each rect's z).
+ * free of stacking concerns; callers zip z back on themselves (reflowToColumns does, preserving each rect's z).
  */
 export type GridRect = Pick<LayoutRect, 'x' | 'y' | 'w' | 'h'>;
 
@@ -93,7 +93,7 @@ export function firstFreeSlot(
  * index), then places each at its `firstFreeSlot` in a `targetCols`-wide grid, appending below when a row
  * fills — packing the spread-out layout "one next to the other" exactly as Xavier's iPad screenshots show.
  * Pure, deterministic, shape-aware. Each card keeps its footprint (w/h) and z; only x/y move. Returns a NEW
- * array in the SAME INPUT ORDER (zip-friendly, mirroring `reflow`) and NEVER mutates the input, so a
+ * array in the SAME INPUT ORDER (zip-friendly) and NEVER mutates the input, so a
  * designed orientation is safe to derive from. Cross-orientation only: it seeds an un-designed orientation
  * on rotation / first render, never an in-orientation move (that is nearestFreeSlot — gaps are preserved).
  */
@@ -160,62 +160,9 @@ export function nearestFreeSlot(
   return firstFreeSlot(footprint, occupied, columns);
 }
 
-/**
- * Deterministic reflow after a move or resize. `rects[pinnedIndex]` is the actively moved/resized card
- * at its TARGET slot+footprint; it stays PUT (only its column is clamped so `x + w <= GRID_COLUMNS`, and
- * its row floored at 0 — a W/L dropped at column 1 shifts left rather than hanging off the grid). Every
- * OTHER rect is re-packed in its CURRENT reading-order sequence (sorted by (y, x)) via firstFreeSlot
- * around the pinned card and the others already placed this pass, so overlap becomes IMPOSSIBLE. Each
- * card's identity (array position), footprint (w/h) and z pass through unchanged — only x/y move. The
- * result is returned in the INPUT order (so a caller can zip it straight back onto its instances).
- *
- * Precondition: every rect is already slot-discrete (integer x/y, w/h in {1,2}) — the read boundary
- * (coerceToSlotGrid) guarantees this, and the snap helpers (geometry.snapDrag/snapResize) produce it.
- * Reflow is a pure algebra over an already-legal grid; it does not re-snap fractional input.
- */
-export function reflow(rects: LayoutRect[], pinnedIndex: number): LayoutRect[] {
-  // A caller must name a real card as the pin. Out of range there is nothing to pin, so return a copy
-  // untouched rather than spreading `undefined` into a NaN-origin rect that would silently corrupt the
-  // layout — a keystone guard, since every downstream gesture path routes through here.
-  if (pinnedIndex < 0 || pinnedIndex >= rects.length) return rects.slice();
-
-  const result = rects.slice();
-
-  // Pin: keep the moved/resized card's footprint and z; clamp only its origin onto the grid.
-  const src = rects[pinnedIndex];
-  const pinned: LayoutRect = {
-    ...src,
-    x: clampColumn(src.x, src.w),
-    y: Math.max(0, src.y),
-  };
-  result[pinnedIndex] = pinned;
-
-  // Everyone else, in their current reading order (row-major, left column first). The `index` tiebreak
-  // makes the order total and the whole pass deterministic regardless of the engine's sort stability.
-  const others = rects
-    .map((rect, index) => ({ rect, index }))
-    .filter((entry) => entry.index !== pinnedIndex)
-    .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.index - b.index);
-
-  const occupied: GridRect[] = [cellOf(pinned)];
-  for (const { rect, index } of others) {
-    const slot = firstFreeSlot({ w: rect.w, h: rect.h }, occupied);
-    const placed: LayoutRect = { ...rect, x: slot.x, y: slot.y };
-    result[index] = placed;
-    occupied.push(cellOf(placed));
-  }
-  return result;
-}
-
 // --- internals -----------------------------------------------------------------------------------
 
 /** The grid cell (drop z) of a rect. */
 function cellOf(rect: LayoutRect): GridRect {
   return { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
-}
-
-/** Clamp a column origin so a `w`-wide footprint stays on the landscape grid: x in [0, GRID_COLUMNS-w].
- *  reflow keeps the landscape count (S4 retires in-arrange reflow; S8 prunes it). */
-function clampColumn(x: number, w: number): number {
-  return Math.max(0, Math.min(x, GRID_COLUMNS - w));
 }

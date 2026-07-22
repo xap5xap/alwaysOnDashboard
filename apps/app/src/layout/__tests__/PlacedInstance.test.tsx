@@ -127,7 +127,7 @@ describe('PlacedInstance arrange affordances (AOD-141 preserved through the AOD-
   it('accepts the AOD-197 (S4) cellPx + columns (portrait) and keeps its arrange chrome', () => {
     // The fit-to-width scale lives on the LayoutCanvas PARENT; the card takes cellPx + columns only to feed
     // its gesture worklets (finger px / cellPx, clamp x by columns) — that math is asserted purely in
-    // geometry.test (snapDrag/snapResize), since the worklets never fire under jest. Here we prove the props
+    // geometry.test (snapDrag), since the worklets never fire under jest. Here we prove the props
     // are wired and every affordance survives in a portrait (4-col, smaller cellPx) mount; the RENDER stays on
     // the nominal UNIT_PX (unchanged), so the card is orientation-independent and the parent scale sizes it.
     renderCard({ cellPx: 48, columns: 4 });

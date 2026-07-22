@@ -1,15 +1,10 @@
 // AOD-7 nominal-unit <-> pixel geometry. These pure functions back both the live gesture preview and
 // the committed rect, so testing them is testing the drag/resize math itself.
 import {
-  applyDrag,
-  applyResize,
   cellPxFor,
   GRID_GUTTER,
   GRID_MARGIN,
-  MIN_H,
-  MIN_W,
   snapDrag,
-  snapResize,
   snapUnit,
   toPixels,
   UNIT_PX,
@@ -23,43 +18,6 @@ const r = (x: number, y: number, w: number, h: number, z = 0): LayoutRect => ({ 
 describe('toPixels', () => {
   it('scales nominal units by UNIT_PX (96 DP per unit, the AOD-122 Many Skies 96px row)', () => {
     expect(toPixels(rect)).toEqual({ left: 96, top: 96, width: 192, height: 96 });
-  });
-});
-
-describe('applyDrag', () => {
-  it('moves exactly one unit per UNIT_PX of pixel translation', () => {
-    expect(applyDrag(rect, UNIT_PX, 0)).toMatchObject({ x: 2, y: 1 });
-    expect(applyDrag(rect, 0, UNIT_PX)).toMatchObject({ x: 1, y: 2 });
-  });
-
-  it('clamps the origin into the canvas (x,y never negative)', () => {
-    expect(applyDrag({ ...rect, x: 0, y: 0 }, -UNIT_PX * 5, -UNIT_PX * 5)).toMatchObject({ x: 0, y: 0 });
-  });
-
-  it('preserves w/h/z', () => {
-    const moved = applyDrag(rect, UNIT_PX, UNIT_PX);
-    expect(moved).toMatchObject({ w: 2, h: 1, z: 0 });
-  });
-
-  it('snaps fractional pixel deltas to hundredths of a unit', () => {
-    // 24px at UNIT_PX 96 = 0.25 units exactly (was 12px at 80 = 0.15 pre-AOD-122)
-    expect(applyDrag({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 24, 0).x).toBe(0.25);
-    // 12px at 96 = 0.125 -> snapUnit rounds to hundredths: 0.13
-    expect(applyDrag({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 12, 0).x).toBe(0.13);
-  });
-});
-
-describe('applyResize', () => {
-  it('grows w/h by the pixel delta in units', () => {
-    expect(applyResize(rect, UNIT_PX, UNIT_PX)).toMatchObject({ w: 3, h: 2 });
-  });
-
-  it('enforces the minimum extent', () => {
-    expect(applyResize(rect, -UNIT_PX * 10, -UNIT_PX * 10)).toMatchObject({ w: MIN_W, h: MIN_H });
-  });
-
-  it('preserves x/y/z', () => {
-    expect(applyResize(rect, UNIT_PX, 0)).toMatchObject({ x: 1, y: 1, z: 0 });
   });
 });
 
@@ -103,35 +61,7 @@ describe('snapDrag (AOD-138 discrete move — origin snaps to a slot)', () => {
   });
 });
 
-describe('snapResize (AOD-138 discrete resize — extents snap to S/M/W/L)', () => {
-  it('snaps each extent to the nearest {1,2} step (what you drag is what you get)', () => {
-    expect(snapResize(r(0, 0, 1, 1), UNIT_PX, UNIT_PX)).toMatchObject({ w: 2, h: 2 }); // S -> L
-    expect(snapResize(r(0, 0, 1, 1), 0.4 * UNIT_PX, 0.6 * UNIT_PX)).toMatchObject({ w: 1, h: 2 }); // -> M
-  });
-
-  it('clamps to the minimum extent when shrinking, and never exceeds the footprint ceiling (2x2, not the 6-col width)', () => {
-    expect(snapResize(r(0, 0, 2, 2), -10 * UNIT_PX, -10 * UNIT_PX)).toMatchObject({ w: MIN_W, h: MIN_H });
-    // A huge grow caps the footprint WIDTH at MAX_SLOT_W (2), never the wider GRID_COLUMNS (6).
-    expect(snapResize(r(0, 0, 2, 2), 10 * UNIT_PX, 10 * UNIT_PX)).toMatchObject({ w: 2, h: 2 });
-  });
-
-  it('shifts the column left when a footprint grown near the right edge would leave the grid (x + w <= GRID_COLUMNS)', () => {
-    // A card at the last column (5) grown to a W would run off the 6-col grid (5 + 2 > 6) -> it shifts left
-    // to the last legal column (4). A W grown at col1 now FITS the wide grid, so it keeps col1 (no shift).
-    expect(snapResize(r(5, 0, 1, 1), UNIT_PX, 0)).toMatchObject({ x: 4, w: 2 });
-    expect(snapResize(r(1, 0, 1, 1), UNIT_PX, 0)).toMatchObject({ x: 1, w: 2 });
-  });
-
-  it('keeps the column when the grown footprint still fits', () => {
-    expect(snapResize(r(1, 0, 1, 1), 0, UNIT_PX)).toMatchObject({ x: 1, w: 1, h: 2 }); // M stays in col1
-  });
-
-  it('preserves y and z', () => {
-    expect(snapResize(r(1, 3, 1, 1, 4), 0, 0)).toMatchObject({ y: 3, z: 4 });
-  });
-});
-
-describe('snapDrag / snapResize honor the AOD-197 (S4) cellPx + columns params', () => {
+describe('snapDrag honors the AOD-197 (S4) cellPx + columns params', () => {
   it('snapDrag converts finger px by the given unit (the on-screen cellPx), not the nominal UNIT_PX', () => {
     // 96 px is one slot at the nominal UNIT_PX (96); at a fit-to-width cellPx of 48 the same finger travel is
     // TWO slots. This is why the handheld drag divides by cellPx, not UNIT_PX (the parent scale sizes the card).
@@ -143,13 +73,6 @@ describe('snapDrag / snapResize honor the AOD-197 (S4) cellPx + columns params',
     // A W dragged far right pins to the last legal column: col 2 on a 4-col grid (x + 2 <= 4), col 4 on 6 cols.
     expect(snapDrag(r(0, 0, 2, 1), 100 * UNIT_PX, 0, UNIT_PX, 4).x).toBe(2);
     expect(snapDrag(r(0, 0, 2, 1), 100 * UNIT_PX, 0, UNIT_PX, 6).x).toBe(4);
-  });
-
-  it('snapResize converts by cellPx and clamps the origin column by `columns`', () => {
-    expect(snapResize(r(0, 0, 1, 1), 48, 0, 48).w).toBe(2); // +48px at cellPx 48 = +1 unit -> S 1x1 -> W 2x1
-    // A W grown at col 3 shifts left to stay on-grid: col 2 on 4 cols, col 3 on 6 cols.
-    expect(snapResize(r(3, 0, 1, 1), UNIT_PX, 0, UNIT_PX, 4)).toMatchObject({ x: 2, w: 2 });
-    expect(snapResize(r(3, 0, 1, 1), UNIT_PX, 0, UNIT_PX, 6)).toMatchObject({ x: 3, w: 2 });
   });
 });
 

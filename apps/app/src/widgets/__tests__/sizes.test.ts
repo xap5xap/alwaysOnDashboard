@@ -1,7 +1,6 @@
-// The AOD-122 S/M/W/L slot catalogue: reconcileSize (the AOD-10 §5.2 rule over the new catalogue) and
-// coerceToSlotGrid (the read-time coercion that resolves every persisted legacy rect onto the slot
-// grid). The coercion cases below ARE the legacy migration table — there is no write-time migration,
-// so these locks are the contract for how pre-slot rows render.
+// The AOD-122 S/M/W/L slot catalogue and coerceToSlotGrid (the read-time coercion that resolves every
+// persisted legacy rect onto the slot grid). The coercion cases below ARE the legacy migration table —
+// there is no write-time migration, so these locks are the contract for how pre-slot rows render.
 import type { LayoutRect } from '../../registry/types';
 import {
   GRID_COLUMNS,
@@ -10,7 +9,6 @@ import {
   PORTRAIT_COLUMNS,
   SIZE_CATALOGUE,
   coerceToSlotGrid,
-  reconcileSize,
 } from '../sizes';
 
 const rect = (x: number, y: number, w: number, h: number, z = 0): LayoutRect => ({ x, y, w, h, z });
@@ -44,7 +42,7 @@ describe('SIZE_CATALOGUE (AOD-122, Many Skies §1c) + the AOD-197 responsive gri
   });
 
   it('exports the footprint ceiling as the single source of truth for the slot algebra (AOD-138/AOD-197)', () => {
-    // MAX_SLOT_W + MAX_SLOT_H are consumed by geometry.snapDrag/snapResize and layout/grid.ts; they must
+    // MAX_SLOT_W + MAX_SLOT_H are consumed by geometry.snapDrag and layout/grid.ts; they must
     // equal the widest/tallest slot in the catalogue so every module agrees on the footprint bounds. They
     // are the FOOTPRINT ceiling, NOT the column count (GRID_COLUMNS), which is now strictly larger.
     expect(MAX_SLOT_W).toBe(2);
@@ -129,24 +127,5 @@ describe('coerceToSlotGrid: the AOD-197 responsive grid (footprint ceiling + per
     expect(coerceToSlotGrid(rect(3, 0, 2, 1)).rect.x).toBe(3); // landscape default keeps col3
     // A 1-wide card at the last portrait column still fits (3 + 1 <= 4).
     expect(coerceToSlotGrid(rect(3, 0, 1, 1), PORTRAIT_COLUMNS)).toEqual({ rect: rect(3, 0, 1, 1), size: 'S' });
-  });
-});
-
-describe('reconcileSize (AOD-10 §5.2 rule over the AOD-122 catalogue)', () => {
-  it('picks M for a tall narrow rect over W', () => {
-    expect(reconcileSize({ w: 1, h: 2 }, ['W', 'L', 'M'])).toBe('M');
-  });
-  it('lets aspect dominate area (a wide rect picks W)', () => {
-    expect(reconcileSize({ w: 6, h: 2 }, ['S', 'W'])).toBe('W');
-  });
-  it('falls to the area tiebreak for equal-aspect rects', () => {
-    expect(reconcileSize({ w: 1, h: 1 }, ['S', 'L'])).toBe('S');
-    expect(reconcileSize({ w: 2, h: 2 }, ['S', 'L'])).toBe('L');
-  });
-  it('returns the nearest supported class for a rect far from every class', () => {
-    expect(reconcileSize({ w: 10, h: 1 }, ['S', 'M', 'W'])).toBe('W');
-  });
-  it('uses supported[0] as the seed when only one class is supported', () => {
-    expect(reconcileSize({ w: 5, h: 5 }, ['W'])).toBe('W');
   });
 });

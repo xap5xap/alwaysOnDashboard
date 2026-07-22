@@ -2,16 +2,16 @@
 // on-screen pixels. widget-model §5.1 leaves the concrete coordinate space to AOD-7; this settles it:
 // rects are stored in nominal layout units and rendered at UNIT_PX pixels per unit. Keeping geometry in
 // nominal units makes a persisted layout device-independent (author on web, reload on the Fire HD 8)
-// and keeps reconcileSize's area term (AOD-10 §5.2) meaningful, which pixel-sized rects would saturate.
+// and keeps the size-class area math (AOD-10 §5.2) meaningful, which pixel-sized rects would saturate.
 // Pure and I/O-free; these functions back both the live gesture preview and the committed value.
 //
-// Two flavours of drag/resize live here: the original CONTINUOUS pair (applyDrag/applyResize, kept for
-// the live gesture preview and anything still free-form) and the DISCRETE pair (snapDrag/snapResize,
-// AOD-138) that resolves a gesture onto the responsive slot grid (GRID_COLUMNS landscape / PORTRAIT_COLUMNS
-// portrait wide, footprints <= MAX_SLOT_W x MAX_SLOT_H — AOD-197). The discrete pair is what the arrange
-// path commits; the pure slot ALGEBRA it feeds (first-free, reflow, slot<->pixel) lives in layout/grid.ts.
-// The grid's column count and the footprint ceiling are imported from widgets/sizes so there is one source
-// of truth for the grid's shape.
+// The discrete move helper snapDrag (AOD-138) resolves a drag onto the responsive slot grid (GRID_COLUMNS
+// landscape / PORTRAIT_COLUMNS portrait wide, footprints <= MAX_SLOT_W x MAX_SLOT_H — AOD-197): it is what
+// the arrange path commits on a move. Resize no longer snaps here — since AOD-140 it flips to the widget's
+// nearest DECLARED footprint in PlacedInstance.supportedSlotFor — so the old CONTINUOUS pair (applyDrag/
+// applyResize) and the generic snapResize were removed in AOD-192. The pure slot ALGEBRA snapDrag feeds
+// (first-free, nearest-free, slot<->pixel) lives in layout/grid.ts. The grid's column count and the
+// footprint ceiling are imported from widgets/sizes so there is one source of truth for the grid's shape.
 import type { LayoutRect } from '../registry/types';
 import { GRID_COLUMNS, MAX_SLOT_H, MAX_SLOT_W } from '../widgets/sizes';
 
@@ -66,32 +66,14 @@ export function toPixels(rect: LayoutRect): PixelRect {
   };
 }
 
-/** Move an instance by a pixel delta. Converts to units and clamps the origin into the canvas (>= 0). */
-export function applyDrag(rect: LayoutRect, dxPx: number, dyPx: number): LayoutRect {
-  return {
-    ...rect,
-    x: snapUnit(Math.max(0, rect.x + dxPx / UNIT_PX)),
-    y: snapUnit(Math.max(0, rect.y + dyPx / UNIT_PX)),
-  };
-}
-
-/** Resize an instance by a pixel delta on its far edges, enforcing the minimum extent. */
-export function applyResize(rect: LayoutRect, dwPx: number, dhPx: number): LayoutRect {
-  return {
-    ...rect,
-    w: snapUnit(Math.max(MIN_W, rect.w + dwPx / UNIT_PX)),
-    h: snapUnit(Math.max(MIN_H, rect.h + dhPx / UNIT_PX)),
-  };
-}
-
-/** Round a value to the nearest integer, then clamp into [lo, hi]. The one-liner both snap helpers use
+/** Round a value to the nearest integer, then clamp into [lo, hi]. The one-liner snapDrag uses
  *  to land a continuous unit coordinate on a discrete, in-bounds slot coordinate. */
 function snapClamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, Math.round(n)));
 }
 
 /**
- * The DISCRETE sibling of applyDrag (AOD-138): move by a pixel delta, then snap the ORIGIN to the nearest
+ * The discrete slot move (AOD-138): move by a pixel delta, then snap the ORIGIN to the nearest
  * slot — column rounded and clamped so the footprint stays on-grid (x + w <= `columns`), row rounded and
  * floored at 0 (rows are unbounded downward). The footprint (w/h) is also legalised onto the slot ladder
  * ({1..MAX_SLOT_W} x {1..MAX_SLOT_H}) so a rect carried over from the pre-slot free-form canvas lands as a
@@ -117,31 +99,6 @@ export function snapDrag(
     ...rect,
     x: snapClamp(rect.x + dxPx / unitPx, 0, columns - w),
     y: Math.max(0, Math.round(rect.y + dyPx / unitPx)),
-    w,
-    h,
-  };
-}
-
-/**
- * The DISCRETE sibling of applyResize (AOD-138): grow/shrink by a pixel delta, then snap each extent to
- * the nearest S/M/W/L step (w in {1..MAX_SLOT_W}, h in {1..MAX_SLOT_H}) so what you drag is what you
- * get — no free-form bounds that only reconcile to a class on release. The origin column is clamped so a
- * footprint grown near the right edge shifts left to stay on-grid (x + w <= `columns`) rather than hanging
- * off; y and z pass through. Same `unitPx` + `columns` parameterization as snapDrag (AOD-197 S4): defaults
- * keep every existing caller byte-identical; the handheld path passes `cellPx` + the active column count.
- */
-export function snapResize(
-  rect: LayoutRect,
-  dwPx: number,
-  dhPx: number,
-  unitPx: number = UNIT_PX,
-  columns: number = GRID_COLUMNS,
-): LayoutRect {
-  const w = snapClamp(rect.w + dwPx / unitPx, MIN_W, MAX_SLOT_W);
-  const h = snapClamp(rect.h + dhPx / unitPx, MIN_H, MAX_SLOT_H);
-  return {
-    ...rect,
-    x: snapClamp(rect.x, 0, columns - w),
     w,
     h,
   };
