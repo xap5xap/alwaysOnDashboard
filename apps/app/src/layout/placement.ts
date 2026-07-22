@@ -4,7 +4,7 @@
 // WidgetDefinition; dashboardRepo stays registry-free and just persists the seed (the AOD-8 §10 seam).
 // Placement is functional, not final: precise drag-to-place is DS-M1 (AOD-7); a non-overlapping default
 // slot is enough here.
-import { SIZE_CATALOGUE } from '../widgets/sizes';
+import { GRID_COLUMNS, SIZE_CATALOGUE } from '../widgets/sizes';
 import { validateConfig } from '../widgets/config';
 import type {
   LayoutRect,
@@ -40,10 +40,14 @@ export function defaultPlacementSize(supported: WidgetSize[]): WidgetSize {
  * is impossible on the first-free grid, but the read path still orders any legacy overlap by z, so a new
  * card sits on top. On an empty board firstFreeSlot returns the origin, matching the bootstrap seed.
  */
-export function defaultPlacementRect(size: WidgetSize, existing: WidgetInstance[]): LayoutRect {
+export function defaultPlacementRect(
+  size: WidgetSize,
+  existing: WidgetInstance[],
+  columns: number = GRID_COLUMNS,
+): LayoutRect {
   const spec = SIZE_CATALOGUE[size];
   const occupied = existing.map((i) => ({ x: i.rect.x, y: i.rect.y, w: i.rect.w, h: i.rect.h }));
-  const slot = firstFreeSlot({ w: spec.nominalW, h: spec.nominalH }, occupied);
+  const slot = firstFreeSlot({ w: spec.nominalW, h: spec.nominalH }, occupied, columns);
   const z = existing.length ? Math.max(...existing.map((i) => i.rect.z)) + 1 : 0;
   return { x: slot.x, y: slot.y, w: spec.nominalW, h: spec.nominalH, z };
 }
@@ -83,6 +87,7 @@ export function defaultSeedFor(
   existing: WidgetInstance[],
   config?: Record<string, unknown>,
   size?: WidgetSize,
+  columns: number = GRID_COLUMNS,
 ): InstanceSeed {
   const chosen = size ?? defaultPlacementSize(def.supportedSizes);
   return {
@@ -90,6 +95,8 @@ export function defaultSeedFor(
     widgetType: def.type,
     config: config ?? defaultConfig(def.configSchema),
     size: chosen,
-    rect: defaultPlacementRect(chosen, existing),
+    // The seed's position lives in the ACTIVE orientation's grid (default landscape = GRID_COLUMNS); AOD-197
+    // addWidgetInstance stores it as pos[active]. S4 passes the portrait count when adding in portrait.
+    rect: defaultPlacementRect(chosen, existing, columns),
   };
 }

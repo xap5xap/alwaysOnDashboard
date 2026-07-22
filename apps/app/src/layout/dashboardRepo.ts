@@ -7,14 +7,24 @@
 // uniform AOD-12 gating) stays open; here layout persists client-direct with no entitlement gating.
 import { supabase } from '../supabase/client';
 import type { WidgetInstance } from '../registry/types';
+import type { Orientation } from '../widgets/sizes';
 import {
+  buildAddPos,
   configToUpdate,
   instanceToInsert,
   layoutToUpdate,
+  mergeStoredRect,
+  parseStoredRect,
+  resolveInstances,
   rowToInstance,
+  rowToStoredInstance,
+  storedRectToUpdate,
   type InstanceSeed,
   type LayoutPatch,
+  type StoredInstance,
+  type StoredLayoutPatch,
 } from './mapper';
+import type { NormalizedStoredRect } from './schema';
 
 export interface LoadedDashboard {
   dashboardId: string;
@@ -50,25 +60,32 @@ const FIRST_RUN_SEED: InstanceSeed = {
   rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
 };
 
-/** Load one dashboard's instances (by dashboard_id), validated + slot-coerced through the mapper. The shared
- *  body of loadDashboard / loadDashboardById: an invalid row is dropped, never crashes the layout (AOD-8
- *  §9 invariant 1). Registry-free — it names no service. */
-async function loadInstancesFor(dashboardId: string): Promise<WidgetInstance[]> {
+/** Load one dashboard's instances (by dashboard_id) resolved for `orientation` (default 'landscape', the
+ *  wall's orientation — so this is byte-identical to pre-AOD-197 for the wall + all live reads). The shared
+ *  body of loadDashboard / loadDashboardById: each row parses to a StoredInstance (an invalid row is dropped,
+ *  never crashes the layout — AOD-8 §9 invariant 1), then resolveInstances collapses the BOARD onto the
+ *  requested orientation (stored positions if designed, else the whole-board reflow — design §6). Registry-free.
+ *  S4 threads the real device orientation; here every caller keeps landscape via the default. */
+async function loadInstancesFor(
+  dashboardId: string,
+  orientation: Orientation = 'landscape',
+): Promise<WidgetInstance[]> {
   const { data: rows, error } = await supabase
     .from('widget_instances')
     .select('*')
     .eq('dashboard_id', dashboardId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (rows ?? [])
-    .map(rowToInstance)
-    .filter((instance): instance is WidgetInstance => instance !== null);
+  const stored = (rows ?? [])
+    .map(rowToStoredInstance)
+    .filter((instance): instance is StoredInstance => instance !== null);
+  return resolveInstances(stored, orientation);
 }
 
 /** Load the user's first dashboard (by position) and its instances, or null if they have none yet. The
  *  "first sky" fallback (AOD-143: useDashboard resolves the active sky, defaulting to this when the pointer
  *  is unset or names a deleted sky). Kept single (.limit(1)) for that default; the full list is loadDashboards. */
-export async function loadDashboard(): Promise<LoadedDashboard | null> {
+export async function loadDashboard(orientation: Orientation = 'landscape'): Promise<LoadedDashboard | null> {
   const { data: dash, error } = await supabase
     .from('dashboards')
     .select('id, name')
@@ -77,14 +94,17 @@ export async function loadDashboard(): Promise<LoadedDashboard | null> {
     .maybeSingle();
   if (error) throw error;
   if (!dash) return null;
-  return { dashboardId: dash.id, name: dash.name, instances: await loadInstancesFor(dash.id) };
+  return { dashboardId: dash.id, name: dash.name, instances: await loadInstancesFor(dash.id, orientation) };
 }
 
 /** Load a SPECIFIC dashboard (by id) and its instances, or null if it does not exist / is not the user's
  *  (RLS scopes the select to auth.uid()). The active-sky loader (AOD-143): useDashboard reads the persisted
  *  active id and loads it here; a null return means the stored pointer is stale, so the caller falls back to
  *  the first sky. Same instance-loading body as loadDashboard, parameterized by id. */
-export async function loadDashboardById(dashboardId: string): Promise<LoadedDashboard | null> {
+export async function loadDashboardById(
+  dashboardId: string,
+  orientation: Orientation = 'landscape',
+): Promise<LoadedDashboard | null> {
   const { data: dash, error } = await supabase
     .from('dashboards')
     .select('id, name')
@@ -92,7 +112,7 @@ export async function loadDashboardById(dashboardId: string): Promise<LoadedDash
     .maybeSingle();
   if (error) throw error;
   if (!dash) return null;
-  return { dashboardId: dash.id, name: dash.name, instances: await loadInstancesFor(dash.id) };
+  return { dashboardId: dash.id, name: dash.name, instances: await loadInstancesFor(dash.id, orientation) };
 }
 
 /** Load ALL of the user's dashboards as summaries (no instances), ordered by position — the page-altitude
@@ -115,9 +135,13 @@ export async function bootstrapDashboard(userId: string): Promise<LoadedDashboar
     .single();
   if (error) throw error;
 
+  // A fresh board: the seed is placed in the active orientation only (landscape, the default; the wall's
+  // orientation). Portrait derives by reflow until the user arranges it (design §6.1). buildAddPos over an
+  // empty board yields just `{ landscape: {0,0} }` — the new-shape twin of the legacy bare origin rect.
+  const pos = buildAddPos(FIRST_RUN_SEED, 'landscape', []);
   const { data: row, error: rowError } = await supabase
     .from('widget_instances')
-    .insert(instanceToInsert(FIRST_RUN_SEED, dash.id, userId))
+    .insert(instanceToInsert(FIRST_RUN_SEED, dash.id, userId, pos))
     .select('*')
     .single();
   if (rowError) throw rowError;
@@ -191,22 +215,137 @@ export async function addWidgetInstance(
   dashboardId: string,
   userId: string,
   seed: InstanceSeed,
+  orientation: Orientation = 'landscape',
 ): Promise<WidgetInstance | null> {
+  // Read the board so buildAddPos can place the card in EVERY OTHER designed orientation at its firstFreeSlot
+  // (design §6.1 add — so every designed orientation stays complete; the wall's landscape always has a slot
+  // for every card). A derived orientation gets no stored pos: it re-reflows to include the card on read. On
+  // the S3 live path (active=landscape, portrait derived), this yields just `{ landscape: seed }` — one INSERT.
+  const { data: rows, error: rowsError } = await supabase
+    .from('widget_instances')
+    .select('*')
+    .eq('dashboard_id', dashboardId);
+  if (rowsError) throw rowsError;
+  const existing = (rows ?? [])
+    .map(rowToStoredInstance)
+    .filter((instance): instance is StoredInstance => instance !== null);
+
+  const pos = buildAddPos(seed, orientation, existing);
   const { data: row, error } = await supabase
     .from('widget_instances')
-    .insert(instanceToInsert(seed, dashboardId, userId))
+    .insert(instanceToInsert(seed, dashboardId, userId, pos))
     .select('*')
     .single();
   if (error) throw error;
-  return rowToInstance(row);
+  return rowToInstance(row, orientation);
 }
 
-/** Persist one instance's geometry/size (and refresh if included) under RLS. Targets by id only, so
- *  dashboard_id is never touched and the §8 dashboard-ownership WITH CHECK is trivially satisfied. */
-export async function persistInstanceLayout(instanceId: string, patch: LayoutPatch): Promise<void> {
+/**
+ * Persist one instance's geometry/size (and refresh if included) for `orientation` (default 'landscape')
+ * under RLS, as a per-orientation read-modify-write (AOD-197, design §6.1). The common path is a single
+ * cheap UPDATE; the S3 LIVE path is always here (every board has landscape designed, and commit defaults to
+ * landscape), so live behavior is byte-identical bar the richer jsonb.
+ *
+ *  1. SELECT the edited row's stored rect + its board.
+ *  2. If the orientation is DESIGNED for this instance (pos[orientation] present — or the rect is
+ *     unparseable, which we heal into a fresh designed rect): a single UPDATE that sets pos[orientation] +
+ *     the shared footprint and PRESERVES pos[other]. This is the whole live path.
+ *  3. If the orientation is DERIVED: MATERIALIZE-on-first-edit — commit the whole board's current reflow as
+ *     this orientation's stored positions (footprint unchanged; rect-only UPDATE per non-edited instance,
+ *     so no size is rewritten), then write the edited instance's NEW position + footprint + size. Multiple
+ *     UPDATEs; NEVER happens on a landscape-only board, so the S3 live path stays step-2 cheap. Unit-tested
+ *     for portrait.
+ *
+ * Targets by id only, so dashboard_id is never touched and the §8 dashboard-ownership WITH CHECK holds.
+ */
+export async function persistInstanceLayout(
+  instanceId: string,
+  patch: LayoutPatch,
+  orientation: Orientation = 'landscape',
+): Promise<void> {
+  const { data: row, error: selError } = await supabase
+    .from('widget_instances')
+    .select('rect, dashboard_id')
+    .eq('id', instanceId)
+    .maybeSingle();
+  if (selError) throw selError;
+  if (!row) return; // the row was deleted concurrently; nothing to persist.
+
+  const base = parseStoredRect(row.rect);
+  const footprint = { w: patch.rect.w, h: patch.rect.h, z: patch.rect.z };
+  const editedPos = { x: patch.rect.x, y: patch.rect.y };
+
+  // Step 2 — designed (or an unparseable rect we heal): one UPDATE, preserving the other orientation.
+  //
+  // DEFERRED (design §6.2, the resize cross-orientation edge): a resize changes the SHARED footprint, which
+  // could make the OTHER *designed* orientation's stored position overlap a neighbour. The faithful fix is
+  // to re-validate that position (nearestFreeSlot). It is NOT implemented here because it NEVER arises in
+  // S3: portrait editing is live only after S4, so the OTHER orientation is always DERIVED (no stored
+  // position — it re-reflows from this one on read, always overlap-free). The both-designed state is thus
+  // unreachable on the live path, so preserving pos[other] as-is ships NO silent overlap. When S4 wires
+  // portrait editing (both orientations designable), add the re-validation here (board-aware). Tracked as
+  // an S4 follow-up.
+  if (!base || base.pos[orientation] !== undefined) {
+    const merged = mergeStoredRect(
+      base ?? { w: footprint.w, h: footprint.h, z: footprint.z, pos: {} },
+      orientation,
+      editedPos,
+      footprint,
+    );
+    await updateInstanceRectAndSize(instanceId, merged, patch);
+    return;
+  }
+
+  // Step 3 — derived: materialize the whole board's reflow, then apply the edit.
+  const { data: rows, error: rowsError } = await supabase
+    .from('widget_instances')
+    .select('*')
+    .eq('dashboard_id', row.dashboard_id)
+    .order('created_at', { ascending: true });
+  if (rowsError) throw rowsError;
+  const stored = (rows ?? [])
+    .map(rowToStoredInstance)
+    .filter((instance): instance is StoredInstance => instance !== null);
+  const resolvedById = new Map(
+    resolveInstances(stored, orientation).map((instance) => [instance.instanceId, instance.rect]),
+  );
+
+  // Stamp every OTHER instance's reflowed position for the now-designed orientation (footprint unchanged →
+  // rect-only UPDATE, size untouched). The edited instance is written last, with the patch's new geometry.
+  for (const s of stored) {
+    if (s.instanceId === instanceId) continue;
+    const resolved = resolvedById.get(s.instanceId);
+    const materialized = resolved ? { x: resolved.x, y: resolved.y } : (s.pos[orientation] ?? { x: 0, y: 0 });
+    const merged: NormalizedStoredRect = {
+      w: s.w,
+      h: s.h,
+      z: s.z,
+      pos: { ...s.pos, [orientation]: materialized },
+    };
+    const { error } = await supabase
+      .from('widget_instances')
+      .update(storedRectToUpdate(merged))
+      .eq('id', s.instanceId);
+    if (error) throw error;
+  }
+
+  const editedMerged = mergeStoredRect(base, orientation, editedPos, footprint);
+  await updateInstanceRectAndSize(instanceId, editedMerged, patch);
+}
+
+/** UPDATE one instance's rect (the whole per-orientation stored shape) + size (+ refresh when the patch
+ *  carries the key), targeting by id. The shared tail of persistInstanceLayout's designed + materialize
+ *  paths for the EDITED instance. */
+async function updateInstanceRectAndSize(
+  instanceId: string,
+  storedRect: NormalizedStoredRect,
+  patch: LayoutPatch,
+): Promise<void> {
+  const storedPatch: StoredLayoutPatch = { storedRect, size: patch.size };
+  if ('refresh' in patch) storedPatch.refresh = patch.refresh;
   const { error } = await supabase
     .from('widget_instances')
-    .update(layoutToUpdate(patch))
+    .update(layoutToUpdate(storedPatch))
     .eq('id', instanceId);
   if (error) throw error;
 }

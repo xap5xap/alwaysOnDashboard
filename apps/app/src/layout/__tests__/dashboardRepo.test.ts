@@ -11,6 +11,7 @@
 // MAPPED result locks 'W', the read-time coercion's output. Same DB bytes as pre-AOD-122; only the
 // app-side vocabulary changed.
 import {
+  addWidgetInstance,
   bootstrapDashboard,
   createDashboard,
   deleteDashboard,
@@ -18,6 +19,7 @@ import {
   loadDashboardById,
   loadDashboards,
   moveInstanceToDashboard,
+  persistInstanceLayout,
   renameDashboard,
   reorderDashboards,
 } from '../dashboardRepo';
@@ -70,7 +72,9 @@ describe('bootstrapDashboard first-run seed (AOD-126: Clock, not the removed stu
       // so the W seed is stored as its geometric twin 'medium' — byte-identical to the pre-slot row.
       size: 'medium',
       config: {},
-      rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
+      // AOD-197: the rect jsonb now carries the shared footprint + a position per designed orientation.
+      // A fresh board seeds LANDSCAPE only (the wall's orientation); portrait derives until arranged.
+      rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 } } },
       refresh: null,
     });
 
@@ -116,12 +120,210 @@ describe('bootstrapDashboard first-run seed (AOD-126: Clock, not the removed stu
   });
 });
 
+// AOD-197: addWidgetInstance now READS the board first (to place the card in every OTHER designed
+// orientation at its firstFreeSlot — design §6.1) then INSERTs with a per-orientation position. These lock
+// the two-step shape and the stored rect it writes. The mock answers BOTH the read (select->eq) and the
+// insert (insert->select->single) on widget_instances from one object.
+describe('addWidgetInstance: per-orientation insert (AOD-197)', () => {
+  const seed = {
+    serviceId: 'clock',
+    widgetType: 'clock',
+    config: {},
+    size: 'W' as const,
+    rect: { x: 2, y: 0, w: 2, h: 1, z: 1 },
+  };
+
+  function mockAdd(existingRows: unknown[]) {
+    const selectEq = jest.fn(async () => ({ data: existingRows, error: null }));
+    const captured: { payload?: Record<string, unknown> } = {};
+    const single = jest.fn(async () => ({
+      data: { id: 'wi-new', created_at: '2026-07-22T00:00:00Z', ...(captured.payload ?? {}) },
+      error: null,
+    }));
+    const insert = jest.fn((payload: Record<string, unknown>) => {
+      captured.payload = payload;
+      return { select: jest.fn(() => ({ single })) };
+    });
+    (supabase.from as jest.Mock)
+      .mockReset()
+      .mockReturnValue({ select: jest.fn(() => ({ eq: selectEq })), insert });
+    return { captured, selectEq };
+  }
+
+  it('a landscape-only board stores JUST pos.landscape = the seed, and returns the resolved instance', async () => {
+    const { captured, selectEq } = mockAdd([]); // empty board
+    const result = await addWidgetInstance('dash-1', 'u1', seed);
+
+    // It read the board by dashboard_id before inserting.
+    expect(selectEq).toHaveBeenCalledWith('dashboard_id', 'dash-1');
+    // The written rect: shared footprint + landscape position only (portrait derives until arranged).
+    expect(captured.payload).toMatchObject({
+      dashboard_id: 'dash-1',
+      user_id: 'u1',
+      size: 'medium', // W's frozen-vocabulary twin
+      rect: { w: 2, h: 1, z: 1, pos: { landscape: { x: 2, y: 0 } } },
+    });
+    // The returned instance is resolved for landscape (the flat render rect).
+    expect(result).toMatchObject({ instanceId: 'wi-new', rect: { x: 2, y: 0, w: 2, h: 1, z: 1 }, size: 'W' });
+  });
+
+  it('when portrait is ALSO designed, the new card gets a firstFreeSlot in portrait too (add-in-all-designed)', async () => {
+    // One existing card designed in BOTH orientations (a 2x1 at each origin).
+    const existing = {
+      id: 'wi-0',
+      dashboard_id: 'dash-1',
+      service_id: 'clock',
+      widget_type: 'clock',
+      size: 'medium',
+      config: {},
+      rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 }, portrait: { x: 0, y: 0 } } },
+      refresh: null,
+      created_at: '2026-07-17T00:00:00Z',
+    };
+    const { captured } = mockAdd([existing]);
+    await addWidgetInstance('dash-1', 'u1', seed);
+
+    // landscape = the seed's position; portrait = firstFreeSlot beside the existing card in the 4-col grid.
+    expect((captured.payload as { rect: unknown }).rect).toEqual({
+      w: 2,
+      h: 1,
+      z: 1,
+      pos: { landscape: { x: 2, y: 0 }, portrait: { x: 2, y: 0 } },
+    });
+  });
+
+  it('throws when the insert is rejected by RLS', async () => {
+    const selectEq = jest.fn(async () => ({ data: [], error: null }));
+    const single = jest.fn(async () => ({ data: null, error: new Error('rls denied') }));
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({
+      select: jest.fn(() => ({ eq: selectEq })),
+      insert: jest.fn(() => ({ select: jest.fn(() => ({ single })) })),
+    });
+    await expect(addWidgetInstance('dash-1', 'u1', seed)).rejects.toThrow('rls denied');
+  });
+});
+
+// AOD-197 (the data-layer keystone): persistInstanceLayout is a per-orientation read-modify-write.
+// - DESIGNED orientation (the S3 LIVE path, always landscape): ONE UPDATE that sets pos[orientation] + the
+//   footprint and PRESERVES the other orientation.
+// - DERIVED orientation (portrait, unit-tested here): MATERIALIZE — stamp every instance's reflowed portrait
+//   position (rect-only, size untouched), then write the edited instance's new position + footprint + size.
+describe('persistInstanceLayout: per-orientation read-modify-write (AOD-197)', () => {
+  type Row = Partial<Tables<'widget_instances'>>;
+  // A select/update mock answering the row-select (select->eq->maybeSingle), the board-load
+  // (select->eq->order), and the UPDATEs (update->eq).
+  function mockPersist(editedRect: unknown, boardRows: Row[] = [], dashboardId = 'd1') {
+    const maybeSingle = jest.fn(async () => ({
+      data: { rect: editedRect, dashboard_id: dashboardId },
+      error: null,
+    }));
+    const order = jest.fn(async () => ({ data: boardRows, error: null }));
+    const selectEqCalls: Array<[string, string]> = [];
+    const selectEq = jest.fn((col: string, val: string) => {
+      selectEqCalls.push([col, val]);
+      return { maybeSingle, order };
+    });
+    const updates: Record<string, unknown>[] = [];
+    const updateEqCalls: Array<[string, string]> = [];
+    const updateEq = jest.fn(async (col: string, val: string) => {
+      updateEqCalls.push([col, val]);
+      return { error: null };
+    });
+    const update = jest.fn((payload: Record<string, unknown>) => {
+      updates.push(payload);
+      return { eq: updateEq };
+    });
+    (supabase.from as jest.Mock)
+      .mockReset()
+      .mockReturnValue({ select: jest.fn(() => ({ eq: selectEq })), update });
+    return { updates, updateEqCalls, selectEqCalls, order };
+  }
+
+  it('DESIGNED landscape: ONE UPDATE, sets the landscape position + footprint, PRESERVES portrait', async () => {
+    // The row is already designed in both orientations.
+    const stored = { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 }, portrait: { x: 3, y: 2 } } };
+    const { updates, updateEqCalls, order } = mockPersist(stored);
+
+    await persistInstanceLayout('wi-1', { rect: { x: 4, y: 1, w: 1, h: 2, z: 0 }, size: 'M' }); // landscape default
+
+    expect(order).not.toHaveBeenCalled(); // no board reflow on a designed orientation
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toEqual({
+      rect: { w: 1, h: 2, z: 0, pos: { landscape: { x: 4, y: 1 }, portrait: { x: 3, y: 2 } } },
+      size: 'tall', // M's frozen-vocabulary twin
+    });
+    expect(updateEqCalls).toEqual([['id', 'wi-1']]);
+  });
+
+  it('DERIVED portrait: MATERIALIZES the board (rect-only for others) then writes the edited instance last', async () => {
+    // Two landscape-designed rows (portrait derived). Editing in portrait materializes the reflow.
+    const boardRows: Row[] = [
+      {
+        id: 'wi-1',
+        service_id: 'clock',
+        widget_type: 'clock',
+        size: 'medium',
+        config: {},
+        rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 } } } as never,
+        refresh: null,
+      },
+      {
+        id: 'wi-2',
+        service_id: 'clock',
+        widget_type: 'clock',
+        size: 'medium',
+        config: {},
+        rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 2, y: 0 } } } as never,
+        refresh: null,
+      },
+    ];
+    // The edited row's own stored rect (portrait NOT designed -> the materialize path).
+    const { updates, updateEqCalls } = mockPersist(
+      { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 } } },
+      boardRows,
+    );
+
+    await persistInstanceLayout('wi-1', { rect: { x: 0, y: 1, w: 2, h: 1, z: 0 }, size: 'W' }, 'portrait');
+
+    // Two UPDATEs: the non-edited wi-2 FIRST (rect-only, materialized portrait position), then the edited
+    // wi-1 (rect + size, its NEW portrait position). Reflow of landscape [(0,0),(2,0)] into 4 cols keeps
+    // wi-2 at (2,0); the edit moves wi-1 to (0,1).
+    expect(updateEqCalls).toEqual([
+      ['id', 'wi-2'],
+      ['id', 'wi-1'],
+    ]);
+    // wi-2: rect ONLY (no size key — its footprint is unchanged), portrait stamped, landscape preserved.
+    expect(updates[0]).toEqual({
+      rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 2, y: 0 }, portrait: { x: 2, y: 0 } } },
+    });
+    expect('size' in updates[0]).toBe(false);
+    // wi-1: rect + size, the edit's new portrait position, landscape preserved.
+    expect(updates[1]).toEqual({
+      rect: { w: 2, h: 1, z: 0, pos: { landscape: { x: 0, y: 0 }, portrait: { x: 0, y: 1 } } },
+      size: 'medium',
+    });
+  });
+
+  it('is a no-op when the edited row was deleted concurrently (select returns null)', async () => {
+    const maybeSingle = jest.fn(async () => ({ data: null, error: null }));
+    const update = jest.fn();
+    (supabase.from as jest.Mock).mockReset().mockReturnValue({
+      select: jest.fn(() => ({ eq: jest.fn(() => ({ maybeSingle })) })),
+      update,
+    });
+    await expect(
+      persistInstanceLayout('gone', { rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, size: 'S' }),
+    ).resolves.toBeUndefined();
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
 // AOD-141 (resolves AOD-104): the client-direct per-widget delete. The RLS grant + policy
 // widget_instances_rw_own (`for all using (user_id = auth.uid())`) already cover DELETE, so the repo
 // only issues delete().eq('id', ...) by id (dashboard_id untouched, like persistInstanceLayout/Config).
 // These tests override the shared from() mock with a delete-aware chain and lock the id targeting + the
 // error-propagation the optimistic hook relies on to roll back.
-describe('deleteWidgetInstance: client-direct RLS delete by id', () => {
+describe('deleteWidgetInstance: client-direct RLS delete by id (strips the instance from ALL orientations)', () => {
   it('deletes the widget_instances row by its id and resolves', async () => {
     const eq = jest.fn(async () => ({ error: null }));
     const del = jest.fn(() => ({ eq }));

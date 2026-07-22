@@ -232,3 +232,20 @@ describe('the optional size override (AOD-148 size-by-seeing)', () => {
     expect(seed.rect).toEqual({ x: 0, y: 0, w: 2, h: 1, z: 0 });
   });
 });
+
+// AOD-197 S3 contract: the hook must NOT thread a non-landscape orientation — every repo call takes the
+// default 'landscape', so the wall + all live behavior stay byte-identical (S4 wires the real orientation).
+describe('the S3 orientation default (AOD-197)', () => {
+  it('drives addWidgetInstance with NO orientation arg, so the repo default (landscape) applies', async () => {
+    const client = seededClient([]);
+    const { result } = renderAdd(client);
+
+    await act(async () => {
+      await result.current.addWidget(def());
+    });
+
+    const call = (addWidgetInstance as jest.Mock).mock.calls[0];
+    // (dashboardId, userId, seed) — no 4th orientation arg (the seed is index 2).
+    expect(call[3]).toBeUndefined();
+  });
+});
