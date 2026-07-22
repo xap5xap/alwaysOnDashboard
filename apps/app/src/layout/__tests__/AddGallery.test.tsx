@@ -7,7 +7,7 @@
 // widget renders in the gallery with no gallery code change (the seam holds; no per-service branch).
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AddGallery } from '../AddGallery';
 import { RegistryProvider, type Registry } from '../../registry/RegistryProvider';
@@ -458,5 +458,20 @@ describe('the seam: the gallery is generic over the registry (no per-service bra
     // And focusing it previews the real card on the sky — the on-sky preview is registry-driven too.
     fireEvent.press(screen.getByTestId('add-gallery-tile-fake-fakewidget'));
     expect(await screen.findByTestId('add-gallery-sky-preview')).toBeTruthy();
+  });
+});
+
+// AOD-196 (S5): the sheet body is vertically scroll-contained so every shelf tile's "Add" button clears the
+// nav bar off the wall (the app is not immersive there). The whole preview + search + shelf region lives
+// inside one vertical scroll container; the horizontal shelf stays its own scroll within it.
+describe('the sheet body is scroll-contained so every "Add" clears the nav bar (AOD-196)', () => {
+  it('wraps the sky preview, search, and shelf (with its Add buttons) in a vertical body scroll', async () => {
+    renderGallery(new Map([['stub', conn('stub')]]));
+    const body = await screen.findByTestId('add-gallery-body');
+    // The shelf + its Add button are DESCENDANTS of the body scroll, so a short screen can scroll down to reach
+    // the Add buttons rather than leaving them below the fold behind the nav bar.
+    expect(within(body).getByTestId('add-gallery-shelf')).toBeTruthy();
+    expect(within(body).getByTestId('add-gallery-add-stub-placeholder')).toBeTruthy();
+    expect(within(body).getByTestId('add-gallery-search')).toBeTruthy();
   });
 });

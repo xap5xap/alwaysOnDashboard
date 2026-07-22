@@ -29,7 +29,7 @@ import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
 import { AddGallery } from '../layout/AddGallery';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
@@ -60,6 +60,10 @@ export function Dashboard() {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const queryClient = useQueryClient();
+  // AOD-196: the bottom safe-area inset (Unistyles rt.insets, reactive — re-reads on rotation). Off the wall
+  // the app is not immersive, so the floating page-dots capsule must clear the Android nav bar; applied inline
+  // (the capsuleBar style is static). The dashboard scroll content reserves the same inset inside LayoutCanvas.
+  const { rt } = useUnistyles();
   // AOD-197: the device orientation drives which per-orientation layout the handheld surfaces request + commit
   // (design §9: you edit the orientation you're holding). Reactive — a rotation re-resolves the whole surface.
   const orientation = useOrientation();
@@ -318,7 +322,7 @@ export function Dashboard() {
                 {/* AOD-145: the grown page-dots capsule, floating at the bottom over the canvas and riding the
                     chrome-awake state (box-none so only the capsule captures; the canvas keeps the rest). Press
                     (or pinch-in) rises to page altitude. */}
-                <View style={styles.capsuleBar} pointerEvents="box-none">
+                <View style={[styles.capsuleBar, { bottom: rt.insets.bottom }]} pointerEvents="box-none">
                   <PageCapsule count={dashboards.length} current={arrangedIndex} awake={awake} onRise={rise} />
                 </View>
               </View>

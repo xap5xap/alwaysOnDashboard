@@ -12,8 +12,21 @@
 // then commits the moved cards on drop. Each PlacedInstance only reports its own gesture up. All of this
 // is gated on `arranging`, and the wall passes arranging=false and never fires a gesture, so the wall
 // render path is structurally unchanged (no hairline, no preview, inert session).
+//
+// AOD-196 (design §9 "scrollable"): off the wall the app is NOT immersive, so the Android nav bar occludes
+// the bottom band and a below-fold card is unreachable. The HANDHELD canvas (cellPx given) becomes a VERTICAL
+// scroll container whose content carries an EXPLICIT layout height = contentRows x cellPx (the VISUAL height
+// after the fit-to-width scale — a transform scales visually but does NOT change layout height, so a naive
+// ScrollView would compute the nominal, too-tall extent). It is floored at the measured viewport height so a
+// short/empty board never collapses, plus the bottom safe-area inset so the last row clears the nav bar. The
+// scroll is react-native-gesture-handler's ScrollView so it COMPOSES with each card's Pan: a card drag/resize
+// blocks the scroll (blocksExternalGesture, wired in PlacedInstance), so a vertical pan STARTING on a card
+// drags it while a pan on empty space scrolls. The WALL (cellPx absent) stays the non-scrolling flex:1 View —
+// byte-identical, no ScrollView, no inset, no scrollRef handed to its cards (design §7, the wall never scrolls).
 import React from 'react';
 import { Pressable, View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetInstance } from '../registry/types';
 import type { LayoutPatch } from './mapper';
@@ -62,12 +75,20 @@ export function LayoutCanvas({
   cellPx,
   columns,
 }: LayoutCanvasProps) {
-  const { theme } = useUnistyles();
+  const { theme, rt } = useUnistyles();
   // The live arrange session: the active target (for the nearest-free hairline) + the gesture reporters
   // PlacedInstance drives. Inert (target: null) until a gesture fires, so on the wall / in Glance it costs a
   // useState + a noop and changes nothing (see the header note). `columns` scopes nearest-free to the active
   // orientation; absent (wall) it defaults to landscape.
   const reflow = useArrangeReflow(instances, onCommit, columns);
+
+  // AOD-196: the handheld scroll container + its measured viewport height. `scrollRef` is handed to each
+  // card's Pan (via `grid` below) ONLY on the handheld (cellPx given) so a card drag/resize blocks the scroll;
+  // the wall passes no scrollRef and renders no ScrollView, so its cards' gestures are byte-identical.
+  // `viewportH` floors the content height so a short/empty board fills the screen and never collapses; it stays
+  // 0 until onLayout fires (and on the wall, which never reads it).
+  const scrollRef = React.useRef(null);
+  const [viewportH, setViewportH] = React.useState(0);
 
   // AOD-197 (S4): the hairline + the cards, laid out on the NOMINAL UNIT_PX grid. On the handheld (cellPx
   // given) the grid is wrapped in the fit-to-width scale layer below so it fills the screen width; on the
@@ -106,32 +127,67 @@ export function LayoutCanvas({
           onCarryEdge={onCarryEdge}
           cellPx={cellPx}
           columns={columns}
+          // AOD-196: only the handheld (scrollable) canvas hands its cards the scroll ref so a card drag/resize
+          // blocks the vertical scroll (place-on-card wins). The wall renders no ScrollView, so it passes none
+          // and PlacedInstance's gesture config stays byte-identical.
+          scrollRef={cellPx != null ? scrollRef : undefined}
         />
       ))}
     </>
   );
 
+  // AOD-197 (S4) fit-to-width: scale the nominal grid so cells fill the screen width, anchored at the top-left
+  // (the grid grows from the corner). box-none so this layer is NEVER a touch target: a card subview still
+  // receives its drag/long-press, and a tap on empty space falls THROUGH to the exitCatcher behind (the "tap
+  // empty to exit arrange" affordance). The wall never takes this branch.
+  const scaleLayer = (
+    <View
+      pointerEvents="box-none"
+      style={[styles.scaleLayer, { transform: [{ scale: (cellPx ?? UNIT_PX) / UNIT_PX }] }]}
+      testID="layout-scale-layer"
+    >
+      {grid}
+    </View>
+  );
+  // Behind the cards: a full-bleed catcher so a tap on empty space leaves arrange mode (inert on the wall,
+  // which passes a noop exit and never arranges).
+  const exitCatcher = arranging ? (
+    <Pressable style={styles.exitCatcher} onPress={onExitArrange} accessibilityLabel="Done arranging" />
+  ) : null;
+
+  if (cellPx != null) {
+    // AOD-196 the HANDHELD scroll container. The scroll content carries an EXPLICIT layout height equal to the
+    // VISUAL height (contentRows x cellPx) — a transform scales the grid visually but never changes its layout
+    // height, so this is what makes the ScrollView's extent match what is on screen — floored at the measured
+    // viewport height (so a short/empty board fills the screen, never collapses) plus the bottom safe-area
+    // inset (so the deepest row clears the Android nav bar). GestureScrollView (react-native-gesture-handler)
+    // composes with each card's Pan: a card drag/resize blocks it (PlacedInstance.blocksExternalGesture), so a
+    // vertical pan on a card drags and a pan on empty space scrolls. Horizontal sky paging stays the SkyPager
+    // FlatList above this (AOD-144). The wall never takes this branch (design §7: the wall does not scroll).
+    const contentRows = Math.max(1, ...instances.map((i) => i.rect.y + i.rect.h));
+    const contentHeight = Math.max(viewportH, contentRows * cellPx + rt.insets.bottom);
+    return (
+      <GestureScrollView
+        ref={scrollRef}
+        style={styles.canvas}
+        showsVerticalScrollIndicator={false}
+        onLayout={(e: LayoutChangeEvent) => setViewportH(e.nativeEvent.layout.height)}
+        testID="layout-scroll"
+      >
+        <View style={[styles.scrollBody, { height: contentHeight }]} testID="layout-scroll-content">
+          {exitCatcher}
+          {scaleLayer}
+        </View>
+      </GestureScrollView>
+    );
+  }
+
+  // The WALL (cellPx absent): the non-scrolling flex:1 canvas exactly as pre-AOD-196 — no ScrollView, no inset,
+  // the bare nominal grid (KioskWall scales the whole canvas with its own wallFitScale layer). Byte-identical.
   return (
     <View style={styles.canvas}>
-      {/* Behind the cards: a full-bleed catcher so a tap on empty space leaves arrange mode. */}
-      {arranging ? (
-        <Pressable style={styles.exitCatcher} onPress={onExitArrange} accessibilityLabel="Done arranging" />
-      ) : null}
-      {cellPx != null ? (
-        // AOD-197 (S4) fit-to-width: scale the nominal grid so cells fill the screen width, anchored at the
-        // top-left (the grid grows from the corner). box-none so this layer is NEVER a touch target: a card
-        // subview still receives its drag/long-press, and a tap on empty space falls THROUGH to the
-        // exitCatcher behind (the "tap empty to exit arrange" affordance). The wall never takes this branch.
-        <View
-          pointerEvents="box-none"
-          style={[styles.scaleLayer, { transform: [{ scale: cellPx / UNIT_PX }] }]}
-          testID="layout-scale-layer"
-        >
-          {grid}
-        </View>
-      ) : (
-        grid
-      )}
+      {exitCatcher}
+      {grid}
     </View>
   );
 }
@@ -146,6 +202,12 @@ function pxStyle(slot: Parameters<typeof slotToPixels>[0]) {
 const styles = StyleSheet.create(() => ({
   canvas: {
     flex: 1,
+    position: 'relative',
+  },
+  // AOD-196 the scroll content body: an explicit-height (contentRows x cellPx, floored at the viewport +
+  // bottom inset — applied inline) relative box the absolute cards + hairline + exitCatcher position within,
+  // so the ScrollView's scroll extent equals the on-screen (scaled) height. Handheld only; never on the wall.
+  scrollBody: {
     position: 'relative',
   },
   exitCatcher: {

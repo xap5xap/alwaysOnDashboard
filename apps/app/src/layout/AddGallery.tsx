@@ -265,7 +265,16 @@ export function AddGallery({
       ) : isLoading ? (
         <Text style={styles.muted}>Checking connections...</Text>
       ) : (
-        <>
+        // AOD-196: the sheet body is VERTICALLY scroll-contained so every shelf tile's "Add" button clears the
+        // Android nav bar (off the wall the app is not immersive). flexShrink lets it shrink to the sheet's
+        // maxHeight (85%) and scroll its overflow; the header + Close above stay fixed and always reachable, and
+        // the Sheet's own paddingBottom already reserves the bottom inset. The horizontal shelf below stays its
+        // own horizontal ScrollView (orthogonal nested scroll: vertical body, horizontal shelf).
+        <ScrollView
+          style={styles.bodyScroll}
+          showsVerticalScrollIndicator={false}
+          testID="add-gallery-body"
+        >
           {/* §2a the sky above: your cards, scaled back a step, with the focused card previewed on it. */}
           <SkyPreview instances={instances} previewInstance={previewInstance} cellPx={cellPx} columns={columns} />
 
@@ -324,7 +333,7 @@ export function AddGallery({
               })}
             </ScrollView>
           )}
-        </>
+        </ScrollView>
       )}
     </Sheet>
   );
@@ -541,6 +550,11 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'flex-start',
     overflow: 'hidden',
     marginBottom: theme.spacing(2),
+  },
+  // AOD-196 the vertical body scroll: flexShrink lets it shrink to the sheet's maxHeight and scroll its
+  // overflow so every "Add" clears the nav bar; the header/Close above stay fixed.
+  bodyScroll: {
+    flexShrink: 1,
   },
   searchRow: {
     marginBottom: theme.spacing(3),

@@ -77,6 +77,11 @@ export interface PlacedInstanceProps {
   /** AOD-197 (S4): the active orientation's column count (landscape 6 / portrait 4). Clamps a dragged or
    *  resized footprint on-grid (x + w <= columns). Defaults to the landscape GRID_COLUMNS. */
   columns?: number;
+  /** AOD-196: the handheld canvas's vertical ScrollView (react-native-gesture-handler). When present the
+   *  drag + resize Pans BLOCK it (blocksExternalGesture), so a vertical pan that STARTS on this card drags/
+   *  resizes it while a pan on empty space scrolls the canvas. Absent (the wall, which renders no ScrollView
+   *  and never scrolls) leaves the gesture config byte-identical to pre-AOD-196. */
+  scrollRef?: React.RefObject<React.ComponentType | undefined | null>;
 }
 
 export function PlacedInstance({
@@ -92,6 +97,7 @@ export function PlacedInstance({
   onCarryEdge,
   cellPx = UNIT_PX,
   columns = GRID_COLUMNS,
+  scrollRef,
 }: PlacedInstanceProps) {
   const registry = useRegistry();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
@@ -357,6 +363,16 @@ export function PlacedInstance({
         runOnJS(cancelGesture)();
       }
     });
+
+  // AOD-196: on the handheld canvas (a vertical ScrollView is present) the drag + resize BLOCK the scroll, so a
+  // vertical pan that starts on this card drags/resizes it instead of scrolling; a pan on empty space still
+  // scrolls (no card gesture blocks it there). The wall renders no ScrollView and passes no scrollRef, so this
+  // is skipped and the gesture config stays byte-identical (blocksExternalGesture mutates + returns the gesture,
+  // so calling it in place needs no reassignment).
+  if (scrollRef) {
+    drag.blocksExternalGesture(scrollRef);
+    resize.blocksExternalGesture(scrollRef);
+  }
 
   const animatedStyle = useAnimatedStyle(() => ({
     left: x.value * UNIT_PX,

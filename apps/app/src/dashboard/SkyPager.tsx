@@ -85,6 +85,10 @@ export function SkyPager({
   testID = 'sky-pager',
 }: SkyPagerProps) {
   const { width } = useWindowDimensions();
+  // AOD-196: the bottom safe-area inset (Unistyles rt.insets, reactive). Off the wall the app is not immersive,
+  // so the floating page dots must clear the Android nav bar; applied inline (the dotsBar style is static). The
+  // per-page canvas reserves the same inset inside its LayoutCanvas scroll content.
+  const { rt } = useUnistyles();
   // Each page must be exactly the pager's width for pagingEnabled to snap. Seed from the window width (a
   // good approximation on device) and refine with onLayout; tests drive the index math off the scroll event
   // instead, so they never depend on this.
@@ -216,8 +220,9 @@ export function SkyPager({
       />
 
       {/* The dots + add control float at the bottom over the pager. box-none: only the + (and, when open, the
-          invite) capture touches; the rest passes the swipe through. */}
-      <View style={styles.dotsBar} pointerEvents="box-none">
+          invite) capture touches; the rest passes the swipe through. AOD-196: lifted by the bottom inset so it
+          clears the nav bar off the wall. */}
+      <View style={[styles.dotsBar, { bottom: rt.insets.bottom }]} pointerEvents="box-none">
         <PageDots count={dashboards.length} current={current} awake={awake} onAdd={() => void onAdd()} />
       </View>
 
