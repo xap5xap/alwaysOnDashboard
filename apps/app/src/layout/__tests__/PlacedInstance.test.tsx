@@ -12,12 +12,20 @@ import type { WidgetInstance } from '../../registry/types';
 
 // gesture-handler: GestureDetector renders its child; each Gesture is a no-op chainable (the worklets
 // never fire under jest, which is why the snap/commit logic is tested purely, not through the gesture).
+// `blocksExternalGesture` records its argument (AOD-196: a scrollRef, so a card drag/resize BLOCKS the
+// handheld canvas scroll) so the wiring is assertable at the logic level; it still returns the gesture so
+// the chain holds.
+const mockBlocksExternal = jest.fn();
 jest.mock('react-native-gesture-handler', () => {
   const make = () => {
-    const g: Record<string, () => unknown> = {};
+    const g: Record<string, (...args: unknown[]) => unknown> = {};
     ['enabled', 'minDuration', 'onStart', 'onUpdate', 'onEnd', 'onFinalize', 'onBegin', 'onChange'].forEach((m) => {
       g[m] = () => g;
     });
+    g.blocksExternalGesture = (...args: unknown[]) => {
+      mockBlocksExternal(...args);
+      return g;
+    };
     return g;
   };
   return {
@@ -126,5 +134,25 @@ describe('PlacedInstance arrange affordances (AOD-141 preserved through the AOD-
     expect(screen.getByTestId('configure-card-1')).toBeTruthy();
     expect(screen.getByTestId('remove-card-1')).toBeTruthy();
     expect(screen.getByLabelText('Resize widget')).toBeTruthy();
+  });
+});
+
+// AOD-196 (S5): on the handheld canvas a scroll container is present, so a card's drag + resize must BLOCK it
+// (blocksExternalGesture) — a vertical pan starting on the card drags/resizes it instead of scrolling. On the
+// wall there is no ScrollView (no scrollRef), so the gesture config stays byte-identical (no block wired).
+describe('scroll-vs-drag arbitration (AOD-196)', () => {
+  beforeEach(() => mockBlocksExternal.mockClear());
+
+  it('wires the drag + resize to BLOCK the canvas scroll when a scrollRef is provided', () => {
+    const scrollRef = React.createRef<React.ComponentType>();
+    renderCard({ scrollRef: scrollRef as React.ComponentProps<typeof PlacedInstance>['scrollRef'] });
+    // Both the drag and the resize Pan block the scroll (so a pan that starts on the card wins over it).
+    expect(mockBlocksExternal).toHaveBeenCalledTimes(2);
+    expect(mockBlocksExternal).toHaveBeenCalledWith(scrollRef);
+  });
+
+  it('does NOT block any external gesture on the wall (no scrollRef -> byte-identical gesture config)', () => {
+    renderCard(); // no scrollRef
+    expect(mockBlocksExternal).not.toHaveBeenCalled();
   });
 });
