@@ -44,8 +44,19 @@ export interface LayoutCanvasProps {
   /** Open the config form for one instance (AOD-10 §4); the dashboard owns the modal. */
   onRequestConfigure(instance: WidgetInstance): void;
   /** Delete one instance (AOD-141); the dashboard owns the mutation. Fired from the arrange-mode
-   *  in-place "Remove?" confirm. The wall callers pass a noop (they never arrange). */
+   *  in-place "Remove?" confirm AND (AOD-195) the calm menu-driven confirm. The wall callers pass a noop
+   *  (they never arrange or menu). */
   onRemove(instanceId: string): void;
+  /** AOD-195: a long-press on a calm card reports the instance + an on-screen anchor so the dashboard can
+   *  open the quick-actions menu. When present (the calm handheld surface) it REPLACES the long-press's
+   *  enter-arrange role. Absent (the wall / the arrange surface, where long-press is disabled) the card
+   *  falls back to onEnterArrange, which the wall passes as a noop — so the wall stays inert + byte-identical. */
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  /** AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed (dashboard-owned),
+   *  so the matching calm card shows the AOD-141 tile-face confirm WITHOUT entering Arrange. */
+  confirmingRemoveId?: string | null;
+  /** AOD-195: Keep on the calm menu-confirm clears the dashboard's confirmingRemoveId. */
+  onCancelRemove?(): void;
   /** AOD-146 (Many Skies §1d): a held card was carried to a screen edge ('left'/'right') or off it (null)
    *  while dragging. The dashboard arms the cross-sky carry dwell. Optional and forwarded straight to each
    *  card: the wall / read-only pager callers never arrange, so they simply omit it (the seam is untouched). */
@@ -71,6 +82,9 @@ export function LayoutCanvas({
   onCommit,
   onRequestConfigure,
   onRemove,
+  onLongPressCard,
+  confirmingRemoveId,
+  onCancelRemove,
   onCarryEdge,
   cellPx,
   columns,
@@ -115,7 +129,14 @@ export function LayoutCanvas({
           key={instance.instanceId}
           instance={instance}
           arranging={arranging}
-          onLongPress={onEnterArrange}
+          // AOD-195: a calm long-press opens the quick-actions menu (onLongPressCard, given the instance +
+          // an anchor). The wall / arrange surface pass no onLongPressCard, so the card falls back to the
+          // nullary onEnterArrange — a noop on the wall (byte-identical), inert in arrange (long-press off).
+          onLongPress={onLongPressCard ?? (() => onEnterArrange())}
+          // AOD-195: the dashboard-driven menu-confirm shows the AOD-141 tile face on this card without
+          // entering Arrange. Only the matching id (calm surface) confirms; the wall passes neither.
+          menuConfirmingRemove={confirmingRemoveId != null && confirmingRemoveId === instance.instanceId}
+          onCancelMenuRemove={onCancelRemove}
           // Place-don't-pack (AOD-197 S4): previewFor is always null (neighbours never move), so a card only
           // ever rests at its committed rect. Kept gated on `arranging` for symmetry with the hairline above.
           previewRect={arranging ? reflow.previewFor(instance.instanceId) : null}

@@ -137,6 +137,36 @@ describe('PlacedInstance arrange affordances (AOD-141 preserved through the AOD-
   });
 });
 
+// AOD-195 (sub-decision 6b): the calm long-press menu's Delete reuses the AOD-141 tile-face "Remove?" confirm,
+// rendered on the card WITHOUT entering Arrange. The dashboard drives it via menuConfirmingRemove (true for the
+// card whose id it is confirming); Confirm fires onRemove, Keep fires onCancelMenuRemove (clearing the
+// dashboard-owned state), and NO arrange chrome ever appears.
+describe('menu-driven delete outside Arrange (AOD-195)', () => {
+  it('shows the confirm face on the calm card (no arrange chrome) when menuConfirmingRemove is set', () => {
+    renderCard({ arranging: false, menuConfirmingRemove: true });
+    expect(screen.getByTestId('remove-confirm-face-card-1')).toBeTruthy();
+    // We never entered Arrange, so there are no pills / resize handle behind it.
+    expect(screen.queryByTestId('configure-card-1')).toBeNull();
+    expect(screen.queryByTestId('remove-card-1')).toBeNull();
+    expect(screen.queryByLabelText('Resize widget')).toBeNull();
+  });
+
+  it('Confirm fires onRemove; Keep clears via onCancelMenuRemove (not the local arrange reset)', () => {
+    const onCancelMenuRemove = jest.fn();
+    const { onRemove } = renderCard({ arranging: false, menuConfirmingRemove: true, onCancelMenuRemove });
+
+    // Keep routes to the dashboard's clear, and does NOT delete.
+    fireEvent.press(screen.getByTestId('remove-keep-card-1'));
+    expect(onCancelMenuRemove).toHaveBeenCalled();
+    expect(onRemove).not.toHaveBeenCalled();
+
+    // Confirm deletes (the face stays mounted here because the prop is static in this isolated mount; in the
+    // app the dashboard clears confirmingRemoveId, unmounting it).
+    fireEvent.press(screen.getByTestId('remove-confirm-card-1'));
+    expect(onRemove).toHaveBeenCalledWith('card-1');
+  });
+});
+
 // AOD-196 (S5): on the handheld canvas a scroll container is present, so a card's drag + resize must BLOCK it
 // (blocksExternalGesture) — a vertical pan starting on the card drags/resizes it instead of scrolling. On the
 // wall there is no ScrollView (no scrollRef), so the gesture config stays byte-identical (no block wired).

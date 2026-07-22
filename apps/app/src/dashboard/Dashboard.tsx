@@ -1,25 +1,26 @@
 // The dashboard screen (AOD-8 §8 DashboardLayout, rendered). It loads the signed-in user's real skies from
-// Supabase under RLS (useDashboards: the active sky's live surface + the ordered sky list + create) and, per
-// the AOD-142 dial, shows ONE of two surfaces: in GLANCE a horizontal sky pager (SkyPager) with one
-// read-only page per sky; in ARRANGE the single active-sky LayoutCanvas (the free-form layout engine). The
-// screen owns the arrange-mode flag and the pager's current page; it never names a service (the AOD-8 seam
-// holds end to end).
+// Supabase under RLS (useDashboards: the active sky's live surface + the ordered sky list + create) and shows
+// ONE of two surfaces: the calm GLANCE pager (SkyPager) with one read-only page per sky, or the ARRANGE
+// LayoutCanvas (the free-form layout engine) once you enter Edit Screen. The screen owns the arrange-mode flag
+// and the pager's current page; it never names a service (the AOD-8 seam holds end to end).
 //
-// AOD-144 (design "Many Skies" §1a/§1f): the Glance surface becomes a pager over the skies. The dial GATES
-// the surface, which makes "swipe never edits" structural (a page turn can never reach an edit) and dodges
-// the swipe-vs-card-drag gesture conflict (there is no horizontal paging while arranging). Entering Arrange
-// from page K sets that sky active so Arrange edits the sky you are viewing; leaving Arrange hands the edited
-// layout back to the pager's per-sky cache (seedSkyFromActive) and returns to the pager at page K. The page
-// dots + the Pro gate on the second sky live inside SkyPager.
+// AOD-195 (supersedes the AOD-142 dial): the surface IS the app — no mode label, no dial. A long-press on a
+// card opens an anchored quick-actions menu (CardQuickActions), each item a NEW ENTRY POINT to an action that
+// already exists: Edit Widget -> the config sheet, Edit Screen -> Arrange, Delete -> the AOD-141 tile-face
+// confirm (rendered on the calm card, sub-decision 6b), and an S/M/W/L row -> the AOD-140 resize/persist path.
+// A long-press on an EMPTY sky enters Edit Screen directly. Edit Screen shows a Done button (top-right) that
+// exits. The AOD-142 mode SEPARATION (calm read-only vs edit, "swipe never edits", the arrange interior)
+// stays; only the dial CONTROL is gone.
 //
-// AOD-142 (design "The sky fills in" §1e): the arranging Done pill is REPLACED by the persistent Glance |
-// Arrange dial in the hub header; the wall Preview pill stays (AOD-81). The dial AND the page dots ride a
-// single "chrome awake" idle state (useChromeAwake) wired to the surface's touch callbacks, so the hub chrome
-// sinks when idle (calm Glance) and wakes on any touch — one mechanism.
+// AOD-144 (design "Many Skies" §1a/§1f): the Glance surface is a pager over the skies, so "swipe never edits"
+// is structural (a page turn can never reach an edit) and the swipe-vs-card-drag conflict is dodged (no
+// horizontal paging while arranging). Entering Arrange from page K sets that sky active so Arrange edits the
+// sky you are viewing; leaving Arrange hands the edited layout back to the pager's per-sky cache
+// (seedSkyFromActive) and returns to the pager at page K. The page dots + the Pro gate live inside SkyPager.
 //
 // AOD-68 canonicalization (design-core-navigation §3, §5, §8, §12 drift 1-2): the inline header is the shell
-// HUB AppBar (the vela wordmark + Add + Settings + the dashboards-switcher chevron), sign out is RELOCATED to
-// Account, and the ad-hoc load / error become the shell screen-level states. AOD-69 fills the AOD-27
+// HUB AppBar (the vela wordmark + Add + Settings + — while arranging — Preview + Done), sign out is RELOCATED
+// to Account, and the ad-hoc load / error become the shell screen-level states. AOD-69 fills the AOD-27
 // dashboard INTERIOR: the arranging header shows the Preview pill, the per-sky empty branch composes the
 // shell EmptyState (now inside SkyPager's pages), and the canvas / picker / config sheet are the polished
 // editor surfaces.
@@ -34,18 +35,19 @@ import { useAuth } from '../auth/AuthProvider';
 import { AddGallery } from '../layout/AddGallery';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
 import { cellPxFor, GRID_MARGIN } from '../layout/geometry';
+import { nearestFreeSlot } from '../layout/grid';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
 import { useMoveInstance } from '../layout/useMoveInstance';
 import { useOrientation } from '../layout/useOrientation';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
-import { columnsFor } from '../widgets/sizes';
+import { columnsFor, SIZE_CATALOGUE } from '../widgets/sizes';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
 import { WallPreview } from '../kiosk/WallPreview';
-import type { WidgetInstance } from '../registry/types';
+import type { WidgetInstance, WidgetSize } from '../registry/types';
 import { AppBar, ErrorState, LoadingState, Screen } from '../shell';
 import { Button } from '../ui/Button';
-import { ModeDial } from './ModeDial';
+import { CardQuickActions } from './CardQuickActions';
 import { PageAltitude } from './PageAltitude';
 import { PageCapsule } from './PageCapsule';
 import { SkyPager } from './SkyPager';
@@ -55,6 +57,14 @@ import { useChromeAwake } from './useChromeAwake';
 // neighbour sky. The hold is what separates a deliberate cross-sky move from a normal near-edge reposition.
 // A device-tuned seed (AOD-190), like PlacedInstance's motion timings + edge band.
 const EDGE_HOLD_DWELL_MS = 600;
+
+// AOD-195: the anchored quick-actions menu's live target — the long-pressed card, the sky it sits on, and the
+// on-screen anchor (the touch point). Null = no menu open.
+interface CardMenu {
+  skyId: string;
+  instance: WidgetInstance;
+  anchor: { x: number; y: number };
+}
 
 export function Dashboard() {
   const { session } = useAuth();
@@ -96,23 +106,28 @@ export function Dashboard() {
   const [arranging, setArranging] = useState(false);
   // AOD-145: the SECOND Arrange altitude. `arranging` gates Glance vs Arrange; within Arrange this flag gates
   // card altitude (edit one sky, the shipped surface) vs page altitude (manage the skies as thumbnails). Only
-  // meaningful while arranging; every path OUT of Arrange (the dial to Glance) also resets it.
+  // meaningful while arranging; every path OUT of Arrange (Done) also resets it.
   const [atPageAltitude, setAtPageAltitude] = useState(false);
   // AOD-144: the pager's current page (a mirror of SkyPager's local scroll position, reported via
-  // onPageChange). It drives which sky the dial arranges — the sky on screen, NOT activeId (which lags
-  // setActive, AOD-143). Persists across the arrange round-trip (SkyPager unmounts in Arrange), and SkyPager
-  // re-seeds it to the active sky's index on remount.
+  // onPageChange). It is the sky on screen (AOD-143 warns activeId lags setActive). Persists across the
+  // arrange round-trip (SkyPager unmounts in Arrange), and SkyPager re-seeds it to the active sky on remount.
   const [currentPage, setCurrentPage] = useState(0);
   // AOD-142: the single "chrome awake" idle state. `wake` is wired to the surface touch callbacks below;
-  // `awake` drives the dial's fade AND the page dots. One timer, reset on any touch.
+  // `awake` drives the page dots + the page-altitude capsule. One timer, reset on any touch.
   const { awake, wake } = useChromeAwake();
   const [picking, setPicking] = useState(false);
   // AOD-81 §6: the wall preview peek. Owned here like `picking`/`arranging` (the app-ia locked fact: a
   // surface carrying a live object stays in-screen, never a router route), mounted as an overlay below.
   const [previewing, setPreviewing] = useState(false);
-  // The instance whose config form is open (AOD-10 §4). Owned here like `picking`/`arranging` so both
-  // reconfigure entries (arrange-mode "Configure" and the host's needs_config prompt) route through it.
+  // The instance whose config form is open (AOD-10 §4). Owned here like `picking`/`arranging` so all three
+  // reconfigure entries (the menu's Edit Widget, arrange-mode "Configure", and the host's needs_config
+  // prompt) route through it.
   const [configuring, setConfiguring] = useState<WidgetInstance | null>(null);
+  // AOD-195: the open quick-actions menu (a long-pressed card + its anchor), null when closed.
+  const [menu, setMenu] = useState<CardMenu | null>(null);
+  // AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed on the CALM surface
+  // (the AOD-141 tile-face confirm rendered without entering Arrange). Threaded to SkyPager -> the matching card.
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
   // AOD-146 (Many Skies §1d): the cross-sky "carry to the edge and hold" dwell timer. A held card reported at
   // a screen edge (onCarryCardToEdge) arms it; holding past the dwell carries the card to the neighbour sky.
   // Any edge change / drop cancels it, and it is cleared on unmount so a pending carry never fires after the
@@ -126,10 +141,10 @@ export function Dashboard() {
   );
 
   // AOD-144: enter Arrange on a specific sky. Setting it active first means Arrange (which renders the active
-  // sky's LayoutCanvas) edits the sky you were viewing — the dial flip from page K, or a long-press on a card
-  // on page K, both land here. The `!== activeId` guard skips a redundant setActive (and its ['dashboard']
-  // invalidate/refetch) when the on-screen sky is already active — the common single-sky case, where flipping
-  // to Arrange must NOT reload the board the way it did before AOD-144. Leaving Arrange is the else-branch below.
+  // sky's LayoutCanvas) edits the sky you were viewing — the menu's Edit Screen, an empty-canvas long-press,
+  // and tapping a thumbnail at page altitude all land here. The `!== activeId` guard skips a redundant
+  // setActive (and its ['dashboard'] invalidate/refetch) when the on-screen sky is already active — the common
+  // single-sky case, where entering Arrange must NOT reload the board. Leaving Arrange is exitArrange below.
   const enterArrange = (skyId: string) => {
     if (skyId !== activeId) {
       // Paint the target sky NOW: copy its already-loaded pager instances (['sky', skyId]) into the active-sky
@@ -143,6 +158,22 @@ export function Dashboard() {
     setArranging(true);
     // AOD-145: entering Arrange always lands at card altitude (edit this sky), never page altitude.
     setAtPageAltitude(false);
+    // AOD-195: an Edit Screen transition must never carry a pending CALM menu-confirm (armed on another sky
+    // before the transition) — clear it so a stale "Remove?" can't re-appear on returning to that sky.
+    setConfirmingRemoveId(null);
+  };
+
+  // AOD-195: leave Edit Screen (the Done button, and the tap-empty-canvas exit). Mirrors the old dial-to-Glance
+  // path: drop BOTH altitudes and hand the just-edited active-sky layout back to the pager's per-sky cache so
+  // the page repaints the edit immediately (no refetch, no debounced-write race).
+  const exitArrange = () => {
+    setArranging(false);
+    setAtPageAltitude(false);
+    // AOD-195: leaving Edit Screen also drops any pending calm menu-confirm (belt-and-suspenders with the
+    // enter-side clear), so an arrange round-trip can never leave a stale "Remove?" armed.
+    setConfirmingRemoveId(null);
+    // AOD-197: hand the edited layout back within the CURRENT orientation's per-sky cache.
+    if (activeId) seedSkyFromActive(queryClient, userId, activeId, orientation);
   };
 
   // AOD-144: an empty page's "Add a card". For the active sky (the single-sky common case, and any freshly
@@ -154,26 +185,61 @@ export function Dashboard() {
     else enterArrange(skyId);
   };
 
-  // AOD-144: the dial flip. Arrange -> enter Arrange on the sky currently on screen (currentPage). Glance ->
-  // leave Arrange AND hand the just-edited active-sky layout back to the pager's per-sky cache, so the page
-  // repaints the edit immediately (no refetch, no debounced-write race).
-  const onDialChange = (mode: 'glance' | 'arrange') => {
-    if (mode === 'arrange') {
-      const sky = dashboards[currentPage];
-      if (sky) enterArrange(sky.id);
-      else {
-        setArranging(true);
-        setAtPageAltitude(false);
-      }
-    } else {
-      // AOD-145: the dial to Glance EXITS Arrange from EITHER altitude — drop the altitude too. Then hand the
-      // just-edited active-sky layout back to the pager's per-sky cache so the page repaints the edit at once.
-      setArranging(false);
-      setAtPageAltitude(false);
-      // AOD-197: hand the edited layout back within the CURRENT orientation's per-sky cache.
-      if (activeId) seedSkyFromActive(queryClient, userId, activeId, orientation);
+  // AOD-195: a long-press on a card opens the quick-actions menu. Make the card's sky active FIRST (seed +
+  // setActive, mirroring enterArrange) so the menu's actions operate on the sky the card is on — Size / Delete
+  // go through the ACTIVE-sky commit / removeWidget, and Edit Screen enters Arrange on it. The `!== activeId`
+  // guard no-ops on the active sky (the common single-sky case), so a menu on the sky you're already on never
+  // reloads; on a non-active page this makes the viewed sky active, exactly as the pre-AOD-195 long-press did.
+  const openCardMenu = (skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }) => {
+    if (skyId !== activeId) {
+      seedActiveFromSky(queryClient, userId, skyId, orientation);
+      setActive(skyId);
     }
+    setConfirmingRemoveId(null); // a fresh menu clears any stale calm confirm
+    setMenu({ skyId, instance, anchor });
   };
+  const closeMenu = () => setMenu(null);
+
+  // The menu items, each routing to an EXISTING action (an entry-point rewire, not new behavior):
+  const menuEditWidget = () => {
+    if (menu) setConfiguring(menu.instance); // -> ConfigureInstanceModal (NOT an inline card-flip config)
+    closeMenu();
+  };
+  const menuEditScreen = () => {
+    if (menu) enterArrange(menu.skyId); // enter Arrange on this card's sky, current orientation (design §9)
+    closeMenu();
+  };
+  const menuDeleteWidget = () => {
+    if (menu) setConfirmingRemoveId(menu.instance.instanceId); // the calm tile-face confirm (sub-decision 6b)
+    closeMenu();
+  };
+  // AOD-195: pick a size in the menu -> re-snap the card's footprint IMMEDIATELY through the same commit /
+  // persist path the Arrange corner-drag uses (AOD-140 activeCommit): the new footprint from SIZE_CATALOGUE,
+  // placed at the NEAREST FREE fitting slot (AOD-197 re-validation, so a grown footprint never overlaps),
+  // then commit. Uses the LIVE instance (its rect/size may have changed from a prior pick this session) and
+  // keeps the menu open so the segmented reflects the applied size. No need to enter Edit Screen.
+  const menuSelectSize = (size: WidgetSize) => {
+    if (!menu) return;
+    const live = instances.find((i) => i.instanceId === menu.instance.instanceId) ?? menu.instance;
+    const spec = SIZE_CATALOGUE[size];
+    const occupied = instances
+      .filter((i) => i.instanceId !== live.instanceId)
+      .map((i) => ({ x: i.rect.x, y: i.rect.y, w: i.rect.w, h: i.rect.h }));
+    const slot = nearestFreeSlot({ w: spec.nominalW, h: spec.nominalH }, occupied, { x: live.rect.x, y: live.rect.y }, columns);
+    commit(live.instanceId, { rect: { x: slot.x, y: slot.y, w: slot.w, h: slot.h, z: live.rect.z }, size });
+  };
+
+  // AOD-195 (sub-decision 6b): the calm menu-confirm's Confirm — clear the confirm + remove (optimistic, the
+  // active-sky useRemoveWidget); Keep just clears it. Both operate on the sky openCardMenu made active.
+  const confirmRemoveFromMenu = (instanceId: string) => {
+    setConfirmingRemoveId(null);
+    void removeWidget(instanceId);
+  };
+  const cancelRemoveFromMenu = () => setConfirmingRemoveId(null);
+
+  // The LIVE instance behind the open menu, so the size row re-marks after a re-snap (the stored menu.instance
+  // is a snapshot; instances updates optimistically on commit).
+  const menuInstance = menu ? instances.find((i) => i.instanceId === menu.instance.instanceId) ?? menu.instance : null;
 
   // AOD-145: the card-altitude capsule press / a pinch-in RISES to page altitude (manage the skies).
   const rise = () => setAtPageAltitude(true);
@@ -238,22 +304,21 @@ export function Dashboard() {
     dashboards.findIndex((d) => d.id === activeId),
   );
 
-  // AOD-142/145: the hub trailing cluster. The Glance | Arrange dial is the PERSISTENT mode control (present
-  // in both modes AND both Arrange altitudes — flipping it to Glance is how you leave Arrange), riding the
-  // chrome-awake state so it sinks when the surface is idle. Its siblings follow the surface: at CARD altitude
-  // the wall Preview pill (AOD-81 §6); at PAGE altitude nothing but the dial (Preview previews one sky's wall,
-  // which page altitude is above); in Glance, Add + Settings. The AOD-68 dashboards-switcher chevron is RETIRED
-  // (AOD-145): the pager + page altitude replace the /dashboards modal, so there is no chevron and no route.
+  // AOD-195: the hub trailing cluster. In CALM the surface is wordless (no dial) — just Add + Settings (the
+  // AOD-68 dashboards-switcher chevron is retired: the pager + page altitude replace the /dashboards modal). In
+  // EDIT SCREEN (Arrange) it is Preview (AOD-81 §6, card altitude only) + Done (sub-decision 1: the exit,
+  // re-adding the pill AOD-142 folded into the dial). Add hides while the board loads (nothing to arrange yet);
+  // Settings always stays.
   const canArrange = !isLoading && !isError;
   const headerRight = (
     <>
-      {canArrange ? (
-        <ModeDial mode={arranging ? 'arrange' : 'glance'} awake={awake} onChange={onDialChange} />
-      ) : null}
       {arranging ? (
-        atPageAltitude ? null : (
-          <Button label="Preview" variant="ghost" size="sm" pill onPress={() => setPreviewing(true)} testID="dashboard-preview" />
-        )
+        <>
+          {atPageAltitude ? null : (
+            <Button label="Preview" variant="ghost" size="sm" pill onPress={() => setPreviewing(true)} testID="dashboard-preview" />
+          )}
+          <Button label="Done" variant="ghost" size="sm" onPress={exitArrange} testID="dashboard-done" />
+        </>
       ) : (
         <>
           {canArrange ? (
@@ -271,8 +336,7 @@ export function Dashboard() {
         {/* AOD-142 the wake surface: any touch re-arms the chrome-awake idle timer. onTouchStart/onTouchMove
             are PASSIVE responder callbacks (they never call setResponder), so they observe the touch without
             capturing it — they can't move a card ("waking ≠ editing") and never contend with the arrange or
-            paging gestures. Wrapping the whole hub means a touch on the dial, a card, the pager, or empty
-            space all wake it. */}
+            paging gestures. Wrapping the whole hub means a touch on a card, the pager, or empty space wakes it. */}
         <View style={styles.surface} onTouchStart={wake} onTouchMove={wake} testID="dashboard-surface">
           <AppBar variant="hub" right={headerRight} testID="dashboard-header" />
 
@@ -282,9 +346,9 @@ export function Dashboard() {
             <ErrorState line="Could not load your dashboard." detail={error?.message} onRetry={() => void refetch()} />
           ) : arranging && atPageAltitude ? (
             // AOD-145: PAGE altitude — the skies as thumbnail tiles (reorder / label / delete / +). It retires
-            // the /dashboards switcher modal; the dial (above) still exits to Glance from here, and tapping a
-            // tile descends into that sky's cards. Data + mutations come from useDashboards; the descend + the
-            // post-create drop are Dashboard's altitude concerns.
+            // the /dashboards switcher modal; Done (above) still exits from here, and tapping a tile descends
+            // into that sky's cards. Data + mutations come from useDashboards; the descend + the post-create
+            // drop are Dashboard's altitude concerns.
             <View style={styles.body}>
               <PageAltitude
                 dashboards={dashboards}
@@ -303,14 +367,13 @@ export function Dashboard() {
             // An empty board still renders the canvas. GestureDetector needs one child, so the body View is it.
             <GestureDetector gesture={pinchToRise}>
               <View style={styles.body}>
-                {/* AOD-142: the arrange-only hint. The old Glance instruction is gone — the dial is the visible
-                    control now. Glance stays wordless and calm. */}
-                <Text style={styles.hint}>Drag to move. Drag a corner to resize. Flip to Glance to finish.</Text>
+                {/* AOD-195: the arrange-only hint. Glance stays wordless and calm; Done finishes. */}
+                <Text style={styles.hint}>Drag to move. Drag a corner to resize. Tap Done to finish.</Text>
                 <LayoutCanvas
                   instances={instances}
                   arranging
                   onEnterArrange={() => setArranging(true)}
-                  onExitArrange={() => setArranging(false)}
+                  onExitArrange={exitArrange}
                   onCommit={commit}
                   onRequestConfigure={setConfiguring}
                   onRemove={(instanceId) => void removeWidget(instanceId)}
@@ -328,9 +391,10 @@ export function Dashboard() {
               </View>
             </GestureDetector>
           ) : (
-            // AOD-144: GLANCE is a horizontal pager over the skies. Each page renders its sky read-only; the
-            // dots + the second-sky Pro gate live inside. A single bootstrapped sky is the common case and
-            // renders as a one-page pager (no dots).
+            // AOD-144: GLANCE (the calm default) is a horizontal pager over the skies. Each page renders its
+            // sky read-only; the dots + the second-sky Pro gate live inside. A single bootstrapped sky is the
+            // common case and renders as a one-page pager (no dots). AOD-195: a long-press on a card opens the
+            // quick-actions menu; a long-press on an empty sky enters Edit Screen.
             <View style={styles.body}>
               <SkyPager
                 dashboards={dashboards}
@@ -345,6 +409,11 @@ export function Dashboard() {
                 cellPx={cellPx}
                 columns={columns}
                 onEnterArrange={enterArrange}
+                // AOD-195: a card long-press opens the quick-actions menu; delete confirms on the calm card.
+                onLongPressCard={openCardMenu}
+                confirmingRemoveId={confirmingRemoveId}
+                onRemove={confirmRemoveFromMenu}
+                onCancelRemove={cancelRemoveFromMenu}
                 onAddCard={onAddCard}
                 createDashboard={createDashboard}
                 awake={awake}
@@ -358,10 +427,25 @@ export function Dashboard() {
           {configuring && <ConfigureInstanceModal instance={configuring} onClose={() => setConfiguring(null)} />}
         </View>
       </Screen>
+      {/* AOD-195: the anchored quick-actions menu, mounted OVER the whole route container (a sibling of Screen)
+          so its absolute-fill overlay's coord space matches the gesture's window absoluteX/absoluteY. Only
+          reachable from the calm surface (long-press is disabled in Arrange); an outside tap dismisses. The
+          LIVE instance drives the size row so a re-snap re-marks it. */}
+      {menu && menuInstance ? (
+        <CardQuickActions
+          instance={menuInstance}
+          anchor={menu.anchor}
+          onEditWidget={menuEditWidget}
+          onEditScreen={menuEditScreen}
+          onDeleteWidget={menuDeleteWidget}
+          onSelectSize={menuSelectSize}
+          onDismiss={closeMenu}
+        />
+      ) : null}
       {/* AOD-81 §6: the wall preview, mounted OVER the whole route container (a sibling of Screen, above the
-          shell chrome) so the peek is edge to edge like the wall. Reachable only while arranging (now entered
-          via the AOD-142 dial or a long-press); WallPreview renders an empty draft fine, so the dial entering
-          Arrange on an empty board is harmless. Tap anywhere / OS back returns. */}
+          shell chrome) so the peek is edge to edge like the wall. Reachable only while arranging (via the
+          menu's Edit Screen or an empty-canvas long-press); WallPreview renders an empty draft fine. Tap
+          anywhere / OS back returns. */}
       {previewing ? <WallPreview instances={instances} onClose={() => setPreviewing(false)} /> : null}
     </>
   );
