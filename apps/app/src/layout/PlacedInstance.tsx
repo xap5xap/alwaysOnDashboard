@@ -21,7 +21,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { WidgetHost } from '../host/WidgetHost';
 import { useRegistry } from '../registry/RegistryProvider';
-import { GRID_COLUMNS, MAX_SLOT_H, SIZE_CATALOGUE } from '../widgets/sizes';
+import { GRID_COLUMNS, MAX_SLOT_H, MAX_SLOT_W, SIZE_CATALOGUE } from '../widgets/sizes';
 import type { LayoutRect, WidgetInstance } from '../registry/types';
 import { snapDrag, UNIT_PX } from './geometry';
 import type { GridRect } from './grid';
@@ -301,7 +301,7 @@ export function PlacedInstance({
       // Only inline number math on the UI thread: grow the extents and round to a RAW slot ({1,2}). The
       // supported-footprint choice + the visible flip happen in applyResizeSlot (JS), fired only when the
       // raw slot changes — so what you drag flips discretely and never lands on an unsupported size.
-      const rw = Math.min(GRID_COLUMNS, Math.max(1, Math.round(startW.value + e.translationX / UNIT_PX)));
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / UNIT_PX)));
       const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / UNIT_PX)));
       if (rw !== lastRw.value || rh !== lastRh.value) {
         lastRw.value = rw;
@@ -313,7 +313,7 @@ export function PlacedInstance({
       'worklet';
       // Re-derive the raw slot from the total translation and commit it (finishResize maps raw -> supported
       // deterministically), so the drop is correct even if the final onUpdate frame was coalesced.
-      const rw = Math.min(GRID_COLUMNS, Math.max(1, Math.round(startW.value + e.translationX / UNIT_PX)));
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / UNIT_PX)));
       const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / UNIT_PX)));
       runOnJS(finishResize)(rw, rh);
     })

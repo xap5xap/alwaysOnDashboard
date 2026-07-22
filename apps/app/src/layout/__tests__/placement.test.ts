@@ -50,13 +50,13 @@ describe('defaultPlacementRect (AOD-10 §5.1 nominal geometry, non-overlap)', ()
     expect(defaultPlacementRect('M', [])).toEqual({ x: 0, y: 0, w: 1, h: 2, z: 0 });
   });
 
-  it('stacks below every existing instance and on top of the z-stack', () => {
+  it('places in the first free slot of the wide row and sits on top of the z-stack', () => {
     const existing = [
       inst({ x: 0, y: 0, w: 2, h: 1, z: 0 }),
       inst({ x: 1, y: 1, w: 1, h: 2, z: 5 }, 'j'),
     ];
-    // max bottom = max(0+1, 1+2) = 3; max z = 5 -> 6
-    expect(defaultPlacementRect('W', existing)).toEqual({ x: 0, y: 3, w: 2, h: 1, z: 6 });
+    // On the 6-col landscape grid the new W fits BESIDE the row-0 W (cols 2-3), not below it; max z = 5 -> 6.
+    expect(defaultPlacementRect('W', existing)).toEqual({ x: 2, y: 0, w: 2, h: 1, z: 6 });
   });
 });
 
@@ -67,11 +67,11 @@ describe('defaultPlacementRect first-free placement (AOD-139, resolves AOD-103)'
     expect(defaultPlacementRect('S', existing)).toEqual({ x: 1, y: 0, w: 1, h: 1, z: 1 });
   });
 
-  it('walks an S across col0 -> col1 -> the next row as the grid fills (reading order)', () => {
+  it('walks an S across col0 -> col1 -> col2 as the wide landscape row fills (reading order)', () => {
     const a = inst({ x: 0, y: 0, w: 1, h: 1, z: 0 }, 'a');
     const b = inst({ x: 1, y: 0, w: 1, h: 1, z: 1 }, 'b');
     expect(defaultPlacementRect('S', [a])).toEqual({ x: 1, y: 0, w: 1, h: 1, z: 1 }); // col1, same row
-    expect(defaultPlacementRect('S', [a, b])).toEqual({ x: 0, y: 1, w: 1, h: 1, z: 2 }); // next row
+    expect(defaultPlacementRect('S', [a, b])).toEqual({ x: 2, y: 0, w: 1, h: 1, z: 2 }); // col2, still row 0
   });
 
   it('drops an M (1x2) into the first column that has two free rows', () => {
@@ -81,33 +81,37 @@ describe('defaultPlacementRect first-free placement (AOD-139, resolves AOD-103)'
     });
   });
 
-  it('places a W (2x1) only in a fully-free row, else appends below (a single S blocks the row)', () => {
+  it('places a W (2x1) beside a single S on the wide row (cols 1-2), not stacked below', () => {
+    // On the 6-col grid a single S no longer blocks the row: the W fits to its right.
     expect(defaultPlacementRect('W', [inst({ x: 0, y: 0, w: 1, h: 1, z: 0 })])).toEqual({
-      x: 0, y: 1, w: 2, h: 1, z: 1,
+      x: 1, y: 0, w: 2, h: 1, z: 1,
     });
   });
 
-  it('appends an L (2x2) below any occupant (it needs the whole grid)', () => {
+  it('places an L (2x2) beside a single S on the wide row (cols 1-2), not below', () => {
+    // The L no longer needs the whole grid — the wide landscape row has room beside a single S.
     expect(defaultPlacementRect('L', [inst({ x: 0, y: 0, w: 1, h: 1, z: 0 })])).toEqual({
-      x: 0, y: 1, w: 2, h: 2, z: 1,
+      x: 1, y: 0, w: 2, h: 2, z: 1,
     });
   });
 
-  it('stacks a new W below a full column of W rows when the grid is full (append)', () => {
+  it('places a new W beside two stacked W rows on the wide grid (cols 2-3), not below', () => {
+    // Two W at cols 0-1 fill only a third of a 6-col row; the new W fits to their right in row 0.
     const rows = [
       inst({ x: 0, y: 0, w: 2, h: 1, z: 0 }, 'a'),
       inst({ x: 0, y: 1, w: 2, h: 1, z: 1 }, 'b'),
     ];
-    expect(defaultPlacementRect('W', rows)).toEqual({ x: 0, y: 2, w: 2, h: 1, z: 2 });
+    expect(defaultPlacementRect('W', rows)).toEqual({ x: 2, y: 0, w: 2, h: 1, z: 2 });
   });
 
-  it('fills an interior hole in reading order before appending', () => {
-    // M in col0 (rows 0-1) + S in col1 row0 -> the first free S slot is the hole at col1 row1.
+  it('fills the first free reading-order slot on the wide row (col2) before any interior hole', () => {
+    // M in col0 (rows 0-1) + S in col1 row0. On the 6-col grid the first free reading-order slot is col2
+    // row0, reached before the interior hole at (col1, row1) -> the wide row fills first.
     const existing = [
       inst({ x: 0, y: 0, w: 1, h: 2, z: 0 }, 'm'),
       inst({ x: 1, y: 0, w: 1, h: 1, z: 1 }, 's'),
     ];
-    expect(defaultPlacementRect('S', existing)).toEqual({ x: 1, y: 1, w: 1, h: 1, z: 2 });
+    expect(defaultPlacementRect('S', existing)).toEqual({ x: 2, y: 0, w: 1, h: 1, z: 2 });
   });
 
   it('lands the first widget of an empty board at the origin (matches the bootstrap seed)', () => {
@@ -176,9 +180,9 @@ describe('defaultSeedFor', () => {
     });
   });
 
-  it('places a new instance below the existing ones', () => {
+  it('places a new instance in the first free slot of the wide row (beside the existing one)', () => {
     const seed = defaultSeedFor(def(), [inst({ x: 0, y: 0, w: 2, h: 1, z: 0 })]);
-    expect(seed.rect).toEqual({ x: 0, y: 1, w: 2, h: 1, z: 1 });
+    expect(seed.rect).toEqual({ x: 2, y: 0, w: 2, h: 1, z: 1 }); // cols 2-3, beside the row-0 W (6-col grid)
   });
 
   it('uses the collected config when configure-on-add supplies one (overriding schema defaults)', () => {

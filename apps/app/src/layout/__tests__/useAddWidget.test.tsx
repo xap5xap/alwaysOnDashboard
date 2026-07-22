@@ -100,13 +100,13 @@ describe('useAddWidget optimistic insert (AOD-139)', () => {
     });
 
     // The provisional is already in the cache though the network has NOT resolved. It sits at the
-    // first-free slot below the seeded W (a W blocks the whole row -> row 1), under a placeholder id.
+    // first-free slot beside the seeded W (cols 2-3, row 0 on the 6-col landscape grid), under a placeholder id.
     const mid = instancesInCache(client);
     expect(mid).toHaveLength(2);
     const provisional = mid[1];
     expect(provisional.instanceId).toMatch(/^pending-/);
     expect(provisional.instanceId).not.toBe('seed-a');
-    expect(provisional.rect).toEqual({ x: 0, y: 1, w: 2, h: 1, z: 1 });
+    expect(provisional.rect).toEqual({ x: 2, y: 0, w: 2, h: 1, z: 1 });
 
     const real = realFromSeed('real-1', {
       serviceId: 'stub',
@@ -180,11 +180,11 @@ describe('useAddWidget optimistic insert (AOD-139)', () => {
     });
 
     // The two seeds passed to the repo were computed before either insert resolved. add #1 lands the W at
-    // the origin; add #2 reads the provisional and stacks below instead of reusing (0,0).
+    // the origin; add #2 reads the provisional and packs beside it (cols 2-3) instead of reusing (0,0).
     const seed1 = (addWidgetInstance as jest.Mock).mock.calls[0][2] as InstanceSeed;
     const seed2 = (addWidgetInstance as jest.Mock).mock.calls[1][2] as InstanceSeed;
     expect(seed1.rect).toEqual({ x: 0, y: 0, w: 2, h: 1, z: 0 });
-    expect(seed2.rect).toEqual({ x: 0, y: 1, w: 2, h: 1, z: 1 });
+    expect(seed2.rect).toEqual({ x: 2, y: 0, w: 2, h: 1, z: 1 });
     expect(cellsOverlap(gridCell(seed1.rect), gridCell(seed2.rect))).toBe(false);
 
     // The live cache holds both provisionals, and they do not overlap either.

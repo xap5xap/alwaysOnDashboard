@@ -239,8 +239,9 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
 });
 
 describe('the on-sky preview (focus a tile -> the real card at its firstFreeSlot landing)', () => {
-  it('drops the focused card onto the sky below the occupied slot (firstFreeSlot), not before focus', async () => {
-    // A W card already fills row 0, so a new W lands at row 1 (firstFreeSlot). The preview appears only on focus.
+  it('drops the focused card onto the sky at its firstFreeSlot landing (beside the occupant), not before focus', async () => {
+    // A W occupies the start of row 0; on the 6-col landscape grid a new W fits BESIDE it (cols 2-3), same
+    // row (firstFreeSlot fills the wide row before going below). The preview appears only on focus.
     renderGallery(new Map([['stub', conn('stub')]]), {
       dashboard: { dashboardId: 'dash-1', name: 'Wall', instances: [inst('a', { x: 0, y: 0, w: 2, h: 1, z: 0 })] },
     });
@@ -250,8 +251,8 @@ describe('the on-sky preview (focus a tile -> the real card at its firstFreeSlot
     fireEvent.press(screen.getByTestId('add-gallery-tile-stub-placeholder'));
     const preview = await screen.findByTestId('add-gallery-sky-preview');
     const style = StyleSheet.flatten(preview.props.style);
-    expect(style.left).toBe(0); // column 0
-    expect(style.top).toBeGreaterThan(0); // row >= 1: it landed BELOW the occupied row (firstFreeSlot)
+    expect(style.left).toBeGreaterThan(0); // shifted right to the free part of the row (col 2), not overlapping
+    expect(style.top).toBe(0); // still row 0 — the wide landscape row has room beside the occupant
   });
 });
 
@@ -272,14 +273,15 @@ describe('already-added state (AOD-148 §2 "Added is visible": a quiet mark + "A
   it('"Add again" still inserts a duplicate below the first (never silent, never disabled)', async () => {
     renderGallery(new Map([['stub', conn('stub')]]), { dashboard: withStubOnSky });
     fireEvent.press(await screen.findByTestId('add-gallery-add-stub-placeholder'));
-    // A second stub-placeholder lands at the first free slot below the existing one — the duplicate is real.
+    // A second stub-placeholder lands at the first free slot beside the existing one (cols 2-3, row 0 on the
+    // 6-col grid) — the duplicate is real, never silent.
     await waitFor(() =>
       expect(addWidgetInstance).toHaveBeenCalledWith('dash-1', 'u1', {
         serviceId: 'stub',
         widgetType: 'placeholder',
         config: {},
         size: 'W',
-        rect: { x: 0, y: 1, w: 2, h: 1, z: 1 },
+        rect: { x: 2, y: 0, w: 2, h: 1, z: 1 },
       }),
     );
   });

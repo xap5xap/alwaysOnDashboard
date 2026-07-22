@@ -1,16 +1,19 @@
-// The discrete 2-column / 96px-row SLOT algebra for the arrange canvas (AOD-138, the geometry side of
-// RB-04). geometry.ts is the CONTINUOUS px bridge; this module is the DISCRETE slot model layered on
-// top. It answers the two questions the arrange UX asks — "where does a footprint land" (first-free)
-// and "how do the neighbours move so nothing overlaps" (reflow) — plus the slot<->pixel mapping the
-// hairline slot and the gallery preview draw from. Pure and I/O-free, and registry-free (no per-service
-// knowledge): the shared engine that AOD-140 (gestures), AOD-139 (placement) and AOD-147 (gallery
-// preview) all consume.
+// The discrete SLOT algebra for the arrange canvas (AOD-138, the geometry side of RB-04; made responsive
+// by AOD-197). geometry.ts is the CONTINUOUS px bridge; this module is the DISCRETE slot model layered on
+// top. It answers the questions the arrange UX asks — "where does a footprint land" (first-free / nearest-
+// free) and "how does an un-arranged orientation pack" (reflowToColumns) — plus the slot<->pixel mapping
+// the hairline slot and the gallery preview draw from. Pure and I/O-free, and registry-free (no per-service
+// knowledge): the shared engine that AOD-140 (gestures), AOD-139 (placement) and AOD-147 (gallery preview)
+// all consume.
 //
-// Grid law (Many Skies §1c/§1d, orchestrator-locked on AOD-138):
-//   - LayoutRect maps x = column, y = row; the grid is GRID_COLUMNS (2) wide and UNBOUNDED downward
-//     (the sky scrolls) — rows are never capped, a full grid appends below rather than blocking.
-//   - Reading order is row-major, top-to-bottom, LEFT-COLUMN-FIRST: slot (r,0) precedes (r,1) precedes
-//     (r+1,0). Both firstFreeSlot and reflow walk this order, so placement is deterministic.
+// Grid law (Many Skies §1c/§1d, orchestrator-locked on AOD-138; responsive columns AOD-197):
+//   - LayoutRect maps x = column, y = row; the grid is `columns` wide (GRID_COLUMNS=6 landscape /
+//     PORTRAIT_COLUMNS=4 portrait — the scan takes the count as a parameter so a caller can pack either
+//     orientation) and UNBOUNDED downward (the sky scrolls) — rows are never capped, a full grid appends
+//     below rather than blocking.
+//   - Reading order is row-major, top-to-bottom, LEFT-COLUMN-FIRST: slot (r,0) precedes (r,1) ... precedes
+//     (r,columns-1) precedes (r+1,0). firstFreeSlot, reflow and reflowToColumns all walk this order, so
+//     placement is deterministic.
 //   - Overlap is IMPOSSIBLE after a reflow — the whole point of this issue (the read path still tolerates
 //     overlap via z, widgets/sizes.ts, but the arrange path no longer produces it).
 import type { LayoutRect } from '../registry/types';
@@ -56,18 +59,24 @@ export function cellsOverlap(a: GridRect, b: GridRect): boolean {
 
 /**
  * The first slot (reading order) where `footprint` fits with no overlap against `occupied`. A footprint
- * (w,h) fits at (row r, col c) iff `c + w <= GRID_COLUMNS` AND every covered cell (rows r..r+h-1, cols
- * c..c+w-1) is free of every occupied rect. The scan walks rows from 0 and, within a row, column 0 then
- * column 1, returning the earliest fit. When no interior gap fits (the grid is "full" in its existing
- * rows), it APPENDS at a fresh row equal to the deepest occupied bottom — below everything — so a full
- * grid never blocks; the sky grows downward. Returns the slot as a GridRect (origin + the footprint).
+ * (w,h) fits at (row r, col c) iff `c + w <= columns` AND every covered cell (rows r..r+h-1, cols
+ * c..c+w-1) is free of every occupied rect. The scan walks rows from 0 and, within a row, left column to
+ * right, returning the earliest fit. When no interior gap fits (the grid is "full" in its existing rows),
+ * it APPENDS at a fresh row equal to the deepest occupied bottom — below everything — so a full grid never
+ * blocks; the sky grows downward. `columns` defaults to the landscape GRID_COLUMNS (so existing callers
+ * keep compiling); S3 passes the active orientation's count. Returns the slot as a GridRect (origin + the
+ * footprint).
  */
-export function firstFreeSlot(footprint: Footprint, occupied: GridRect[]): GridRect {
+export function firstFreeSlot(
+  footprint: Footprint,
+  occupied: GridRect[],
+  columns: number = GRID_COLUMNS,
+): GridRect {
   const { w, h } = footprint;
   // The deepest occupied row edge; any interior gap must live within [0, bottom). Below it we append.
   const bottom = occupied.reduce((deepest, cell) => Math.max(deepest, cell.y + cell.h), 0);
   for (let row = 0; row < bottom; row++) {
-    for (let col = 0; col + w <= GRID_COLUMNS; col++) {
+    for (let col = 0; col + w <= columns; col++) {
       const candidate: GridRect = { x: col, y: row, w, h };
       if (!occupied.some((cell) => cellsOverlap(candidate, cell))) {
         return candidate;
@@ -76,6 +85,79 @@ export function firstFreeSlot(footprint: Footprint, occupied: GridRect[]): GridR
   }
   // No interior gap: append below all occupied rows, left column first (the sky scrolls).
   return { x: 0, y: bottom, w, h };
+}
+
+/**
+ * Reflow a whole layout into a `targetCols`-wide grid (AOD-197, design §6.3) — how a DERIVED orientation
+ * is computed from a designed one. Sorts the cards in reading order (`y`, then `x`, then a stable input
+ * index), then places each at its `firstFreeSlot` in a `targetCols`-wide grid, appending below when a row
+ * fills — packing the spread-out layout "one next to the other" exactly as Xavier's iPad screenshots show.
+ * Pure, deterministic, shape-aware. Each card keeps its footprint (w/h) and z; only x/y move. Returns a NEW
+ * array in the SAME INPUT ORDER (zip-friendly, mirroring `reflow`) and NEVER mutates the input, so a
+ * designed orientation is safe to derive from. Cross-orientation only: it seeds an un-designed orientation
+ * on rotation / first render, never an in-orientation move (that is nearestFreeSlot — gaps are preserved).
+ */
+export function reflowToColumns(rects: LayoutRect[], targetCols: number): LayoutRect[] {
+  const order = rects
+    .map((rect, index) => ({ rect, index }))
+    .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.index - b.index);
+  const result = rects.slice();
+  const occupied: GridRect[] = [];
+  for (const { rect, index } of order) {
+    const slot = firstFreeSlot({ w: rect.w, h: rect.h }, occupied, targetCols);
+    result[index] = { ...rect, x: slot.x, y: slot.y };
+    occupied.push(cellOf(result[index]));
+  }
+  return result;
+}
+
+/**
+ * The nearest free slot to a drop target (AOD-197, design §8) — the "place, don't pack" hairline for an
+ * in-orientation move/resize. If the cell at `target` is free and its footprint fits on-grid (x + w <=
+ * columns), that cell wins outright (WYSIWYG: the card lands where the finger is). Otherwise it returns the
+ * NEAREST free fitting cell by Euclidean distance on the ORIGIN, ties broken by reading order (y, then x);
+ * neighbours never move, so gaps are preserved. The search covers the interior rows and the append row
+ * below all cards (rows unbounded), so a target dropped past the last row lands nearest the finger on a new
+ * row rather than repacking. Only when the footprint cannot fit the column count at all (wider than the
+ * grid) does it fall back to firstFreeSlot's append. Deterministic. `columns` defaults to the landscape
+ * GRID_COLUMNS; S4 passes the active orientation's count.
+ */
+export function nearestFreeSlot(
+  footprint: Footprint,
+  occupied: GridRect[],
+  target: { x: number; y: number },
+  columns: number = GRID_COLUMNS,
+): GridRect {
+  const { w, h } = footprint;
+  const fits = (x: number, y: number): boolean =>
+    x >= 0 &&
+    y >= 0 &&
+    x + w <= columns &&
+    !occupied.some((cell) => cellsOverlap({ x, y, w, h }, cell));
+
+  // The cell under the finger, free and on-grid, wins outright.
+  if (fits(target.x, target.y)) return { x: target.x, y: target.y, w, h };
+
+  // Otherwise scan the interior rows AND the append row (y = bottom, always free) for the nearest fit.
+  const bottom = occupied.reduce((deepest, cell) => Math.max(deepest, cell.y + cell.h), 0);
+  let best: GridRect | null = null;
+  let bestScore = Infinity;
+  for (let y = 0; y <= bottom; y++) {
+    for (let x = 0; x + w <= columns; x++) {
+      if (!fits(x, y)) continue;
+      const dx = x - target.x;
+      const dy = y - target.y;
+      const score = dx * dx + dy * dy; // squared Euclidean distance on the origin
+      if (score < bestScore) {
+        // Strict < with a reading-order scan (y outer, x inner) breaks ties by the earliest reading-order cell.
+        bestScore = score;
+        best = { x, y, w, h };
+      }
+    }
+  }
+  if (best) return best;
+  // The footprint is wider than the grid: nothing fits any column, so append below all cards.
+  return firstFreeSlot(footprint, occupied, columns);
 }
 
 /**
@@ -132,7 +214,8 @@ function cellOf(rect: LayoutRect): GridRect {
   return { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
 }
 
-/** Clamp a column origin so a `w`-wide footprint stays inside the two columns: x in [0, GRID_COLUMNS-w]. */
+/** Clamp a column origin so a `w`-wide footprint stays on the landscape grid: x in [0, GRID_COLUMNS-w].
+ *  reflow keeps the landscape count (S4 retires in-arrange reflow; S8 prunes it). */
 function clampColumn(x: number, w: number): number {
   return Math.max(0, Math.min(x, GRID_COLUMNS - w));
 }

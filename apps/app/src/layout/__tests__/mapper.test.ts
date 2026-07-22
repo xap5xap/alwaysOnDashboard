@@ -55,8 +55,9 @@ describe('rowToInstance (read path: gate on the DB vocabulary, then coerce to th
   });
 
   it('snaps a free-drop fractional rect (the pre-slot arrange canvas) onto the grid', () => {
+    // x=0.6 rounds to col1 and survives on the wide landscape grid (it no longer collapses to 0 as at 2 cols).
     expect(rowToInstance(row({ size: 'medium', rect: { x: 0.6, y: 1.25, w: 2.3, h: 1.4, z: 4 } }))).toMatchObject({
-      rect: { x: 0, y: 1, w: 2, h: 1, z: 4 },
+      rect: { x: 1, y: 1, w: 2, h: 1, z: 4 },
       size: 'W',
     });
   });
@@ -185,10 +186,11 @@ describe('configToUpdate (AOD-10 §4 config-update path)', () => {
 
 describe('round-trip', () => {
   it('a legacy row coerces once, then row -> instance -> insert -> instance is a fixed point', () => {
-    // A worst-case legacy row: the retired wide 3x1 parked outside the 2-column grid.
+    // A worst-case legacy row: the retired wide 3x1 parked past the right edge of the landscape grid. w
+    // clamps to MAX_SLOT_W=2 and x clamps to the last legal landscape column (5 -> GRID_COLUMNS-2 = 4).
     const original = row({ rect: { x: 5, y: 6, w: 3, h: 1, z: 2 }, size: 'wide', config: { projectId: 'p1' } });
     const instance = rowToInstance(original)!;
-    expect(instance.rect).toEqual({ x: 0, y: 6, w: 2, h: 1, z: 2 });
+    expect(instance.rect).toEqual({ x: 4, y: 6, w: 2, h: 1, z: 2 });
     expect(instance.size).toBe('W');
 
     const insert = instanceToInsert(
@@ -203,7 +205,7 @@ describe('round-trip', () => {
       original.dashboard_id,
       original.user_id,
     );
-    expect(insert.rect).toEqual({ x: 0, y: 6, w: 2, h: 1, z: 2 });
+    expect(insert.rect).toEqual({ x: 4, y: 6, w: 2, h: 1, z: 2 });
     expect(insert.size).toBe('medium'); // W serialized into the frozen vocabulary
     expect(insert.config).toEqual({ projectId: 'p1' });
 
