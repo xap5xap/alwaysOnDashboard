@@ -12,7 +12,7 @@ jest.mock('../dashboardRepo', () => ({ persistInstanceConfig: jest.fn() }));
 
 import { persistInstanceConfig } from '../dashboardRepo';
 import { useConfigureInstance } from '../useConfigureInstance';
-import { dashboardQueryKey } from '../useDashboard';
+import { dashboardQueryKey, dashboardQueryPrefix } from '../useDashboard';
 
 function renderConfigure() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
@@ -21,7 +21,7 @@ function renderConfigure() {
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
   const { result } = renderHook(() => useConfigureInstance(), { wrapper });
-  return { result, invalidate };
+  return { result, invalidate, client };
 }
 
 beforeEach(() => {
@@ -30,15 +30,23 @@ beforeEach(() => {
 });
 
 describe('useConfigureInstance', () => {
-  it('persists the config by instance id, then invalidates the dashboard query', async () => {
-    const { result, invalidate } = renderConfigure();
+  // AOD-197 (Pass B2): config is orientation-INDEPENDENT, so the repaint invalidates the dashboard PREFIX
+  // (both orientations), not one orientation key. Seeding both caches proves the prefix covers landscape AND
+  // portrait (S3/pre-B2 asserted the single landscape key here).
+  it('persists the config by instance id, then invalidates BOTH orientations via the dashboard prefix', async () => {
+    const { result, invalidate, client } = renderConfigure();
+    client.setQueryData(dashboardQueryKey('u1', 'landscape'), { dashboardId: 'dash-1', name: 'Wall', instances: [] });
+    client.setQueryData(dashboardQueryKey('u1', 'portrait'), { dashboardId: 'dash-1', name: 'Wall', instances: [] });
 
     await act(async () => {
       await result.current.configure('inst-1', { density: 'compact' });
     });
 
     expect(persistInstanceConfig).toHaveBeenCalledWith('inst-1', { density: 'compact' });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: dashboardQueryKey('u1') });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: dashboardQueryPrefix('u1') });
+    // The prefix is a PARTIAL match, so it invalidates BOTH orientation caches.
+    expect(client.getQueryState(dashboardQueryKey('u1', 'landscape'))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(dashboardQueryKey('u1', 'portrait'))?.isInvalidated).toBe(true);
     expect(result.current.error).toBeNull();
   });
 

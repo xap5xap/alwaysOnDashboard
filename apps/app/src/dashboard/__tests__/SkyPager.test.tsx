@@ -251,11 +251,20 @@ describe('SkyPager — one source of truth for the active sky (AOD-194)', () => 
 
     // The active page (d1) shows the 3 true ['dashboard'] cards...
     expect(within(screen.getByTestId('sky-page-d1')).getByTestId('canvas-count').props.children).toBe('3');
-    // ...and NEVER subscribed to ['sky', 'd1'] — useSkyInstances runs only for the non-active pages.
-    expect(mockUseSkyInstances).toHaveBeenCalledWith('d2');
-    expect(mockUseSkyInstances).not.toHaveBeenCalledWith('d1');
+    // ...and NEVER subscribed to ['sky', 'd1'] — useSkyInstances runs only for the non-active pages, keyed by
+    // the device orientation (AOD-197, landscape by default here).
+    expect(mockUseSkyInstances).toHaveBeenCalledWith('d2', 'landscape');
+    expect(mockUseSkyInstances).not.toHaveBeenCalledWith('d1', 'landscape');
     // The non-active page (d2) still renders its own ['sky'] cache (the 1 phantom card here).
     expect(within(screen.getByTestId('sky-page-d2')).getByTestId('canvas-count').props.children).toBe('1');
+  });
+
+  it('threads the device orientation into the non-active pages’ per-sky read (AOD-197)', () => {
+    renderPager([], { activeId: 'd1', orientation: 'portrait' });
+    // The non-active page (d2) reads its own sky in the CURRENT orientation, so it resolves the same
+    // per-orientation layout the active page shows; the active page (d1) never calls useSkyInstances.
+    expect(mockUseSkyInstances).toHaveBeenCalledWith('d2', 'portrait');
+    expect(mockUseSkyInstances).not.toHaveBeenCalledWith('d1', 'portrait');
   });
 
   it('the active page repaints when the ["dashboard"] cache changes (WYSIWYG after a commit)', () => {

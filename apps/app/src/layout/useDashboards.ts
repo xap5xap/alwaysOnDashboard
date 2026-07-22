@@ -19,7 +19,8 @@ import {
   type DashboardSummary,
 } from './dashboardRepo';
 import { setActiveDashboardId } from './activeDashboardStore';
-import { dashboardQueryKey, useDashboard, type UseDashboardResult } from './useDashboard';
+import { dashboardQueryPrefix, useDashboard, type UseDashboardResult } from './useDashboard';
+import type { Orientation } from '../widgets/sizes';
 
 // §1e: the last remaining sky can be emptied but never deleted — the policy the hook enforces (the repo is
 // the raw mechanism). Surfaced as an Error so a caller that wires delete can show it, though the switcher's
@@ -52,14 +53,17 @@ export interface UseDashboardsResult extends UseDashboardResult {
   deleteDashboard(id: string): Promise<void>;
 }
 
-export function useDashboards(): UseDashboardsResult {
+export function useDashboards(orientation: Orientation = 'landscape'): UseDashboardsResult {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const queryClient = useQueryClient();
 
-  // The active sky's live surface (instances / dashboardId / dashboardName / commit / ...) — the SAME cache
-  // (and the SAME resolution: persisted pointer -> first -> bootstrap) KioskWall and Dashboard read.
-  const active = useDashboard();
+  // The active sky's live surface (instances / dashboardId / dashboardName / commit / ...) resolved for the
+  // device orientation (AOD-197). The active-sky RESOLUTION (persisted pointer -> first -> bootstrap) is the
+  // same as KioskWall's; only WHICH orientation's rect list it hands back differs. `dashboardId` / `activeId`
+  // are orientation-INDEPENDENT (the same sky, different card positions), so the sky list + active pointer
+  // logic below is unchanged.
+  const active = useDashboard(orientation);
 
   const listQuery = useQuery<DashboardSummary[]>({
     queryKey: dashboardsQueryKey(userId),
@@ -92,10 +96,12 @@ export function useDashboards(): UseDashboardsResult {
 
   const setActive = useCallback(
     (id: string) => {
-      // Persist the pointer, then invalidate the active-sky key so useDashboard's queryFn re-resolves to `id`
+      // Persist the pointer, then invalidate the active-sky cache so useDashboard's queryFn re-resolves to `id`
       // and KioskWall / Dashboard / this hook all repaint the chosen sky. The key is NOT re-keyed (kiosk-safe).
+      // AOD-197: invalidate the PREFIX so BOTH orientations re-resolve — the active sky is orientation-
+      // independent, so flipping it must refresh landscape AND portrait, whichever is mounted.
       setActiveDashboardId(id);
-      void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId) });
+      void queryClient.invalidateQueries({ queryKey: dashboardQueryPrefix(userId) });
     },
     [queryClient, userId],
   );
@@ -118,8 +124,9 @@ export function useDashboards(): UseDashboardsResult {
       await refetchList();
       // The active sky's name is ALSO cached under the active-sky key (useDashboard exposes dashboardName from
       // it); renaming the active sky must refresh that key too, or dashboardName goes stale until the next
-      // setActive/restart (M5 page-altitude binds a header to it).
-      if (id === activeId) void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId) });
+      // setActive/restart (M5 page-altitude binds a header to it). AOD-197: the prefix refreshes BOTH
+      // orientations (the name is orientation-independent).
+      if (id === activeId) void queryClient.invalidateQueries({ queryKey: dashboardQueryPrefix(userId) });
     },
     [refetchList, activeId, queryClient, userId],
   );

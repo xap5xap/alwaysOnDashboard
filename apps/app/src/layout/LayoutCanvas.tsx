@@ -17,6 +17,7 @@ import { Pressable, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetInstance } from '../registry/types';
 import type { LayoutPatch } from './mapper';
+import { UNIT_PX } from './geometry';
 import { slotToPixels } from './grid';
 import { PlacedInstance } from './PlacedInstance';
 import { useArrangeReflow } from './useArrangeReflow';
@@ -36,6 +37,17 @@ export interface LayoutCanvasProps {
    *  while dragging. The dashboard arms the cross-sky carry dwell. Optional and forwarded straight to each
    *  card: the wall / read-only pager callers never arrange, so they simply omit it (the seam is untouched). */
   onCarryEdge?(instanceId: string, edge: 'left' | 'right' | null): void;
+  /** AOD-197 (S4): the ON-SCREEN pixels per grid cell (cellPxFor(columns, viewportW), from the CALLER). When
+   *  present (handheld Glance / Arrange) the cards + hairline are wrapped in a fit-to-width scale layer
+   *  (scale = cellPx / UNIT_PX, top-left anchored) so they fill the screen width additively — UNIT_PX and the
+   *  card internals are untouched. When ABSENT (the wall: KioskWall / WallPreview) the canvas renders EXACTLY
+   *  as pre-AOD-197 — no wrapper, no scale — and the wall applies its own wallFitScale layer around it, so the
+   *  kiosk path stays byte-identical. */
+  cellPx?: number;
+  /** AOD-197 (S4): the active orientation's column count (landscape 6 / portrait 4), threaded to the arrange
+   *  session + every card so a drag/resize clamps against the grid the user is touching. Defaults (absent)
+   *  to the landscape GRID_COLUMNS via the hook/card, which is the wall's orientation. */
+  columns?: number;
 }
 
 export function LayoutCanvas({
@@ -47,22 +59,25 @@ export function LayoutCanvas({
   onRequestConfigure,
   onRemove,
   onCarryEdge,
+  cellPx,
+  columns,
 }: LayoutCanvasProps) {
   const { theme } = useUnistyles();
-  // The live arrange session: the active target (for the hairline), the per-card reflow preview, and the
-  // three gesture reporters PlacedInstance drives. Inert (target: null) until a gesture fires, so on the
-  // wall / in Glance it costs a useState + a noop and changes nothing (see the header note).
-  const reflow = useArrangeReflow(instances, onCommit);
+  // The live arrange session: the active target (for the nearest-free hairline) + the gesture reporters
+  // PlacedInstance drives. Inert (target: null) until a gesture fires, so on the wall / in Glance it costs a
+  // useState + a noop and changes nothing (see the header note). `columns` scopes nearest-free to the active
+  // orientation; absent (wall) it defaults to landscape.
+  const reflow = useArrangeReflow(instances, onCommit, columns);
 
-  return (
-    <View style={styles.canvas}>
-      {/* Behind the cards: a full-bleed catcher so a tap on empty space leaves arrange mode. */}
-      {arranging ? (
-        <Pressable style={styles.exitCatcher} onPress={onExitArrange} accessibilityLabel="Done arranging" />
-      ) : null}
-      {/* AOD-140: the hairline slot — a thin outline at the slot the held/resized card will land on,
-          visible only while a gesture is active in arrange. Behind the cards (drawn before them) and
-          non-interactive, so it never intercepts the gesture it is illustrating. */}
+  // AOD-197 (S4): the hairline + the cards, laid out on the NOMINAL UNIT_PX grid. On the handheld (cellPx
+  // given) the grid is wrapped in the fit-to-width scale layer below so it fills the screen width; on the
+  // wall (cellPx absent) it renders directly — structurally byte-identical to pre-AOD-197 — and KioskWall
+  // scales the whole canvas with its own wallFitScale layer.
+  const grid = (
+    <>
+      {/* AOD-140: the hairline slot — a thin outline at the nearest-free slot the held/resized card will land
+          on (AOD-197 place-don't-pack), visible only while a gesture is active in arrange. Behind the cards
+          (drawn before them) and non-interactive, so it never intercepts the gesture it is illustrating. */}
       {arranging && reflow.activeSlot ? (
         <View
           pointerEvents="none"
@@ -80,9 +95,8 @@ export function LayoutCanvas({
           instance={instance}
           arranging={arranging}
           onLongPress={onEnterArrange}
-          // Gate the preview on `arranging` so a stale session (an orphaned target that outlived arrange,
-          // e.g. an unmount path that skipped onFinalize) can never drive a neighbour in Glance — belt to
-          // the reflow's own pinnedIndex<0 self-heal. The hairline above is already arranging-gated.
+          // Place-don't-pack (AOD-197 S4): previewFor is always null (neighbours never move), so a card only
+          // ever rests at its committed rect. Kept gated on `arranging` for symmetry with the hairline above.
           previewRect={arranging ? reflow.previewFor(instance.instanceId) : null}
           onArrangeMove={reflow.onArrangeMove}
           onArrangeEnd={reflow.onArrangeEnd}
@@ -90,8 +104,34 @@ export function LayoutCanvas({
           onRequestConfigure={onRequestConfigure}
           onRemove={onRemove}
           onCarryEdge={onCarryEdge}
+          cellPx={cellPx}
+          columns={columns}
         />
       ))}
+    </>
+  );
+
+  return (
+    <View style={styles.canvas}>
+      {/* Behind the cards: a full-bleed catcher so a tap on empty space leaves arrange mode. */}
+      {arranging ? (
+        <Pressable style={styles.exitCatcher} onPress={onExitArrange} accessibilityLabel="Done arranging" />
+      ) : null}
+      {cellPx != null ? (
+        // AOD-197 (S4) fit-to-width: scale the nominal grid so cells fill the screen width, anchored at the
+        // top-left (the grid grows from the corner). box-none so this layer is NEVER a touch target: a card
+        // subview still receives its drag/long-press, and a tap on empty space falls THROUGH to the
+        // exitCatcher behind (the "tap empty to exit arrange" affordance). The wall never takes this branch.
+        <View
+          pointerEvents="box-none"
+          style={[styles.scaleLayer, { transform: [{ scale: cellPx / UNIT_PX }] }]}
+          testID="layout-scale-layer"
+        >
+          {grid}
+        </View>
+      ) : (
+        grid
+      )}
     </View>
   );
 }
@@ -114,6 +154,13 @@ const styles = StyleSheet.create(() => ({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  // AOD-197 (S4) the handheld fit-to-width layer: fills the canvas and grows the nominal UNIT_PX grid from
+  // the top-left (transformOrigin) by scale = cellPx / UNIT_PX, exactly like KioskWall's wallFitScale layer.
+  // The dynamic transform is applied inline; box-none (set on the element) keeps it out of hit-testing.
+  scaleLayer: {
+    flex: 1,
+    transformOrigin: 'left top',
   },
   // AOD-140 the landing-slot hairline: a 1.5px dashed accent outline over a faint accent wash (colours +
   // radius applied inline, resolved from the theme like the arrange affordances). Position rides pxStyle.

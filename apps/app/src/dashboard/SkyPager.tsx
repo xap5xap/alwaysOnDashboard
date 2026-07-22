@@ -30,6 +30,7 @@ import { LayoutCanvas } from '../layout/LayoutCanvas';
 import type { DashboardSummary } from '../layout/dashboardRepo';
 import { useSkyInstances } from '../layout/useSkyInstances';
 import type { WidgetInstance } from '../registry/types';
+import type { Orientation } from '../widgets/sizes';
 import { EmptyState, ErrorState, LoadingState } from '../shell';
 import { AddGlyph } from './glyphs';
 import { PageDots } from './PageDots';
@@ -46,6 +47,14 @@ export interface SkyPagerProps {
    *  (Dashboard passes useDashboards().instances). AOD-194: the active page (id === activeId) renders THESE,
    *  never its own ['sky', activeId] cache, so Glance and Arrange can never diverge on the sky you are on. */
   activeInstances: WidgetInstance[];
+  /** The current device orientation (AOD-197). Threaded into the NON-active pages' per-sky read so every page
+   *  resolves the same per-orientation layout the active page (activeInstances) shows. Default landscape. */
+  orientation?: Orientation;
+  /** AOD-197 (S4): the fit-to-width placement scale (cellPx) + the active orientation's column count, from
+   *  Dashboard. Threaded to each page's read-only LayoutCanvas so Glance fills the screen width with the SAME
+   *  scale Arrange uses (WYSIWYG, design §7). Absent = the nominal grid (the pre-S4 fallback, tests). */
+  cellPx?: number;
+  columns?: number;
   /** Long-press a card on a page -> arrange THAT sky (Dashboard: setActive + arranging). */
   onEnterArrange(skyId: string): void;
   /** An empty page's "Add a card" -> Dashboard opens the add flow for that sky. */
@@ -64,6 +73,9 @@ export function SkyPager({
   dashboards,
   activeId,
   activeInstances,
+  orientation = 'landscape',
+  cellPx,
+  columns,
   onEnterArrange,
   onAddCard,
   createDashboard,
@@ -170,6 +182,8 @@ export function SkyPager({
               sky={item}
               instances={activeInstances}
               width={pageWidth}
+              cellPx={cellPx}
+              columns={columns}
               onEnterArrange={() => onEnterArrange(item.id)}
               onAddCard={() => onAddCard(item.id)}
             />
@@ -177,6 +191,9 @@ export function SkyPager({
             <SkyPage
               sky={item}
               width={pageWidth}
+              orientation={orientation}
+              cellPx={cellPx}
+              columns={columns}
               onEnterArrange={() => onEnterArrange(item.id)}
               onAddCard={() => onAddCard(item.id)}
             />
@@ -225,15 +242,21 @@ export function SkyPager({
 function SkyPage({
   sky,
   width,
+  orientation,
+  cellPx,
+  columns,
   onEnterArrange,
   onAddCard,
 }: {
   sky: DashboardSummary;
   width: number;
+  orientation: Orientation;
+  cellPx?: number;
+  columns?: number;
   onEnterArrange(): void;
   onAddCard(): void;
 }) {
-  const { instances, isLoading, isError, refetch } = useSkyInstances(sky.id);
+  const { instances, isLoading, isError, refetch } = useSkyInstances(sky.id, orientation);
   return (
     // Fixed to the pager width so pagingEnabled snaps; height comes from the list's cross-axis stretch,
     // giving the flex:1 LayoutCanvas / centered states a concrete box to fill.
@@ -243,7 +266,7 @@ function SkyPage({
       ) : isError ? (
         <ErrorState line="Could not load this sky." onRetry={() => refetch()} testID={`sky-page-${sky.id}-error`} />
       ) : (
-        <SkyPageContent skyId={sky.id} instances={instances} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
+        <SkyPageContent skyId={sky.id} instances={instances} cellPx={cellPx} columns={columns} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
       )}
     </View>
   );
@@ -260,18 +283,22 @@ function ActiveSkyPage({
   sky,
   instances,
   width,
+  cellPx,
+  columns,
   onEnterArrange,
   onAddCard,
 }: {
   sky: DashboardSummary;
   instances: WidgetInstance[];
   width: number;
+  cellPx?: number;
+  columns?: number;
   onEnterArrange(): void;
   onAddCard(): void;
 }) {
   return (
     <View style={{ width }} testID={`sky-page-${sky.id}`}>
-      <SkyPageContent skyId={sky.id} instances={instances} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
+      <SkyPageContent skyId={sky.id} instances={instances} cellPx={cellPx} columns={columns} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
     </View>
   );
 }
@@ -283,11 +310,15 @@ function ActiveSkyPage({
 function SkyPageContent({
   skyId,
   instances,
+  cellPx,
+  columns,
   onEnterArrange,
   onAddCard,
 }: {
   skyId: string;
   instances: WidgetInstance[];
+  cellPx?: number;
+  columns?: number;
   onEnterArrange(): void;
   onAddCard(): void;
 }) {
@@ -310,6 +341,9 @@ function SkyPageContent({
       onCommit={noop}
       onRequestConfigure={noop}
       onRemove={noop}
+      // AOD-197 (S4): Glance fills the screen width with the same fit-to-width scale Arrange uses (design §7).
+      cellPx={cellPx}
+      columns={columns}
     />
   );
 }

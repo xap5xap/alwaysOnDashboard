@@ -233,10 +233,13 @@ describe('the optional size override (AOD-148 size-by-seeing)', () => {
   });
 });
 
-// AOD-197 S3 contract: the hook must NOT thread a non-landscape orientation — every repo call takes the
-// default 'landscape', so the wall + all live behavior stay byte-identical (S4 wires the real orientation).
-describe('the S3 orientation default (AOD-197)', () => {
-  it('drives addWidgetInstance with NO orientation arg, so the repo default (landscape) applies', async () => {
+// AOD-197 (Pass B2): the hook now THREADS the active orientation into the repo + cache + reconcile. The
+// default is 'landscape' (the wall's orientation), so the no-arg path stays byte-identical in BEHAVIOR —
+// landscape resolves landscape — though the orientation is now passed to the repo explicitly (S3 asserted it
+// was left undefined; B2 wires the real device orientation). In portrait the add reads + writes the PORTRAIT
+// cache and reconciles the other (landscape) orientation.
+describe('orientation threading (AOD-197 Pass B2)', () => {
+  it('defaults to landscape: drives addWidgetInstance with "landscape" and writes only the landscape cache', async () => {
     const client = seededClient([]);
     const { result } = renderAdd(client);
 
@@ -245,7 +248,47 @@ describe('the S3 orientation default (AOD-197)', () => {
     });
 
     const call = (addWidgetInstance as jest.Mock).mock.calls[0];
-    // (dashboardId, userId, seed) — no 4th orientation arg (the seed is index 2).
-    expect(call[3]).toBeUndefined();
+    expect(call[3]).toBe('landscape'); // B2 passes it explicitly (still landscape) — was undefined under S3
+    // The real row landed in the LANDSCAPE cache; the portrait cache is never CREATED (invalidate ≠ create).
+    expect(instancesInCache(client).map((i) => i.instanceId)).toEqual(['real-1']);
+    expect(client.getQueryData(dashboardQueryKey('u1', 'portrait'))).toBeUndefined();
+  });
+
+  it('in portrait: reads + writes the PORTRAIT cache, drives the repo with "portrait", and invalidates landscape (exact)', async () => {
+    // Seed BOTH orientation caches distinctly: the portrait add must read the PORTRAIT board (not landscape)
+    // and land its provisional-then-real there, leaving landscape's own card untouched.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    client.setQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'landscape'), {
+      dashboardId: 'dash-1',
+      name: 'Wall',
+      instances: [instance('land-only', { x: 0, y: 0, w: 2, h: 1, z: 0 })],
+    });
+    client.setQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'portrait'), {
+      dashboardId: 'dash-1',
+      name: 'Wall',
+      instances: [],
+    });
+    const invalidate = jest.spyOn(client, 'invalidateQueries');
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useAddWidget('portrait'), { wrapper });
+
+    await act(async () => {
+      await result.current.addWidget(def());
+    });
+
+    // The repo was driven with the PORTRAIT orientation (index 3).
+    expect((addWidgetInstance as jest.Mock).mock.calls[0][3]).toBe('portrait');
+    // The real row landed in the PORTRAIT cache (which started empty), NOT landscape.
+    expect(
+      (client.getQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'portrait'))?.instances ?? []).map((i) => i.instanceId),
+    ).toEqual(['real-1']);
+    // Landscape kept its own card (the add never wrote it) — only the cross-orientation reconcile touched it.
+    expect(
+      (client.getQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'landscape'))?.instances ?? []).map((i) => i.instanceId),
+    ).toEqual(['land-only']);
+    // The OTHER orientation (landscape) is invalidated (exact) so it re-derives the buildAddPos stamp.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: dashboardQueryKey('u1', 'landscape'), exact: true });
   });
 });

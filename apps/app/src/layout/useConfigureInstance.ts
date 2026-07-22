@@ -8,7 +8,7 @@ import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
 import { persistInstanceConfig } from './dashboardRepo';
-import { dashboardQueryKey } from './useDashboard';
+import { dashboardQueryPrefix } from './useDashboard';
 
 export interface UseConfigureInstanceResult {
   /** Persist `config` for `instanceId`, then repaint. Throws on failure (also surfaced via `error`) so
@@ -32,8 +32,10 @@ export function useConfigureInstance(): UseConfigureInstanceResult {
       setError(null);
       try {
         await persistInstanceConfig(instanceId, config);
-        // Repaint from the server so the host re-derives needsConfig from the persisted row.
-        await queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId) });
+        // Repaint from the server so the host re-derives needsConfig from the persisted row. AOD-197 (Pass
+        // B2): config is orientation-INDEPENDENT, so reconcile BOTH orientations via the prefix (a partial
+        // match on ['dashboard', userId, *] — landscape AND portrait).
+        await queryClient.invalidateQueries({ queryKey: dashboardQueryPrefix(userId) });
       } catch (err) {
         setError(err as Error);
         throw err;

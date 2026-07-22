@@ -14,6 +14,7 @@ jest.mock('../dashboardRepo', () => ({ loadDashboardById: jest.fn() }));
 import { loadDashboardById } from '../dashboardRepo';
 import { dashboardQueryKey } from '../useDashboard';
 import { skyQueryKey, useSkyInstances, seedSkyFromActive, seedActiveFromSky } from '../useSkyInstances';
+import type { Orientation } from '../../widgets/sizes';
 
 const D2 = { dashboardId: 'd2', name: 'Travel', instances: [{ instanceId: 'i1' }, { instanceId: 'i2' }] };
 
@@ -21,11 +22,11 @@ function makeClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
 }
 
-function renderSky(skyId: string, client = makeClient()) {
+function renderSky(skyId: string, orientation: Orientation = 'landscape', client = makeClient()) {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
-  return { client, ...renderHook(() => useSkyInstances(skyId), { wrapper }) };
+  return { client, ...renderHook(() => useSkyInstances(skyId, orientation), { wrapper }) };
 }
 
 beforeEach(() => {
@@ -34,12 +35,21 @@ beforeEach(() => {
 });
 
 describe('useSkyInstances (AOD-144)', () => {
-  it('loads a specific sky by id via loadDashboardById', async () => {
+  it('loads a specific sky by id via loadDashboardById (landscape by default)', async () => {
     const { result } = renderSky('d2');
     await waitFor(() => expect(result.current.instances).toHaveLength(2));
-    expect(loadDashboardById).toHaveBeenCalledWith('d2');
+    expect(loadDashboardById).toHaveBeenCalledWith('d2', 'landscape');
     expect(result.current.isLoading).toBe(false);
     expect(result.current.isError).toBe(false);
+  });
+
+  it('keys by orientation: a portrait read lands under the portrait key and requests portrait (AOD-197)', async () => {
+    const { client, result } = renderSky('d2', 'portrait');
+    await waitFor(() => expect(result.current.instances).toHaveLength(2));
+    expect(loadDashboardById).toHaveBeenCalledWith('d2', 'portrait');
+    expect(client.getQueryData(skyQueryKey('u1', 'd2', 'portrait'))).toEqual(D2);
+    // The landscape key is a SEPARATE cache entry — the portrait read never writes it.
+    expect(client.getQueryData(skyQueryKey('u1', 'd2', 'landscape'))).toBeUndefined();
   });
 
   it('reads under a per-sky key SEPARATE from the active-sky key', async () => {
@@ -80,6 +90,18 @@ describe('seedSkyFromActive (the arrange-exit hand-off)', () => {
     seedSkyFromActive(client, 'u1', 'd2');
     expect(client.getQueryData(skyQueryKey('u1', 'd2'))).toBeUndefined();
   });
+
+  it('seeds WITHIN one orientation: portrait active -> portrait per-sky, landscape untouched (AOD-197)', () => {
+    const client = makeClient();
+    const editedP = { dashboardId: 'd2', name: 'Travel', instances: [{ instanceId: 'p-moved' }] };
+    client.setQueryData(dashboardQueryKey('u1', 'portrait'), editedP);
+
+    seedSkyFromActive(client, 'u1', 'd2', 'portrait');
+
+    expect(client.getQueryData(skyQueryKey('u1', 'd2', 'portrait'))).toEqual(editedP);
+    // Orientations never cross-seed: the landscape per-sky cache stays empty.
+    expect(client.getQueryData(skyQueryKey('u1', 'd2', 'landscape'))).toBeUndefined();
+  });
 });
 
 describe('seedActiveFromSky (the swipe-then-Arrange hand-off)', () => {
@@ -97,5 +119,16 @@ describe('seedActiveFromSky (the swipe-then-Arrange hand-off)', () => {
     const client = makeClient();
     seedActiveFromSky(client, 'u1', 'd2');
     expect(client.getQueryData(dashboardQueryKey('u1'))).toBeUndefined();
+  });
+
+  it('seeds WITHIN one orientation: portrait per-sky -> portrait active, landscape untouched (AOD-197)', () => {
+    const client = makeClient();
+    client.setQueryData(skyQueryKey('u1', 'd2', 'portrait'), D2);
+
+    seedActiveFromSky(client, 'u1', 'd2', 'portrait');
+
+    expect(client.getQueryData(dashboardQueryKey('u1', 'portrait'))).toEqual(D2);
+    // The landscape active cache is a separate entry, never written by a portrait seed.
+    expect(client.getQueryData(dashboardQueryKey('u1', 'landscape'))).toBeUndefined();
   });
 });

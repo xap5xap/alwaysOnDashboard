@@ -92,19 +92,31 @@ function snapClamp(n: number, lo: number, hi: number): number {
 
 /**
  * The DISCRETE sibling of applyDrag (AOD-138): move by a pixel delta, then snap the ORIGIN to the nearest
- * slot — column rounded and clamped so the footprint stays on-grid (x + w <= GRID_COLUMNS, the landscape
- * count; S4 wires the active orientation), row rounded and floored at 0 (rows are unbounded downward). The
- * footprint (w/h) is also legalised onto the slot ladder ({1..MAX_SLOT_W} x {1..MAX_SLOT_H}) so a rect
- * carried over from the pre-slot free-form canvas lands as a valid slot; a rect that is already a slot is
- * unchanged. z passes through. This is what the arrange canvas commits on drop.
+ * slot — column rounded and clamped so the footprint stays on-grid (x + w <= `columns`), row rounded and
+ * floored at 0 (rows are unbounded downward). The footprint (w/h) is also legalised onto the slot ladder
+ * ({1..MAX_SLOT_W} x {1..MAX_SLOT_H}) so a rect carried over from the pre-slot free-form canvas lands as a
+ * valid slot; a rect that is already a slot is unchanged. z passes through. This is what the arrange canvas
+ * commits on drop.
+ *
+ * AOD-197 (S4): `unitPx` + `columns` default to the nominal UNIT_PX + landscape GRID_COLUMNS so existing
+ * callers (and the wall, which never arranges) stay byte-identical. The handheld arrange path passes the
+ * fit-to-width `cellPx` as `unitPx` (the finger moves in ON-SCREEN pixels, and one on-screen cell is cellPx
+ * wide under the LayoutCanvas scale) and the ACTIVE orientation's `columns`, so a drag converts + clamps
+ * against the grid the user is actually touching. UNIT_PX itself is untouched (§1.1 #3).
  */
-export function snapDrag(rect: LayoutRect, dxPx: number, dyPx: number): LayoutRect {
+export function snapDrag(
+  rect: LayoutRect,
+  dxPx: number,
+  dyPx: number,
+  unitPx: number = UNIT_PX,
+  columns: number = GRID_COLUMNS,
+): LayoutRect {
   const w = snapClamp(rect.w, MIN_W, MAX_SLOT_W);
   const h = snapClamp(rect.h, MIN_H, MAX_SLOT_H);
   return {
     ...rect,
-    x: snapClamp(rect.x + dxPx / UNIT_PX, 0, GRID_COLUMNS - w),
-    y: Math.max(0, Math.round(rect.y + dyPx / UNIT_PX)),
+    x: snapClamp(rect.x + dxPx / unitPx, 0, columns - w),
+    y: Math.max(0, Math.round(rect.y + dyPx / unitPx)),
     w,
     h,
   };
@@ -114,15 +126,22 @@ export function snapDrag(rect: LayoutRect, dxPx: number, dyPx: number): LayoutRe
  * The DISCRETE sibling of applyResize (AOD-138): grow/shrink by a pixel delta, then snap each extent to
  * the nearest S/M/W/L step (w in {1..MAX_SLOT_W}, h in {1..MAX_SLOT_H}) so what you drag is what you
  * get — no free-form bounds that only reconcile to a class on release. The origin column is clamped so a
- * footprint grown near the right edge shifts left to stay on-grid (x + w <= GRID_COLUMNS, the landscape
- * count) rather than hanging off; y and z pass through.
+ * footprint grown near the right edge shifts left to stay on-grid (x + w <= `columns`) rather than hanging
+ * off; y and z pass through. Same `unitPx` + `columns` parameterization as snapDrag (AOD-197 S4): defaults
+ * keep every existing caller byte-identical; the handheld path passes `cellPx` + the active column count.
  */
-export function snapResize(rect: LayoutRect, dwPx: number, dhPx: number): LayoutRect {
-  const w = snapClamp(rect.w + dwPx / UNIT_PX, MIN_W, MAX_SLOT_W);
-  const h = snapClamp(rect.h + dhPx / UNIT_PX, MIN_H, MAX_SLOT_H);
+export function snapResize(
+  rect: LayoutRect,
+  dwPx: number,
+  dhPx: number,
+  unitPx: number = UNIT_PX,
+  columns: number = GRID_COLUMNS,
+): LayoutRect {
+  const w = snapClamp(rect.w + dwPx / unitPx, MIN_W, MAX_SLOT_W);
+  const h = snapClamp(rect.h + dhPx / unitPx, MIN_H, MAX_SLOT_H);
   return {
     ...rect,
-    x: snapClamp(rect.x, 0, GRID_COLUMNS - w),
+    x: snapClamp(rect.x, 0, columns - w),
     w,
     h,
   };

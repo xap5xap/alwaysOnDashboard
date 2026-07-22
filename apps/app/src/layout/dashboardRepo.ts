@@ -7,7 +7,7 @@
 // uniform AOD-12 gating) stays open; here layout persists client-direct with no entitlement gating.
 import { supabase } from '../supabase/client';
 import type { WidgetInstance } from '../registry/types';
-import type { Orientation } from '../widgets/sizes';
+import { columnsFor, type Orientation } from '../widgets/sizes';
 import {
   buildAddPos,
   configToUpdate,
@@ -24,7 +24,8 @@ import {
   type StoredInstance,
   type StoredLayoutPatch,
 } from './mapper';
-import type { NormalizedStoredRect } from './schema';
+import { nearestFreeSlot, type GridRect } from './grid';
+import type { NormalizedStoredRect, StoredPos } from './schema';
 
 export interface LoadedDashboard {
   dashboardId: string;
@@ -275,16 +276,13 @@ export async function persistInstanceLayout(
   const footprint = { w: patch.rect.w, h: patch.rect.h, z: patch.rect.z };
   const editedPos = { x: patch.rect.x, y: patch.rect.y };
 
-  // Step 2 — designed (or an unparseable rect we heal): one UPDATE, preserving the other orientation.
-  //
-  // DEFERRED (design §6.2, the resize cross-orientation edge): a resize changes the SHARED footprint, which
-  // could make the OTHER *designed* orientation's stored position overlap a neighbour. The faithful fix is
-  // to re-validate that position (nearestFreeSlot). It is NOT implemented here because it NEVER arises in
-  // S3: portrait editing is live only after S4, so the OTHER orientation is always DERIVED (no stored
-  // position — it re-reflows from this one on read, always overlap-free). The both-designed state is thus
-  // unreachable on the live path, so preserving pos[other] as-is ships NO silent overlap. When S4 wires
-  // portrait editing (both orientations designable), add the re-validation here (board-aware). Tracked as
-  // an S4 follow-up.
+  // Step 2 — designed (or an unparseable rect we heal): the common path is one UPDATE, preserving the other
+  // orientation's stored position. AOD-197 (design §6.2, S4/Pass A): a RESIZE changes the SHARED footprint,
+  // which can push the OTHER *designed* orientation's preserved position into overlap with a neighbour there
+  // — so on a footprint change, re-validate it (nearestFreeSlot keeps it put if it still fits, else moves it
+  // to the nearest free fitting cell). Gated so the common MOVE (no footprint change) stays a single cheap
+  // UPDATE with NO board load: only when the footprint actually changed AND the other orientation is designed
+  // for this instance (a stored pos[other] — which by the all-or-none invariant means designed board-wide).
   if (!base || base.pos[orientation] !== undefined) {
     const merged = mergeStoredRect(
       base ?? { w: footprint.w, h: footprint.h, z: footprint.z, pos: {} },
@@ -292,20 +290,18 @@ export async function persistInstanceLayout(
       editedPos,
       footprint,
     );
+    const other: Orientation = orientation === 'landscape' ? 'portrait' : 'landscape';
+    const otherPos = base?.pos[other];
+    if (otherPos !== undefined && base != null && (base.w !== footprint.w || base.h !== footprint.h)) {
+      const board = await loadStoredBoard(row.dashboard_id);
+      merged.pos[other] = revalidatePos(board, instanceId, other, footprint, otherPos);
+    }
     await updateInstanceRectAndSize(instanceId, merged, patch);
     return;
   }
 
   // Step 3 — derived: materialize the whole board's reflow, then apply the edit.
-  const { data: rows, error: rowsError } = await supabase
-    .from('widget_instances')
-    .select('*')
-    .eq('dashboard_id', row.dashboard_id)
-    .order('created_at', { ascending: true });
-  if (rowsError) throw rowsError;
-  const stored = (rows ?? [])
-    .map(rowToStoredInstance)
-    .filter((instance): instance is StoredInstance => instance !== null);
+  const stored = await loadStoredBoard(row.dashboard_id);
   const resolvedById = new Map(
     resolveInstances(stored, orientation).map((instance) => [instance.instanceId, instance.rect]),
   );
@@ -330,7 +326,58 @@ export async function persistInstanceLayout(
   }
 
   const editedMerged = mergeStoredRect(base, orientation, editedPos, footprint);
+  // AOD-197 (design §6.2): if this first-edit-in-a-derived-orientation is also a RESIZE (footprint change),
+  // the OTHER (already-designed, the reflow SOURCE) orientation's preserved position may now overlap —
+  // re-validate it against the board we already loaded (no extra query). A plain move leaves it untouched.
+  const otherDesigned: Orientation = orientation === 'landscape' ? 'portrait' : 'landscape';
+  const otherStoredPos = base.pos[otherDesigned];
+  if (otherStoredPos !== undefined && (base.w !== footprint.w || base.h !== footprint.h)) {
+    editedMerged.pos[otherDesigned] = revalidatePos(stored, instanceId, otherDesigned, footprint, otherStoredPos);
+  }
   await updateInstanceRectAndSize(instanceId, editedMerged, patch);
+}
+
+/** Load a board's parsed StoredInstances (AOD-197). The shared read for persistInstanceLayout's materialize
+ *  path AND the step-2 resize re-validation: select every row for the dashboard, ordered by created_at (the
+ *  stable reflow reading order), dropping any schema-invalid row (AOD-8 §9 invariant 1). */
+async function loadStoredBoard(dashboardId: string): Promise<StoredInstance[]> {
+  const { data: rows, error } = await supabase
+    .from('widget_instances')
+    .select('*')
+    .eq('dashboard_id', dashboardId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (rows ?? [])
+    .map(rowToStoredInstance)
+    .filter((instance): instance is StoredInstance => instance !== null);
+}
+
+/** Re-validate ONE instance's stored position in `orientation` against its neighbours there, for its (possibly
+ *  grown) footprint (AOD-197, design §6.2). The neighbours' stored positions in that orientation are the
+ *  occupied cells; nearestFreeSlot keeps the instance's current cell if it still fits (no move — gaps
+ *  preserved), else returns the nearest free fitting cell. Pure over the loaded board (skips the instance
+ *  itself and any neighbour not designed in `orientation`). */
+function revalidatePos(
+  board: StoredInstance[],
+  instanceId: string,
+  orientation: Orientation,
+  footprint: { w: number; h: number },
+  current: StoredPos,
+): StoredPos {
+  const occupied: GridRect[] = [];
+  for (const s of board) {
+    if (s.instanceId === instanceId) continue;
+    const p = s.pos[orientation];
+    if (p === undefined) continue;
+    occupied.push({ x: p.x, y: p.y, w: s.w, h: s.h });
+  }
+  const slot = nearestFreeSlot(
+    { w: footprint.w, h: footprint.h },
+    occupied,
+    current,
+    columnsFor(orientation),
+  );
+  return { x: slot.x, y: slot.y };
 }
 
 /** UPDATE one instance's rect (the whole per-orientation stored shape) + size (+ refresh when the patch

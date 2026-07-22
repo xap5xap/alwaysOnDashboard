@@ -9,6 +9,7 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
+import type { Orientation } from '../widgets/sizes';
 import { deleteWidgetInstance, type LoadedDashboard } from './dashboardRepo';
 import { dashboardQueryKey } from './useDashboard';
 
@@ -20,7 +21,7 @@ export interface UseRemoveWidgetResult {
   error: Error | null;
 }
 
-export function useRemoveWidget(): UseRemoveWidgetResult {
+export function useRemoveWidget(orientation: Orientation = 'landscape'): UseRemoveWidgetResult {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const queryClient = useQueryClient();
@@ -30,7 +31,9 @@ export function useRemoveWidget(): UseRemoveWidgetResult {
   const removeWidget = useCallback(
     async (instanceId: string) => {
       if (!userId) throw new Error('Not signed in');
-      const key = dashboardQueryKey(userId);
+      // AOD-197 (Pass B2): drop from the ACTIVE orientation's cache so the tile vanishes on the sky you are
+      // holding. Defaults to landscape, so the wall + every no-arg path stay byte-identical.
+      const key = dashboardQueryKey(userId, orientation);
       const previous = queryClient.getQueryData<LoadedDashboard | null>(key);
 
       // Optimistic: drop the instance now so the tile disappears immediately and the persisted (cold
@@ -45,6 +48,11 @@ export function useRemoveWidget(): UseRemoveWidgetResult {
       setError(null);
       try {
         await deleteWidgetInstance(instanceId);
+        // AOD-197 (Pass B2): the delete strips the row in EVERY orientation, so the OTHER orientation's cache
+        // (populated if the user rotated this session) must drop the tile too — invalidate it (exact) to
+        // reconcile. The current orientation already dropped it optimistically above.
+        const other: Orientation = orientation === 'landscape' ? 'portrait' : 'landscape';
+        void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId, other), exact: true });
       } catch (err) {
         // Roll back to the pre-delete cache so the tile reappears; the row is still there.
         queryClient.setQueryData<LoadedDashboard | null>(key, previous);
@@ -54,7 +62,7 @@ export function useRemoveWidget(): UseRemoveWidgetResult {
         setPending(false);
       }
     },
-    [queryClient, userId],
+    [queryClient, userId, orientation],
   );
 
   return { removeWidget, pending, error };

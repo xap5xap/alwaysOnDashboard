@@ -14,6 +14,9 @@ import { CHROME_IDLE_MS } from '../useChromeAwake';
 jest.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
 jest.mock('../../layout/useDashboards', () => ({ useDashboards: jest.fn() }));
 jest.mock('../../layout/useRemoveWidget', () => ({ useRemoveWidget: jest.fn() }));
+// AOD-197: pin the device orientation so the shell's per-orientation wiring (useDashboards(orientation) +
+// the seed hand-offs, which now carry the orientation) is deterministic — landscape, the wall's orientation.
+jest.mock('../../layout/useOrientation', () => ({ useOrientation: () => 'landscape' }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));
 
 // The Glance pager is stubbed to expose the props the shell wires: the active sky + sky count it received,
@@ -241,7 +244,8 @@ describe('Dashboard — the Glance-pager / Arrange split §1a/§1e', () => {
 
     // ['dashboard'] is seeded with d2 BEFORE setActive fires its lagging refetch, so Arrange paints d2 (not
     // the previously-active d1) from frame one and a commit in that window can't persist to the wrong sky.
-    expect(mockSeedActiveFromSky).toHaveBeenCalledWith(expect.anything(), 'u1', 'd2');
+    // AOD-197: the seed carries the current orientation so it lands in the right per-orientation cache.
+    expect(mockSeedActiveFromSky).toHaveBeenCalledWith(expect.anything(), 'u1', 'd2', 'landscape');
     expect(setActive).toHaveBeenCalledWith('d2');
     const seedOrder = mockSeedActiveFromSky.mock.invocationCallOrder[0];
     const setActiveOrder = setActive.mock.invocationCallOrder[0];
@@ -365,7 +369,7 @@ describe('Dashboard — the two Arrange altitudes §1b (AOD-145)', () => {
     // Tap sky d2 (not the active d1): descend into its cards.
     fireEvent.press(screen.getByTestId('pa-tap-d2'));
     expect(setActive).toHaveBeenCalledWith('d2');
-    expect(mockSeedActiveFromSky).toHaveBeenCalledWith(expect.anything(), 'u1', 'd2'); // paints d2 at once
+    expect(mockSeedActiveFromSky).toHaveBeenCalledWith(expect.anything(), 'u1', 'd2', 'landscape'); // paints d2 at once
     expect(canvasMode()).toBe('arrange'); // back at card altitude
     expect(screen.queryByTestId('page-altitude')).toBeNull();
   });

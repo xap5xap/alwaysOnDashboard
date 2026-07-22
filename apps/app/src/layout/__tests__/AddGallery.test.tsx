@@ -100,7 +100,9 @@ function renderGallery(
   {
     reg = registry,
     dashboard = { dashboardId: 'dash-1', name: 'Wall', instances: [] } as LoadedDashboard | null,
-  }: { reg?: Registry; dashboard?: LoadedDashboard | null } = {},
+    cellPx,
+    columns,
+  }: { reg?: Registry; dashboard?: LoadedDashboard | null; cellPx?: number; columns?: number } = {},
 ) {
   // gcTime Infinity (not 0): the seeded dashboard cache has no active observer here, so gcTime:0 would
   // collect it before addWidget reads it; Infinity also schedules no gc timer, so no worker leak.
@@ -108,16 +110,16 @@ function renderGallery(
   client.setQueryData(dashboardQueryKey('u1'), dashboard);
   (fetchConnections as jest.Mock).mockResolvedValue(connections);
   const onClose = jest.fn();
-  render(
+  const utils = render(
     <QueryClientProvider client={client}>
       <RegistryProvider registry={reg}>
         <WidgetDataSourceProvider source={mockDataSource}>
-          <AddGallery onClose={onClose} />
+          <AddGallery onClose={onClose} cellPx={cellPx} columns={columns} />
         </WidgetDataSourceProvider>
       </RegistryProvider>
     </QueryClientProvider>,
   );
-  return { onClose };
+  return { onClose, ...utils };
 }
 
 const inst = (instanceId: string, rect: WidgetInstance['rect'], size: WidgetInstance['size'] = 'W'): WidgetInstance => ({
@@ -168,7 +170,8 @@ describe('adding a widget (Add never leaves Arrange)', () => {
         config: {},
         size: 'W', // AOD-122 default placement slot
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-      }),
+        // AOD-197 (Pass B2): the gallery threads the active orientation (landscape default) to the repo.
+      }, 'landscape'),
     );
     // "Add never leaves Arrange": the sheet is NOT closed after an add.
     expect(onClose).not.toHaveBeenCalled();
@@ -209,7 +212,7 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
         config: { name: 'My Board' },
         size: 'W',
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-      }),
+      }, 'landscape'),
     );
     // Back on the gallery (the config sheet closed), still open for the next card.
     await waitFor(() => expect(screen.getByTestId('add-gallery')).toBeTruthy());
@@ -233,8 +236,25 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
         config: { name: 'My Board' },
         size: 'S', // the size chosen before the form, carried through — not the default W
         rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, // the S 1x1 footprint at the origin
-      }),
+      }, 'landscape'),
     );
+  });
+});
+
+describe('the on-sky preview re-bases on the AOD-197 (S4) cellPx (not the fixed grid)', () => {
+  it('a smaller cellPx yields a smaller on-sky preview (fit-to-width, not GRID_COLUMNS * cell)', async () => {
+    // The S1-review carry-forward: the preview box widened with the fixed grid (GRID_COLUMNS 2 -> 6). It now
+    // tracks cellPx. Focus the tile at two cell sizes and compare the ringed preview's width: the small cellPx
+    // must render a narrower card, proving the preview scales with cellPx rather than the fixed column count.
+    const big = renderGallery(new Map([['stub', conn('stub')]]), { cellPx: 96 });
+    fireEvent.press(await big.findByTestId('add-gallery-tile-stub-placeholder'));
+    const bigW = StyleSheet.flatten((await big.findByTestId('add-gallery-sky-preview')).props.style).width;
+
+    const small = renderGallery(new Map([['stub', conn('stub')]]), { cellPx: 20 });
+    fireEvent.press(await small.findByTestId('add-gallery-tile-stub-placeholder'));
+    const smallW = StyleSheet.flatten((await small.findByTestId('add-gallery-sky-preview')).props.style).width;
+
+    expect(smallW).toBeLessThan(bigW);
   });
 });
 
@@ -282,7 +302,7 @@ describe('already-added state (AOD-148 §2 "Added is visible": a quiet mark + "A
         config: {},
         size: 'W',
         rect: { x: 2, y: 0, w: 2, h: 1, z: 1 },
-      }),
+      }, 'landscape'),
     );
   });
 
@@ -338,7 +358,7 @@ describe('size-by-seeing (AOD-148 §2: S/M/W/L flips the tile + the on-sky previ
         config: {},
         size: 'S', // the SELECTED size, not the default W
         rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, // the S 1x1 footprint at the origin
-      }),
+      }, 'landscape'),
     );
   });
 
@@ -363,7 +383,7 @@ describe('size-by-seeing (AOD-148 §2: S/M/W/L flips the tile + the on-sky previ
         config: {},
         size: 'W', // reset to cal's default, NOT the leaked S
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-      }),
+      }, 'landscape'),
     );
   });
 });
