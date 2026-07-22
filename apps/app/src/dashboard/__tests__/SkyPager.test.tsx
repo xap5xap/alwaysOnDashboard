@@ -7,9 +7,10 @@
 // are stubbed (their own suites cover them); entitlements run real through CustomerInfoProvider, exactly as
 // the DashboardsSwitcher billing test does.
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { PRO_ENTITLEMENT_ID } from '@vela/shared';
 import { CustomerInfoProvider } from '../../entitlements/CustomerInfoContext';
+import type { WidgetInstance } from '../../registry/types';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../layout/useSkyInstances', () => ({ useSkyInstances: jest.fn() }));
@@ -42,6 +43,10 @@ const TWO_SKIES = [
 
 const nonEmptySky = { instances: [{ instanceId: 'i1' }], isLoading: false, isError: false, refetch: jest.fn() };
 
+// Minimal placed-instance stubs: the mocked LayoutCanvas only reads instanceId + length, so a bare id cast to
+// the full type keeps the tests terse while satisfying the typed activeInstances prop.
+const inst = (instanceId: string) => ({ instanceId }) as unknown as WidgetInstance;
+
 function renderPager(
   activeEntitlementIds: string[],
   props: Partial<React.ComponentProps<typeof SkyPager>> = {},
@@ -49,6 +54,8 @@ function renderPager(
   const all: React.ComponentProps<typeof SkyPager> = {
     dashboards: TWO_SKIES,
     activeId: 'd1',
+    // The active page (default d1) renders THESE (the ['dashboard'] cache), never useSkyInstances (AOD-194).
+    activeInstances: [inst('i1')],
     onEnterArrange: jest.fn(),
     onAddCard: jest.fn(),
     createDashboard: jest.fn().mockResolvedValue('d3'),
@@ -197,14 +204,24 @@ describe('SkyPager — the second sky Pro gate §1f (the billing gate)', () => {
 });
 
 describe('SkyPager — per-page states', () => {
-  it('an empty sky page offers "Add a card" that routes up with the sky id', () => {
-    mockUseSkyInstances.mockReturnValue({ instances: [], isLoading: false, isError: false, refetch: jest.fn() });
+  it('an empty ACTIVE sky page offers "Add a card" that routes up with the sky id', () => {
+    // The active page's empty state comes from activeInstances ([] = the ['dashboard'] cache), NOT useSkyInstances.
     const onAddCard = jest.fn();
-    renderPager([], { dashboards: [{ id: 'd1', name: 'Wall', position: 0 }], activeId: 'd1', onAddCard });
+    renderPager([], { dashboards: [{ id: 'd1', name: 'Wall', position: 0 }], activeId: 'd1', activeInstances: [], onAddCard });
 
     expect(screen.getByTestId('sky-page-d1-empty')).toBeTruthy();
     fireEvent.press(screen.getByTestId('screen-empty-action'));
     expect(onAddCard).toHaveBeenCalledWith('d1');
+  });
+
+  it('an empty NON-active sky page offers "Add a card" from its own ["sky"] cache', () => {
+    mockUseSkyInstances.mockReturnValue({ instances: [], isLoading: false, isError: false, refetch: jest.fn() });
+    const onAddCard = jest.fn();
+    renderPager([], { activeId: 'd1', onAddCard }); // d2 is non-active + empty via useSkyInstances
+
+    expect(screen.getByTestId('sky-page-d2-empty')).toBeTruthy();
+    fireEvent.press(within(screen.getByTestId('sky-page-d2')).getByTestId('screen-empty-action'));
+    expect(onAddCard).toHaveBeenCalledWith('d2');
   });
 
   it('a long-press on a page card drops into Arrange for THAT sky', () => {
@@ -215,9 +232,51 @@ describe('SkyPager — per-page states', () => {
     expect(onEnterArrange).toHaveBeenCalledWith('d2');
   });
 
-  it("a page still loading shows that page's loading state", () => {
+  it("a NON-active page still shows its own ['sky'] loading state; the active page never does", () => {
+    // Loading/error are NON-active-page concerns (['sky', id]); Dashboard gates the active page, so it never
+    // shows a spinner. d1 is active (renders activeInstances); d2 is non-active and still loading.
     mockUseSkyInstances.mockReturnValue({ instances: [], isLoading: true, isError: false, refetch: jest.fn() });
-    renderPager([], { dashboards: [{ id: 'd1', name: 'Wall', position: 0 }], activeId: 'd1' });
-    expect(screen.getByTestId('sky-page-d1-loading')).toBeTruthy();
+    renderPager([], { activeId: 'd1' }); // TWO_SKIES: d1 active, d2 non-active
+    expect(screen.getByTestId('sky-page-d2-loading')).toBeTruthy();
+    expect(screen.queryByTestId('sky-page-d1-loading')).toBeNull();
+  });
+});
+
+describe('SkyPager — one source of truth for the active sky (AOD-194)', () => {
+  it('the ACTIVE page renders activeInstances (the ["dashboard"] cache), never its own ["sky", activeId]', () => {
+    // The TRUE active-sky layout (what Arrange + the wall show) = 3 cards, passed as activeInstances. A
+    // DIVERGENT phantom is what ['sky', id] holds for every sky here — the active page must IGNORE it.
+    mockUseSkyInstances.mockReturnValue({ instances: [{ instanceId: 'phantom' }], isLoading: false, isError: false, refetch: jest.fn() });
+    renderPager([], { activeId: 'd1', activeInstances: [inst('t1'), inst('t2'), inst('t3')] });
+
+    // The active page (d1) shows the 3 true ['dashboard'] cards...
+    expect(within(screen.getByTestId('sky-page-d1')).getByTestId('canvas-count').props.children).toBe('3');
+    // ...and NEVER subscribed to ['sky', 'd1'] — useSkyInstances runs only for the non-active pages.
+    expect(mockUseSkyInstances).toHaveBeenCalledWith('d2');
+    expect(mockUseSkyInstances).not.toHaveBeenCalledWith('d1');
+    // The non-active page (d2) still renders its own ['sky'] cache (the 1 phantom card here).
+    expect(within(screen.getByTestId('sky-page-d2')).getByTestId('canvas-count').props.children).toBe('1');
+  });
+
+  it('the active page repaints when the ["dashboard"] cache changes (WYSIWYG after a commit)', () => {
+    const { rerender, props } = renderPager([], { activeId: 'd1', activeInstances: [inst('a')] });
+    expect(within(screen.getByTestId('sky-page-d1')).getByTestId('canvas-count').props.children).toBe('1');
+
+    // A commit to ['dashboard'] reaches the pager as a new activeInstances array (Dashboard re-renders from
+    // the same cache Arrange wrote). The active page must reflect it with no ['sky'] round-trip.
+    rerender(
+      <CustomerInfoProvider value={{ activeEntitlementIds: [] }}>
+        <SkyPager {...props} activeInstances={[inst('a'), inst('b')]} />
+      </CustomerInfoProvider>,
+    );
+    expect(within(screen.getByTestId('sky-page-d1')).getByTestId('canvas-count').props.children).toBe('2');
+  });
+
+  it('a NON-active page still surfaces its own ["sky"] error state; the active page has no error branch', () => {
+    const refetch = jest.fn();
+    mockUseSkyInstances.mockReturnValue({ instances: [], isLoading: false, isError: true, refetch });
+    renderPager([], { activeId: 'd1' }); // d2 is non-active and errored
+    expect(screen.getByTestId('sky-page-d2-error')).toBeTruthy();
+    expect(screen.queryByTestId('sky-page-d1-error')).toBeNull();
   });
 });

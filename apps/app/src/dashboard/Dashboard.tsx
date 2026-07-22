@@ -311,6 +311,9 @@ export function Dashboard() {
               <SkyPager
                 dashboards={dashboards}
                 activeId={activeId}
+                // AOD-194: the active page renders the ['dashboard'] cache (the same instances Arrange and the
+                // wall read), not its own ['sky', activeId] cache, so Glance and Arrange can never diverge.
+                activeInstances={instances}
                 onEnterArrange={enterArrange}
                 onAddCard={onAddCard}
                 createDashboard={createDashboard}
