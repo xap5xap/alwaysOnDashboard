@@ -49,8 +49,10 @@ export interface PlacedInstanceProps {
   /** The live gesture crossed a grid boundary (drag) or flipped size (resize): report the new target slot
    *  so LayoutCanvas can move the hairline and reflow the neighbours. Slot-change granularity. */
   onArrangeMove(instanceId: string, slot: GridRect): void;
-  /** The gesture ended: LayoutCanvas commits this card + every neighbour the reflow displaced. */
-  onArrangeEnd(instanceId: string, slot: GridRect): void;
+  /** The gesture ended: LayoutCanvas commits this card at its nearest-free landing and RETURNS that landing
+   *  (design §8) so this card settles exactly where the hairline showed — never resting on the neighbour it
+   *  was dropped onto, and animating back to its own origin on a no-op drop. */
+  onArrangeEnd(instanceId: string, slot: GridRect): GridRect;
   /** The gesture was cancelled (not completed): LayoutCanvas drops the preview and commits nothing. */
   onArrangeCancel(): void;
   /** Open the per-instance config form (AOD-10 §4). Generic over the registry; the dashboard owns the
@@ -168,10 +170,21 @@ export function PlacedInstance({
   const reportMove = (sx: number, sy: number, sw: number, sh: number) =>
     onArrangeMove(instance.instanceId, { x: sx, y: sy, w: sw, h: sh });
   const finishDrag = (dxPx: number, dyPx: number) => {
-    // snapDrag (AOD-138) is the authoritative commit math — the same slot the worklet settled onto. AOD-197:
-    // divide the finger px by cellPx and clamp against the active orientation's columns (the on-screen grid).
+    // snapDrag (AOD-138) is the RAW finger slot — the same slot the onEnd worklet optimistically settled onto
+    // (byte-for-byte: same round + clamp). AOD-197: finger px / cellPx, clamped to the active columns.
     const s = snapDrag(instance.rect, dxPx, dyPx, cellPx, columns);
-    onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
+    // The arrange session returns the AUTHORITATIVE nearest-free landing (design §8: place, don't pack). When
+    // the raw finger slot is FREE the two agree and the worklet's settle already stands (feel unchanged). When
+    // the drop lands on an OCCUPIED neighbour they differ: redirect the settle to the landing so the card never
+    // rests overlapping a neighbour, and on a no-op drop (landing == this card's own origin) it animates back
+    // to its origin instead of stranding on the card it was dropped onto. This is the raw-vs-nearest-free
+    // reconcile the review flagged; the move that DOES commit still self-corrects via the instance.rect effect,
+    // which targets the same landing, so the two never fight.
+    const landing = onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
+    if (landing.x !== s.x || landing.y !== s.y) {
+      x.value = withTiming(landing.x, SETTLE);
+      y.value = withTiming(landing.y, SETTLE);
+    }
   };
   // AOD-146: forward a screen-edge crossing to the dashboard's carry-to-neighbour dwell. Maps the worklet's
   // numeric edge (-1/0/1) to the direction the dashboard reasons about; null clears any armed dwell.
@@ -216,6 +229,10 @@ export function PlacedInstance({
     w.value = s.w;
     h.value = s.h;
     x.value = s.x;
+    // Unlike a drag, resize does not redirect its settle to onArrangeEnd's returned landing: a resize only ever
+    // changes the FOOTPRINT (its origin stays put, right-edge-clamped), so if the grown footprint had to nudge
+    // off a neighbour the size changed too — activeCommit fires and the instance.rect effect corrects the
+    // origin. A same-size, same-place resize is a true no-op whose landing IS this origin, so nothing strands.
     onArrangeEnd(instance.instanceId, s);
   };
   const cancelGesture = () => onArrangeCancel();

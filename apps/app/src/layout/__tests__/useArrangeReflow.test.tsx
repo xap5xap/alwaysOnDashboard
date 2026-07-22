@@ -7,6 +7,7 @@
 // overlap nudges to the nearest free fit, and a cancel / in-place drop commits nothing.
 import { act, renderHook } from '@testing-library/react-native';
 import type { LayoutRect, WidgetInstance } from '../../registry/types';
+import type { GridRect } from '../grid';
 import { useArrangeReflow } from '../useArrangeReflow';
 
 const rect = (x: number, y: number, w: number, h: number, z = 0): LayoutRect => ({ x, y, w, h, z });
@@ -93,6 +94,53 @@ describe('useArrangeReflow (place, don\'t pack — AOD-197 S4)', () => {
     expect(commit).toHaveBeenCalledTimes(1);
     expect(commit).toHaveBeenCalledWith('A', { rect: rect(4, 0, 1, 1), size: 'S' });
     expect(commit).not.toHaveBeenCalledWith('C', expect.anything()); // C never packs up into the gap
+  });
+
+  // --- the settle target (design §8: no overlap on drop) — review fix -------------------------------------
+  // onArrangeEnd RETURNS the nearest-free landing so the gesture host settles the card exactly where the
+  // hairline showed. These lock the landing/no-overlap LOGIC (the worklet FEEL is device-verified, AOD-190).
+
+  it('a drop onto an occupied NEIGHBOUR returns the nearest-free landing (settle there, never on the neighbour); a landing back on its own origin commits nothing', () => {
+    const commit = jest.fn();
+    // The exact review scenario: A@(0,0), B@(1,0). Drag A onto B's slot (1,0) and release. B is occupied, so
+    // the nearest-free slot is A's OWN vacated origin (0,0): the card MUST settle there (no overlap on B), and
+    // because that equals A's committed origin nothing commits — the board is unchanged and the card animates
+    // back to its origin rather than stranding on the card it was dropped onto (the raw-finger-slot bug).
+    const { result } = renderHook(() => useArrangeReflow([A, B], commit));
+    let landing!: GridRect;
+    act(() => {
+      landing = result.current.onArrangeEnd('A', { x: 1, y: 0, w: 1, h: 1 });
+    });
+    expect(landing).toEqual({ x: 0, y: 0, w: 1, h: 1 }); // settle target = nearest-free, NOT the occupied (1,0)
+    expect(commit).not.toHaveBeenCalled(); // no overlap ever: the card returns to its own free origin
+  });
+
+  it('a committing drop returns the SAME nearest-free landing it persists (settle target == committed rect)', () => {
+    const commit = jest.fn();
+    // M dropped onto A's occupied slot (0,0) with A@(0,0) + B@(1,0) both taken -> nearest free is (0,1). The
+    // returned settle target and the committed rect are the identical slot, so what the card settles to is
+    // exactly what persists (no drift between the visual landing and the data).
+    const M = inst('M', rect(4, 0, 1, 1));
+    const { result } = renderHook(() => useArrangeReflow([A, B, M], commit));
+    let landing!: GridRect;
+    act(() => {
+      landing = result.current.onArrangeEnd('M', { x: 0, y: 0, w: 1, h: 1 });
+    });
+    expect(landing).toEqual({ x: 0, y: 1, w: 1, h: 1 });
+    expect(commit).toHaveBeenCalledWith('M', { rect: rect(0, 1, 1, 1), size: 'S' });
+  });
+
+  it('a drop onto a FREE target returns that target unchanged (the optimistic worklet settle stands, feel unchanged)', () => {
+    const commit = jest.fn();
+    const { result } = renderHook(() => useArrangeReflow([A, B, C], commit));
+    let landing!: GridRect;
+    // B carried to a free cell (3,0): the raw finger slot is free, so the landing equals it — the host's
+    // optimistic settle needs no redirect.
+    act(() => {
+      landing = result.current.onArrangeEnd('B', { x: 3, y: 0, w: 1, h: 1 });
+    });
+    expect(landing).toEqual({ x: 3, y: 0, w: 1, h: 1 });
+    expect(commit).toHaveBeenCalledWith('B', { rect: rect(3, 0, 1, 1), size: 'S' });
   });
 
   it('end after a RESIZE that FITS commits the new footprint; the neighbour is untouched', () => {

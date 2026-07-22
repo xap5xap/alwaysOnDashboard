@@ -14,7 +14,7 @@ import { useAuth } from '../auth/AuthProvider';
 import type { Orientation } from '../widgets/sizes';
 import { moveInstanceToDashboard, type LoadedDashboard } from './dashboardRepo';
 import { dashboardQueryKey } from './useDashboard';
-import { skyQueryKey } from './useSkyInstances';
+import { skyQueryPrefix } from './useSkyInstances';
 
 export interface UseMoveInstanceResult {
   /** Move `instanceId` from the current active sky to `toDashboardId`, optimistically dropping the card from
@@ -62,10 +62,14 @@ export function useMoveInstance(orientation: Orientation = 'landscape'): UseMove
         // has it). The SOURCE sky's ['sky', sourceId] cache still LISTS it — and since the pager keeps every
         // page mounted at staleTime:Infinity (useSkyInstances), without this the moved card duplicates across
         // both skies (Glance pages + the page-altitude thumbnails) until a cold start. `previous` is the source
-        // sky's ['dashboard'] snapshot, so previous.dashboardId is the sky to refresh.
-        await queryClient.invalidateQueries({ queryKey: skyQueryKey(userId, toDashboardId) });
+        // sky's ['dashboard'] snapshot, so previous.dashboardId is the sky to refresh. AOD-197 (Pass B2): a
+        // re-parent is orientation-INDEPENDENT, so invalidate the sky PREFIX (['sky', userId, skyId]) — a
+        // partial match on BOTH orientations — mirroring the dashboard-prefix reasoning add/reconfigure use.
+        // The plain skyQueryKey now defaults to 'landscape', so keying by it would miss the portrait pager page
+        // and ghost the moved card there until a cold start.
+        await queryClient.invalidateQueries({ queryKey: skyQueryPrefix(userId, toDashboardId) });
         if (previous) {
-          await queryClient.invalidateQueries({ queryKey: skyQueryKey(userId, previous.dashboardId) });
+          await queryClient.invalidateQueries({ queryKey: skyQueryPrefix(userId, previous.dashboardId) });
         }
       } catch (err) {
         // Roll back to the pre-move cache so the card reappears on the current sky; the row never moved.

@@ -19,7 +19,7 @@ jest.mock('../dashboardRepo', () => ({ moveInstanceToDashboard: jest.fn() }));
 import { moveInstanceToDashboard } from '../dashboardRepo';
 import { useMoveInstance } from '../useMoveInstance';
 import { dashboardQueryKey } from '../useDashboard';
-import { skyQueryKey } from '../useSkyInstances';
+import { skyQueryKey, skyQueryPrefix } from '../useSkyInstances';
 
 const instance = (id: string): WidgetInstance => ({
   instanceId: id,
@@ -73,8 +73,9 @@ describe('useMoveInstance', () => {
     // The card is already gone from THIS sky though the network call has NOT resolved; 'b' survives untouched.
     expect(idsInCache(client)).toEqual(['b']);
     expect(moveInstanceToDashboard).toHaveBeenCalledWith('a', 'd-dest');
-    // The destination is invalidated only AFTER the write resolves, never during the optimistic phase.
-    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'd-dest') });
+    // The destination is invalidated only AFTER the write resolves, never during the optimistic phase. Keyed by
+    // the sky PREFIX (both orientations), not the landscape-defaulting skyQueryKey.
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'd-dest') });
 
     await act(async () => {
       resolveMove();
@@ -83,10 +84,10 @@ describe('useMoveInstance', () => {
 
     // Still gone here (it moved away); the destination sky's read cache is invalidated so it re-reads with it.
     expect(idsInCache(client)).toEqual(['b']);
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'd-dest') });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'd-dest') });
     // AND the SOURCE sky ('dash-1') is invalidated too, so its ['sky'] read cache doesn't ghost the moved card
     // (the pager keeps every page mounted at staleTime:Infinity — without this the card duplicates across skies).
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'dash-1') });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'dash-1') });
     expect(result.current.error).toBeNull();
   });
 
@@ -103,8 +104,8 @@ describe('useMoveInstance', () => {
     // Restored exactly: the moved card is back on this sky, in its original position, and the failed move
     // never touched the destination sky's cache.
     expect(idsInCache(client)).toEqual(['a', 'b']);
-    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'd-dest') });
-    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'dash-1') }); // no source invalidate either — the move never happened
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'd-dest') });
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'dash-1') }); // no source invalidate either — the move never happened
     await waitFor(() => expect(result.current.error?.message).toBe('rls denied'));
   });
 
@@ -146,9 +147,36 @@ describe('useMoveInstance', () => {
     expect(idsIn('portrait')).toEqual(['b']);
     // The OTHER orientation (landscape) active-sky cache is invalidated (exact) so it drops the card too.
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: dashboardQueryKey('u1', 'landscape'), exact: true });
-    // The destination + source per-sky read caches are still invalidated (unchanged behavior).
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'd-dest') });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'dash-1') });
+    // The destination + source per-sky read caches are still invalidated, by the sky PREFIX (both orientations).
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'd-dest') });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryPrefix('u1', 'dash-1') });
+    expect(result.current.error).toBeNull();
+  });
+
+  // AOD-197 (review fix): the per-sky read caches are keyed ['sky', userId, skyId, orientation]. A re-parent is
+  // orientation-INDEPENDENT, so the invalidation must hit BOTH orientations of the destination AND the source
+  // sky — otherwise the portrait pager page (never invalidated by a landscape-defaulting key) ghosts the moved
+  // card until a cold start. This seeds REAL per-sky queries in all four (sky x orientation) slots and proves
+  // every one is invalidated after the move.
+  it('invalidates BOTH orientations of the destination AND source per-sky read caches (portrait never ghosts)', async () => {
+    const client = seededClient(); // active-sky ['dashboard','u1','landscape'] holds a,b on sky 'dash-1'
+    const skyData = (id: string) => ({ dashboardId: id, name: id, instances: [] }) as LoadedDashboard;
+    for (const id of ['d-dest', 'dash-1'] as const) {
+      client.setQueryData<LoadedDashboard>(skyQueryKey('u1', id, 'landscape'), skyData(id));
+      client.setQueryData<LoadedDashboard>(skyQueryKey('u1', id, 'portrait'), skyData(id));
+    }
+    const { result } = renderMove(client);
+
+    await act(async () => {
+      await result.current.moveInstance('a', 'd-dest');
+    });
+
+    // Every (sky x orientation) read cache is invalidated — landscape AND portrait, destination AND source.
+    for (const id of ['d-dest', 'dash-1'] as const) {
+      for (const o of ['landscape', 'portrait'] as const) {
+        expect(client.getQueryState(skyQueryKey('u1', id, o))?.isInvalidated).toBe(true);
+      }
+    }
     expect(result.current.error).toBeNull();
   });
 });

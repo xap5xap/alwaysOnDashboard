@@ -35,8 +35,12 @@ export interface ArrangeReflow {
    *  SNAPPED target actually changes, not every frame. */
   onArrangeMove(instanceId: string, slot: GridRect): void;
   /** The gesture ended: persist the active card at its nearest-free landing (arrange.activeCommit), then
-   *  clear the session. Only the active card ever commits; an in-place drop commits nothing. */
-  onArrangeEnd(instanceId: string, slot: GridRect): void;
+   *  clear the session. Only the active card ever commits; an in-place drop commits nothing. RETURNS that
+   *  nearest-free landing (design §8) so the gesture host settles the card exactly where the hairline showed
+   *  — INCLUDING the no-op case where the landing equals the card's own origin, so a drop onto an occupied
+   *  neighbour never leaves the card resting on top of it (the hairline promised a free slot; the card lands
+   *  there, never on the neighbour). */
+  onArrangeEnd(instanceId: string, slot: GridRect): GridRect;
   /** The gesture was cancelled (not completed): drop the target, commit nothing. */
   onArrangeCancel(): void;
 }
@@ -64,14 +68,22 @@ export function useArrangeReflow(
   }, []);
 
   const onArrangeEnd = useCallback(
-    (instanceId: string, slot: GridRect) => {
-      // Place, don't pack: commit ONLY the active card at its nearest-free landing (against the committed
-      // instances, unchanged since the gesture began, + the FINAL slot). A true in-place drop, or a card
-      // that did not move, yields null and writes nothing — no neighbour ever moves, so a pre-existing gap
-      // (e.g. a removed widget's hole; useRemoveWidget does not compact) is preserved.
-      const c = activeCommit(instances, { instanceId, slot }, columns);
+    (instanceId: string, slot: GridRect): GridRect => {
+      const target = { instanceId, slot };
+      // The nearest-free landing the hairline showed (design §8) IS where the card must SETTLE — never on a
+      // neighbour. Returned unconditionally so the gesture host redirects its optimistic raw-finger settle to
+      // this slot; on a no-op drop it equals the card's own origin, so the card animates back rather than
+      // stranding on the card it was dropped onto (the raw-finger vs nearest-free mismatch the review found).
+      const landing = placeActive(instances, target, columns);
+      // Place, don't pack: commit ONLY the active card at that landing (against the committed instances,
+      // unchanged since the gesture began, + the FINAL slot). A true in-place drop, or a card that did not
+      // move, yields null and writes nothing — no neighbour ever moves, so a pre-existing gap (e.g. a removed
+      // widget's hole; useRemoveWidget does not compact) is preserved. activeCommit re-derives the same
+      // landing, so the committed rect and the returned settle target can never diverge.
+      const c = activeCommit(instances, target, columns);
       if (c) commit(c.instanceId, c.patch);
       setTarget(null);
+      return landing;
     },
     [instances, commit, columns],
   );

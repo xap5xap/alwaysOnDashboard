@@ -26,6 +26,16 @@ export function skyQueryKey(userId: string | undefined, skyId: string, orientati
   return ['sky', userId ?? 'anon', skyId, orientation] as const;
 }
 
+/** The per-sky read PREFIX (BOTH orientations). For invalidations that must hit a sky's landscape AND portrait
+ *  read caches — a re-parent (cross-sky move) is orientation-INDEPENDENT: the row's dashboard_id changed, so
+ *  the card left/joined the sky in EVERY orientation. Pass this to invalidateQueries (a partial match,
+ *  exact:false, so it invalidates ['sky', userId, skyId, 'landscape'] AND ['sky', userId, skyId, 'portrait']).
+ *  Mirrors dashboardQueryPrefix; without it the 4-element skyQueryKey defaults to 'landscape' and the portrait
+ *  pager page ghosts the moved card until a cold start. */
+export function skyQueryPrefix(userId: string | undefined, skyId: string) {
+  return ['sky', userId ?? 'anon', skyId] as const;
+}
+
 export interface UseSkyInstancesResult {
   /** The sky's placed instances (read-only; empty while loading, on error, or for a truly empty sky). */
   instances: WidgetInstance[];
