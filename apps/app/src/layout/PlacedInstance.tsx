@@ -66,6 +66,15 @@ export interface PlacedInstanceProps {
    *  neighbour sky (the dwell disambiguates it from a normal near-edge reposition). Optional: this card stays
    *  sky-agnostic (AOD-8 §10 seam) and the wall / read-only callers never arrange, so they never wire it. */
   onCarryEdge?(instanceId: string, edge: 'left' | 'right' | null): void;
+  /** AOD-197 (S4): the ON-SCREEN pixels per grid cell under the LayoutCanvas fit-to-width scale. The drag/
+   *  resize worklets convert finger px -> slot units by dividing by THIS (not the nominal UNIT_PX), because
+   *  one on-screen cell is cellPx wide once the parent scales the nominal canvas. The RENDER still uses
+   *  UNIT_PX (the parent scale sizes the card on screen). Defaults to UNIT_PX so the wall — which never
+   *  arranges and passes no cellPx — is byte-identical. */
+  cellPx?: number;
+  /** AOD-197 (S4): the active orientation's column count (landscape 6 / portrait 4). Clamps a dragged or
+   *  resized footprint on-grid (x + w <= columns). Defaults to the landscape GRID_COLUMNS. */
+  columns?: number;
 }
 
 export function PlacedInstance({
@@ -79,6 +88,8 @@ export function PlacedInstance({
   onRequestConfigure,
   onRemove,
   onCarryEdge,
+  cellPx = UNIT_PX,
+  columns = GRID_COLUMNS,
 }: PlacedInstanceProps) {
   const registry = useRegistry();
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
@@ -157,8 +168,9 @@ export function PlacedInstance({
   const reportMove = (sx: number, sy: number, sw: number, sh: number) =>
     onArrangeMove(instance.instanceId, { x: sx, y: sy, w: sw, h: sh });
   const finishDrag = (dxPx: number, dyPx: number) => {
-    // snapDrag (AOD-138) is the authoritative commit math — the same slot the worklet settled onto.
-    const s = snapDrag(instance.rect, dxPx, dyPx);
+    // snapDrag (AOD-138) is the authoritative commit math — the same slot the worklet settled onto. AOD-197:
+    // divide the finger px by cellPx and clamp against the active orientation's columns (the on-screen grid).
+    const s = snapDrag(instance.rect, dxPx, dyPx, cellPx, columns);
     onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
   };
   // AOD-146: forward a screen-edge crossing to the dashboard's carry-to-neighbour dwell. Maps the worklet's
@@ -184,7 +196,7 @@ export function PlacedInstance({
         bh = supportedH[i];
       }
     }
-    const tx = Math.min(GRID_COLUMNS - bw, Math.max(0, startRx.value)); // shift left at column 1 when full-width
+    const tx = Math.min(columns - bw, Math.max(0, startRx.value)); // shift left at the right edge when full-width
     return { x: tx, y: instance.rect.y, w: bw, h: bh };
   };
   // Live resize step: snap the raw slot to a supported footprint, flip the VISIBLE size to it (setting the
@@ -227,7 +239,7 @@ export function PlacedInstance({
       lift.value = withTiming(1, LIFT);
       // Open the hairline at the current slot immediately (a "slot opens where it will land").
       const tw = w.value;
-      const tx = Math.min(GRID_COLUMNS - tw, Math.max(0, Math.round(x.value)));
+      const tx = Math.min(columns - tw, Math.max(0, Math.round(x.value)));
       const ty = Math.max(0, Math.round(y.value));
       lastDx.value = tx;
       lastDy.value = ty;
@@ -235,13 +247,14 @@ export function PlacedInstance({
     })
     .onUpdate((e) => {
       'worklet';
-      // The held card follows the finger (continuous, lifted); the hairline + the neighbours snap.
-      const contX = Math.max(0, startX.value + e.translationX / UNIT_PX);
-      const contY = Math.max(0, startY.value + e.translationY / UNIT_PX);
+      // The held card follows the finger (continuous, lifted); the hairline snaps. AOD-197: finger px ->
+      // slot units divides by the ON-SCREEN cell (cellPx), and the column clamp uses the active count.
+      const contX = Math.max(0, startX.value + e.translationX / cellPx);
+      const contY = Math.max(0, startY.value + e.translationY / cellPx);
       x.value = contX;
       y.value = contY;
       const tw = w.value; // footprint is unchanged during a move
-      const tx = Math.min(GRID_COLUMNS - tw, Math.max(0, Math.round(contX)));
+      const tx = Math.min(columns - tw, Math.max(0, Math.round(contX)));
       const ty = Math.max(0, Math.round(contY));
       if (tx !== lastDx.value || ty !== lastDy.value) {
         lastDx.value = tx;
@@ -262,7 +275,7 @@ export function PlacedInstance({
       // Settle onto the snapped slot (covers drop-in-place, where no commit fires and the reflow effect
       // would not re-run). This slot equals snapDrag's, so the settle target IS the committed rect.
       const w0 = w.value;
-      x.value = withTiming(Math.min(GRID_COLUMNS - w0, Math.max(0, Math.round(x.value))), SETTLE);
+      x.value = withTiming(Math.min(columns - w0, Math.max(0, Math.round(x.value))), SETTLE);
       y.value = withTiming(Math.max(0, Math.round(y.value)), SETTLE);
       runOnJS(finishDrag)(e.translationX, e.translationY);
     })
@@ -301,8 +314,8 @@ export function PlacedInstance({
       // Only inline number math on the UI thread: grow the extents and round to a RAW slot ({1,2}). The
       // supported-footprint choice + the visible flip happen in applyResizeSlot (JS), fired only when the
       // raw slot changes — so what you drag flips discretely and never lands on an unsupported size.
-      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / UNIT_PX)));
-      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / UNIT_PX)));
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / cellPx)));
+      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / cellPx)));
       if (rw !== lastRw.value || rh !== lastRh.value) {
         lastRw.value = rw;
         lastRh.value = rh;
@@ -313,8 +326,8 @@ export function PlacedInstance({
       'worklet';
       // Re-derive the raw slot from the total translation and commit it (finishResize maps raw -> supported
       // deterministically), so the drop is correct even if the final onUpdate frame was coalesced.
-      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / UNIT_PX)));
-      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / UNIT_PX)));
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / cellPx)));
+      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / cellPx)));
       runOnJS(finishResize)(rw, rh);
     })
     .onFinalize((_e, success) => {

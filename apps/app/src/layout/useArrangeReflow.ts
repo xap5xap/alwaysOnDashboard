@@ -1,54 +1,63 @@
-// The arrange-session state + commit wiring (AOD-140): the thin, testable React layer between the gesture
-// host (PlacedInstance, which reports its live target slot) and the pure orchestration (arrange.ts). It
-// holds the ONE active target on the JS thread, derives the reflow preview every neighbour animates to,
-// and — on drop — fires the per-instance commit for the dragged card AND every neighbour the reflow moved.
-// LayoutCanvas owns this hook because it holds all instances (the AOD-140 architecture: the canvas
-// orchestrates the reflow, each PlacedInstance only reports its own gesture). Registry-free: it speaks
-// WidgetInstance/LayoutPatch, never a service.
+// The arrange-session state + commit wiring (AOD-140; "place, don't pack" since AOD-197 S4): the thin,
+// testable React layer between the gesture host (PlacedInstance, which reports its live target slot) and the
+// pure orchestration (arrange.ts). It holds the ONE active target on the JS thread, derives the nearest-free
+// landing slot the hairline shows, and — on drop — fires ONE commit for the active card only.
+//
+// AOD-197 (S4, design §8): a move relocates ONLY the dragged card; every neighbour holds its committed slot,
+// so gaps are preserved (the from:dogfood arrange pain was the opposite — neighbours packed on every move).
+// The hairline snaps to the NEAREST FREE fitting slot (grid.nearestFreeSlot, via arrange.placeActive)
+// computed against the OTHER cards; `previewFor` is therefore ALWAYS null (no neighbour ever animates), and
+// the drop commits just the active card at that slot (arrange.activeCommit). `columns` is the active
+// orientation's count (landscape 6 / portrait 4), threaded from LayoutCanvas.
 //
 // The wall callers (KioskWall / WallPreview) mount LayoutCanvas with arranging=false and a noop commit and
-// never fire a gesture, so the hook stays at { target: null } there — inert, no reflow, no wall-render
+// never fire a gesture, so the hook stays at { target: null } there — inert, no placement, no wall-render
 // change (the AOD-140 "don't touch the wall render path" line holds structurally).
 import { useCallback, useMemo, useState } from 'react';
 import type { LayoutRect, WidgetInstance } from '../registry/types';
+import { GRID_COLUMNS } from '../widgets/sizes';
 import type { GridRect } from './grid';
 import type { LayoutPatch } from './mapper';
-import { type ArrangeTarget, collectArrangeCommits, reflowForTarget } from './arrange';
+import { type ArrangeTarget, activeCommit, placeActive } from './arrange';
 
 export interface ArrangeReflow {
   /** The id of the card being dragged/resized right now, or null when no gesture is active. */
   activeId: string | null;
-  /** The slot the active card will land on (origin + footprint), for the hairline LayoutCanvas draws.
-   *  Null when idle. */
+  /** The slot the active card will land on (origin + footprint) — the NEAREST FREE fitting slot to the
+   *  gesture target (design §8), for the hairline LayoutCanvas draws. Null when idle. */
   activeSlot: GridRect | null;
-  /** The reflowed (uncommitted) rect a card should animate toward during the active gesture, or null —
-   *  which means "rest at your committed rect" (this IS the active card, or nothing is being dragged). */
+  /** ALWAYS null under place-don't-pack (AOD-197 S4): neighbours never move, so no card animates toward a
+   *  reflowed rect. Kept in the interface (LayoutCanvas passes it to every PlacedInstance) so the card rests
+   *  at its committed rect; the signature is unchanged from the AOD-140 pack era. */
   previewFor(instanceId: string): LayoutRect | null;
   /** A gesture crossed a grid boundary (drag origin moved) or flipped size (resize footprint): update the
-   *  live target so the preview + hairline follow. Slot-change granularity — PlacedInstance only calls this
-   *  when the SNAPPED target actually changes, not every frame. */
+   *  live target so the hairline follows. Slot-change granularity — PlacedInstance only calls this when the
+   *  SNAPPED target actually changes, not every frame. */
   onArrangeMove(instanceId: string, slot: GridRect): void;
-  /** The gesture ended: persist the active card + every neighbour the reflow displaced (arrange.ts), then
-   *  clear the session. Uses the final slot passed here (== the last previewed one), so what persists is
-   *  exactly what was on screen. */
+  /** The gesture ended: persist the active card at its nearest-free landing (arrange.activeCommit), then
+   *  clear the session. Only the active card ever commits; an in-place drop commits nothing. */
   onArrangeEnd(instanceId: string, slot: GridRect): void;
-  /** The gesture was cancelled (not completed): drop the preview, commit nothing. Neighbours animate back
-   *  to their committed rects (PlacedInstance) because previewFor goes null again. */
+  /** The gesture was cancelled (not completed): drop the target, commit nothing. */
   onArrangeCancel(): void;
 }
 
 export function useArrangeReflow(
   instances: WidgetInstance[],
   commit: (instanceId: string, patch: LayoutPatch) => void,
+  columns: number = GRID_COLUMNS,
 ): ArrangeReflow {
   // The single in-flight gesture target. One finger, one active card, so one target suffices (a second
   // gesture cannot start while this one holds; PlacedInstance gates on arranging + not-confirming).
   const [target, setTarget] = useState<ArrangeTarget | null>(null);
 
-  // The whole-board reflow for the current target. Recomputes only when the target or the committed
-  // instances change; during a gesture `instances` is stable (commits fire on END), so this tracks the
-  // finger, not React churn. Null while idle keeps the common (Glance/wall) path allocation-free.
-  const preview = useMemo(() => (target ? reflowForTarget(instances, target) : null), [target, instances]);
+  // The nearest-free landing slot for the current target — the hairline (design §8). Recomputes only when
+  // the target, the committed instances, or the column count change; during a gesture `instances` is stable
+  // (the one commit fires on END), so this tracks the finger, not React churn. Null while idle keeps the
+  // common (Glance/wall) path allocation-free.
+  const activeSlot = useMemo(
+    () => (target ? placeActive(instances, target, columns) : null),
+    [target, instances, columns],
+  );
 
   const onArrangeMove = useCallback((instanceId: string, slot: GridRect) => {
     setTarget({ instanceId, slot });
@@ -56,45 +65,26 @@ export function useArrangeReflow(
 
   const onArrangeEnd = useCallback(
     (instanceId: string, slot: GridRect) => {
-      // A true IN-PLACE drop (the active card lands on its own committed slot, same footprint) must change
-      // NOTHING — no reflow, no writes — even when the board has a pre-existing gap (e.g. a removed widget
-      // left a hole; useRemoveWidget does not compact). Reflow/compaction is reserved for an actual move, so
-      // tapping a card and releasing it never makes OTHER cards jump (the from:dogfood arrange pain). A real
-      // move still re-packs reading-order gaps via grid.reflow (the AOD-138 springboard behaviour).
-      const active = instances.find((i) => i.instanceId === instanceId);
-      const inPlace =
-        active != null &&
-        active.rect.x === slot.x &&
-        active.rect.y === slot.y &&
-        active.rect.w === slot.w &&
-        active.rect.h === slot.h;
-      if (!inPlace) {
-        // Recompute against the committed instances (unchanged since the gesture began) + the FINAL slot, so
-        // the persisted layout is byte-identical to the last preview. Fire one commit per moved instance;
-        // useDashboard's per-instance optimistic update repaints and its debounce coalesces the RLS writes.
-        const reflowed = reflowForTarget(instances, { instanceId, slot });
-        for (const c of collectArrangeCommits(instances, reflowed)) commit(c.instanceId, c.patch);
-      }
+      // Place, don't pack: commit ONLY the active card at its nearest-free landing (against the committed
+      // instances, unchanged since the gesture began, + the FINAL slot). A true in-place drop, or a card
+      // that did not move, yields null and writes nothing — no neighbour ever moves, so a pre-existing gap
+      // (e.g. a removed widget's hole; useRemoveWidget does not compact) is preserved.
+      const c = activeCommit(instances, { instanceId, slot }, columns);
+      if (c) commit(c.instanceId, c.patch);
       setTarget(null);
     },
-    [instances, commit],
+    [instances, commit, columns],
   );
 
   const onArrangeCancel = useCallback(() => setTarget(null), []);
 
-  const previewFor = useCallback(
-    (instanceId: string): LayoutRect | null => {
-      // The active card is driven by its own gesture (finger for drag, live footprint for resize), never by
-      // the preview — returning null here is what keeps the reflow effect from fighting the gesture.
-      if (!target || instanceId === target.instanceId) return null;
-      return preview?.get(instanceId) ?? null;
-    },
-    [target, preview],
-  );
+  // Neighbours never move under place-don't-pack, so no card is ever driven by a preview: always null. The
+  // active card is driven by its own gesture (finger for drag, live footprint for resize) regardless.
+  const previewFor = useCallback((): LayoutRect | null => null, []);
 
   return {
     activeId: target?.instanceId ?? null,
-    activeSlot: target?.slot ?? null,
+    activeSlot,
     previewFor,
     onArrangeMove,
     onArrangeEnd,

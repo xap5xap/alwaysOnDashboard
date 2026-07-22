@@ -24,7 +24,7 @@
 // shell EmptyState (now inside SkyPager's pages), and the canvas / picker / config sheet are the polished
 // editor surfaces.
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { runOnJS } from 'react-native-reanimated';
@@ -33,11 +33,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
 import { AddGallery } from '../layout/AddGallery';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
+import { cellPxFor, GRID_MARGIN } from '../layout/geometry';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
 import { useMoveInstance } from '../layout/useMoveInstance';
 import { useOrientation } from '../layout/useOrientation';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
+import { columnsFor } from '../widgets/sizes';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
 import { WallPreview } from '../kiosk/WallPreview';
 import type { WidgetInstance } from '../registry/types';
@@ -61,6 +63,13 @@ export function Dashboard() {
   // AOD-197: the device orientation drives which per-orientation layout the handheld surfaces request + commit
   // (design §9: you edit the orientation you're holding). Reactive — a rotation re-resolves the whole surface.
   const orientation = useOrientation();
+  // AOD-197 (S4): the fit-to-width placement scale for THIS device + orientation. The handheld canvas renders
+  // the nominal UNIT_PX grid scaled by cellPx/UNIT_PX so cells fill the screen width; the wall keeps UNIT_PX.
+  // gutter 0 so cells fill the width and touch (card border-radius separates them); the inter-cell gutter is a
+  // tunable deferral (design §4/§13). GRID_MARGIN keeps the grid off the screen edge.
+  const { width: viewportW } = useWindowDimensions();
+  const columns = columnsFor(orientation);
+  const cellPx = cellPxFor(columns, viewportW, GRID_MARGIN, 0);
   const {
     instances,
     isLoading,
@@ -300,6 +309,9 @@ export function Dashboard() {
                   onRequestConfigure={setConfiguring}
                   onRemove={(instanceId) => void removeWidget(instanceId)}
                   onCarryEdge={onCarryCardToEdge}
+                  // AOD-197 (S4): the arrange canvas fills the screen width in the active orientation.
+                  cellPx={cellPx}
+                  columns={columns}
                 />
                 {/* AOD-145: the grown page-dots capsule, floating at the bottom over the canvas and riding the
                     chrome-awake state (box-none so only the capsule captures; the canvas keeps the rest). Press
@@ -323,6 +335,9 @@ export function Dashboard() {
                 // AOD-197: the non-active pages read their per-sky cache in the CURRENT device orientation, so
                 // every page shows the same per-orientation resolution the active page (activeInstances) does.
                 orientation={orientation}
+                // AOD-197 (S4): Glance fits to width with the SAME cellPx as Arrange (WYSIWYG, design §7).
+                cellPx={cellPx}
+                columns={columns}
                 onEnterArrange={enterArrange}
                 onAddCard={onAddCard}
                 createDashboard={createDashboard}
@@ -333,7 +348,7 @@ export function Dashboard() {
             </View>
           )}
 
-          {picking && <AddGallery onClose={() => setPicking(false)} />}
+          {picking && <AddGallery onClose={() => setPicking(false)} cellPx={cellPx} columns={columns} />}
           {configuring && <ConfigureInstanceModal instance={configuring} onClose={() => setConfiguring(null)} />}
         </View>
       </Screen>

@@ -33,7 +33,8 @@
 //     (§2 "Size is chosen by seeing … the card lands exactly as shown"); Add then lands the card at that size
 //     via useAddWidget's optional size override. The selection resets to the default on focusing a new widget.
 import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { router } from 'expo-router';
 import { StyleSheet, UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
 import { connectedServiceIds } from '../connections/connectionsRepo';
@@ -59,6 +60,12 @@ import { useDashboard } from './useDashboard';
 
 export interface AddGalleryProps {
   onClose(): void;
+  /** AOD-197 (S4): the active orientation's fit-to-width cell size (cellPx) + column count, from Dashboard —
+   *  the SAME values the arrange canvas uses. The on-sky preview re-bases its silhouette on them so the
+   *  preview box fits the sheet width (it no longer widens with the fixed grid as the column count grew from 2
+   *  to 6). Absent (tests / a caller without them) falls back to the nominal UNIT_PX + landscape GRID_COLUMNS. */
+  cellPx?: number;
+  columns?: number;
 }
 
 // The scaled-sky region (DP). SKY_MAX_CELL is a "step back" from the real UNIT_PX (96) — the same zoom-out
@@ -110,7 +117,7 @@ function sizeOptions(supported: WidgetSize[]): SegmentedOption<WidgetSize>[] {
   return SIZE_ORDER.filter((s) => supported.includes(s)).map((s) => ({ label: s, value: s }));
 }
 
-export function AddGallery({ onClose }: AddGalleryProps) {
+export function AddGallery({ onClose, cellPx = UNIT_PX, columns = GRID_COLUMNS }: AddGalleryProps) {
   const registry = useRegistry();
   const { connections, isLoading, isError } = useConnections();
   const { addWidget, pending, error } = useAddWidget();
@@ -246,7 +253,7 @@ export function AddGallery({ onClose }: AddGalleryProps) {
       ) : (
         <>
           {/* §2a the sky above: your cards, scaled back a step, with the focused card previewed on it. */}
-          <SkyPreview instances={instances} previewInstance={previewInstance} />
+          <SkyPreview instances={instances} previewInstance={previewInstance} cellPx={cellPx} columns={columns} />
 
           {/* §2b's search field, borrowed verbatim: the magnifier filters the shelf. */}
           <View style={styles.searchRow}>
@@ -316,21 +323,34 @@ export function AddGallery({ onClose }: AddGalleryProps) {
 function SkyPreview({
   instances,
   previewInstance,
+  cellPx,
+  columns,
 }: {
   instances: WidgetInstance[];
   previewInstance: WidgetInstance | null;
+  cellPx: number;
+  columns: number;
 }) {
   const { theme } = useUnistyles();
+  const { width: winW } = useWindowDimensions();
+  // The measured width of the preview region (the Sheet's inner width). Seed from the window width (a good
+  // approximation before layout) and refine on layout — the SkyPager pageWidth pattern.
+  const [regionW, setRegionW] = useState(winW);
+  const onRegionLayout = (e: LayoutChangeEvent) => setRegionW(e.nativeEvent.layout.width);
+
   const rects = [...instances.map((i) => i.rect), ...(previewInstance ? [previewInstance.rect] : [])];
   const contentRows = Math.max(1, ...rects.map((r) => r.y + r.h));
-  // Fit the content height into the region, capped at the "step back" cell so a short sky is not blown up.
-  const cell = Math.min(SKY_MAX_CELL, SKY_H / contentRows);
+  // AOD-197 (S4): re-base the silhouette on the fit-to-width geometry. The cell fits the `columns`-wide grid
+  // into the region WIDTH (regionW / columns) so the box never overflows as the column count grows (2 -> 6,
+  // the S1 carry-forward), fits the content HEIGHT into the region (SKY_H / contentRows), and steps back a
+  // notch — capped by SKY_MAX_CELL and by the real on-screen cellPx (never zoom past the live card size).
+  const cell = Math.min(SKY_MAX_CELL, cellPx, SKY_H / contentRows, regionW / columns);
   const scale = cell / UNIT_PX;
   const previewPx = previewInstance ? slotToPixels(previewInstance.rect) : null;
 
   return (
-    <View style={[styles.sky, { height: SKY_H }]} testID="add-gallery-sky">
-      <View style={{ width: GRID_COLUMNS * cell, height: contentRows * cell }}>
+    <View style={[styles.sky, { height: SKY_H }]} testID="add-gallery-sky" onLayout={onRegionLayout}>
+      <View style={{ width: columns * cell, height: contentRows * cell }}>
         {/* The placed cards as proportional blocks — the "room" you judge (non-interactive). */}
         {instances.map((inst) => (
           <View
