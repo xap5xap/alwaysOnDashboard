@@ -3,6 +3,9 @@
 import {
   applyDrag,
   applyResize,
+  cellPxFor,
+  GRID_GUTTER,
+  GRID_MARGIN,
   MIN_H,
   MIN_W,
   snapDrag,
@@ -78,10 +81,12 @@ describe('snapDrag (AOD-138 discrete move — origin snaps to a slot)', () => {
     expect(snapDrag(r(0, 0, 1, 1), 0.6 * UNIT_PX, 0).x).toBe(1); // round(0.6) = 1
   });
 
-  it('clamps the column so a 2-wide footprint never leaves the two-column grid', () => {
-    // A W can only ever sit at column 0 (x + w <= 2), no matter how far right it is dragged.
-    expect(snapDrag(r(0, 0, 2, 1), UNIT_PX, 0).x).toBe(0);
-    expect(snapDrag(r(0, 0, 2, 1), 5 * UNIT_PX, 0).x).toBe(0);
+  it('clamps the column so a 2-wide footprint stays within the landscape grid (x + w <= GRID_COLUMNS)', () => {
+    // On the 6-column landscape grid a W spans columns 0..4 (x + 2 <= 6); a one-column drag lands it at
+    // col1, and dragging far right pins it to the last legal column (4), not to 0 as on the old 2-col grid.
+    expect(snapDrag(r(0, 0, 2, 1), UNIT_PX, 0).x).toBe(1);
+    expect(snapDrag(r(0, 0, 2, 1), 5 * UNIT_PX, 0).x).toBe(4); // last legal column for a 2-wide footprint
+    expect(snapDrag(r(0, 0, 2, 1), 10 * UNIT_PX, 0).x).toBe(4); // dragged past the edge -> still clamped to 4
   });
 
   it('floors the row at 0 (rows are unbounded downward but never negative)', () => {
@@ -104,13 +109,17 @@ describe('snapResize (AOD-138 discrete resize — extents snap to S/M/W/L)', () 
     expect(snapResize(r(0, 0, 1, 1), 0.4 * UNIT_PX, 0.6 * UNIT_PX)).toMatchObject({ w: 1, h: 2 }); // -> M
   });
 
-  it('clamps to the minimum extent when shrinking past it, and never exceeds the grid', () => {
+  it('clamps to the minimum extent when shrinking, and never exceeds the footprint ceiling (2x2, not the 6-col width)', () => {
     expect(snapResize(r(0, 0, 2, 2), -10 * UNIT_PX, -10 * UNIT_PX)).toMatchObject({ w: MIN_W, h: MIN_H });
+    // A huge grow caps the footprint WIDTH at MAX_SLOT_W (2), never the wider GRID_COLUMNS (6).
     expect(snapResize(r(0, 0, 2, 2), 10 * UNIT_PX, 10 * UNIT_PX)).toMatchObject({ w: 2, h: 2 });
   });
 
-  it('shifts the column left when a card grows to full width at column 1 (x + w <= 2)', () => {
-    expect(snapResize(r(1, 0, 1, 1), UNIT_PX, 0)).toMatchObject({ x: 0, w: 2 });
+  it('shifts the column left when a footprint grown near the right edge would leave the grid (x + w <= GRID_COLUMNS)', () => {
+    // A card at the last column (5) grown to a W would run off the 6-col grid (5 + 2 > 6) -> it shifts left
+    // to the last legal column (4). A W grown at col1 now FITS the wide grid, so it keeps col1 (no shift).
+    expect(snapResize(r(5, 0, 1, 1), UNIT_PX, 0)).toMatchObject({ x: 4, w: 2 });
+    expect(snapResize(r(1, 0, 1, 1), UNIT_PX, 0)).toMatchObject({ x: 1, w: 2 });
   });
 
   it('keeps the column when the grown footprint still fits', () => {
@@ -119,5 +128,31 @@ describe('snapResize (AOD-138 discrete resize — extents snap to S/M/W/L)', () 
 
   it('preserves y and z', () => {
     expect(snapResize(r(1, 3, 1, 1, 4), 0, 0)).toMatchObject({ y: 3, z: 4 });
+  });
+});
+
+describe('cellPxFor (AOD-197 fit-to-width placement scale, design §4)', () => {
+  it('divides the usable width evenly across the columns: (viewportW - 2*margin - (C-1)*gutter) / C', () => {
+    // 6 landscape columns on a 960 DP canvas with the default 24 DP margin + 24 DP gutter:
+    // (960 - 2*24 - 5*24) / 6 = (960 - 48 - 120) / 6 = 792 / 6 = 132.
+    expect(cellPxFor(6, 960)).toBe(132);
+    // 4 portrait columns on the same canvas: (960 - 48 - 3*24) / 4 = (960 - 48 - 72) / 4 = 840 / 4 = 210,
+    // so a portrait cell is wider than a landscape cell on the same device (fewer, fatter columns).
+    expect(cellPxFor(4, 960)).toBe(210);
+    expect(cellPxFor(4, 960)).toBeGreaterThan(cellPxFor(6, 960));
+  });
+
+  it('honors explicit margin + gutter overrides (tunable per orientation)', () => {
+    // No margin, no gutter: the whole width splits evenly across the columns.
+    expect(cellPxFor(6, 600, 0, 0)).toBe(100);
+    // (400 - 2*10 - 1*20) / 2 = (400 - 20 - 20) / 2 = 360 / 2 = 180.
+    expect(cellPxFor(2, 400, 10, 20)).toBe(180);
+  });
+
+  it('is additive: it never touches UNIT_PX (the nominal render unit stays 96)', () => {
+    // cellPx is a separate placement scale; UNIT_PX + the default margin/gutter are load-bearing constants.
+    expect(UNIT_PX).toBe(96);
+    expect(GRID_MARGIN).toBe(24);
+    expect(GRID_GUTTER).toBe(24);
   });
 });

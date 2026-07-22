@@ -1,8 +1,10 @@
 // The slot catalogue and the rect <-> size-class rules for the S/M/W/L slot grid (AOD-122, superseding
 // the AOD-10 §5 free-class set). The design contract (Many Skies §1c, redesign-build-audit.md §1.1/§2.1):
-// S 1x1 / M 1x2 / W 2x1 / L 2x2 on a TWO-COLUMN, 96px-row grid; the 3-wide banner class is retired.
-// The rect (AOD-7) stays authoritative for geometry; the size id is the slot it occupies. Pure and
-// I/O-free.
+// S 1x1 / M 1x2 / W 2x1 / L 2x2 — footprints at most MAX_SLOT_W x MAX_SLOT_H (2x2); the 3-wide banner
+// class is retired. AOD-197 makes the PLACEMENT grid responsive per orientation (GRID_COLUMNS wide in
+// landscape, PORTRAIT_COLUMNS in portrait), a column COUNT kept DISTINCT from the footprint-width ceiling
+// MAX_SLOT_W below (they were conflated when the grid was itself two columns wide). The rect (AOD-7) stays
+// authoritative for geometry; the size id is the slot it occupies. Pure and I/O-free.
 import type { LayoutRect, WidgetSize } from '../registry/types';
 
 export interface SizeClassSpec {
@@ -12,12 +14,18 @@ export interface SizeClassSpec {
   nominalAspect: number;
 }
 
-// The slot grid is two columns wide; slots are at most two rows tall (L/M). Rows extend downward
-// without bound (the sky scrolls); columns do not. Both bounds are exported so the discrete snap/slot
-// algebra (layout/geometry.ts snapDrag/snapResize, layout/grid.ts) shares one source of truth for the
-// grid's shape rather than re-declaring 2 in three places (AOD-138).
-export const GRID_COLUMNS = 2;
-export const MAX_SLOT_H = 2;
+// AOD-197 responsive placement grid. The column COUNT depends on orientation — GRID_COLUMNS wide in
+// LANDSCAPE (the wall's orientation and the default), PORTRAIT_COLUMNS wide in portrait (design §4/§5) —
+// while a widget FOOTPRINT spans at most MAX_SLOT_W x MAX_SLOT_H (a 2x2 L). These two concepts were
+// conflated when the grid was itself two columns wide; they are now SEPARATE: the column count bounds an
+// x-position and a placement scan, MAX_SLOT_W bounds a footprint's w (wider-than-2 footprints are a
+// deferred seam, design §13). Rows extend downward without bound (the sky scrolls); columns do not. All
+// exported so the discrete snap/slot algebra (layout/geometry.ts, layout/grid.ts) shares one source of
+// truth for the grid's shape rather than re-declaring the numbers across modules (AOD-138).
+export const GRID_COLUMNS = 6; // landscape placement columns (Xavier's iPad Air 11", design §4)
+export const PORTRAIT_COLUMNS = 4; // portrait placement columns (design §4)
+export const MAX_SLOT_W = 2; // footprint width ceiling (S/M/W/L are <= 2 wide); NOT the column count
+export const MAX_SLOT_H = 2; // footprint height ceiling (S/M/W/L are <= 2 tall)
 
 // The Many Skies §1c slot contract (nominal units; aspect = w/h). Exactly four slots, no 3-wide.
 export const SIZE_CATALOGUE: Record<WidgetSize, SizeClassSpec> = {
@@ -43,18 +51,25 @@ function clamp(n: number, lo: number, hi: number): number {
  * The AOD-122 read-time coercion: resolve ANY persisted rect onto the S/M/W/L slot grid, without a
  * write-back. Deterministic, geometry-driven (the rect is authoritative; the stored size string is
  * only a validation gate in the mapper): w/h round to the nearest slot extent and clamp into
- * {1..GRID_COLUMNS} x {1..MAX_SLOT_H}; x rounds and clamps into the two columns (x + w <= GRID_COLUMNS);
- * y rounds and clamps at 0 (rows are unbounded downward); z passes through. The slot id is derived
- * from the SNAPPED extent, so size and rect always agree. Legacy rows resolve as: small 1x1 -> S,
- * medium 2x1 -> W, tall 1x2 -> M, large 2x2 -> L, and the retired wide 3x1 clamps to W 2x1 (the
- * nearest legal horizontal slot). Free-drop fractional rects (the pre-slot arrange canvas) round to
- * the nearest slot the same way. Overlap between coerced neighbours is possible and allowed (z still
- * orders it); the slot-grid arrange rework owns reflow, not this read path.
+ * {1..MAX_SLOT_W} x {1..MAX_SLOT_H}; x rounds and clamps into the active orientation's `columns`
+ * (x + w <= columns); y rounds and clamps at 0 (rows are unbounded downward); z passes through. The slot
+ * id is derived from the SNAPPED extent, so size and rect always agree. Legacy rows resolve as: small 1x1
+ * -> S, medium 2x1 -> W, tall 1x2 -> M, large 2x2 -> L, and the retired wide 3x1 clamps to W 2x1 (the
+ * footprint ceiling MAX_SLOT_W, the nearest legal horizontal slot). `columns` defaults to the landscape
+ * GRID_COLUMNS so existing callers (mapper) keep resolving on the wall's orientation; S3 will pass the
+ * real orientation's count. Widening landscape to 6 columns (AOD-197) means a legacy 2-column rect
+ * coerces LEFT-ALIGNED into the wider grid with no overlap (design §12) — its x was already <= columns-w.
+ * Free-drop fractional rects (the pre-slot arrange canvas) round to the nearest slot the same way. Overlap
+ * between coerced neighbours is possible and allowed (z still orders it); the slot-grid arrange rework owns
+ * reflow, not this read path.
  */
-export function coerceToSlotGrid(rect: LayoutRect): { rect: LayoutRect; size: WidgetSize } {
-  const w = clamp(Math.round(rect.w), 1, GRID_COLUMNS);
+export function coerceToSlotGrid(
+  rect: LayoutRect,
+  columns: number = GRID_COLUMNS,
+): { rect: LayoutRect; size: WidgetSize } {
+  const w = clamp(Math.round(rect.w), 1, MAX_SLOT_W);
   const h = clamp(Math.round(rect.h), 1, MAX_SLOT_H);
-  const x = clamp(Math.round(rect.x), 0, GRID_COLUMNS - w);
+  const x = clamp(Math.round(rect.x), 0, columns - w);
   const y = Math.max(0, Math.round(rect.y));
   return { rect: { x, y, w, h, z: rect.z }, size: slotIdFor(w, h) };
 }

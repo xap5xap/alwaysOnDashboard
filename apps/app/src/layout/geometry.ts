@@ -7,19 +7,43 @@
 //
 // Two flavours of drag/resize live here: the original CONTINUOUS pair (applyDrag/applyResize, kept for
 // the live gesture preview and anything still free-form) and the DISCRETE pair (snapDrag/snapResize,
-// AOD-138) that resolves a gesture onto the 2-column / 96px-row slot grid. The discrete pair is what the
-// arrange path commits; the pure slot ALGEBRA it feeds (first-free, reflow, slot<->pixel) lives in
-// layout/grid.ts. The grid's shape (columns, max row span) is imported from widgets/sizes so there is
-// one source of truth for "2 columns, 2 rows tall".
+// AOD-138) that resolves a gesture onto the responsive slot grid (GRID_COLUMNS landscape / PORTRAIT_COLUMNS
+// portrait wide, footprints <= MAX_SLOT_W x MAX_SLOT_H — AOD-197). The discrete pair is what the arrange
+// path commits; the pure slot ALGEBRA it feeds (first-free, reflow, slot<->pixel) lives in layout/grid.ts.
+// The grid's column count and the footprint ceiling are imported from widgets/sizes so there is one source
+// of truth for the grid's shape.
 import type { LayoutRect } from '../registry/types';
-import { GRID_COLUMNS, MAX_SLOT_H } from '../widgets/sizes';
+import { GRID_COLUMNS, MAX_SLOT_H, MAX_SLOT_W } from '../widgets/sizes';
 
 // 96 DP per nominal layout unit: the Many Skies §1c card-grid row (AOD-122; was 80 pre-slot-grid).
 // DENSITY-INDEPENDENT pixels, never physical px — the AOD-81 lesson: rt.screen and this constant must
-// share the DP space or every derived scale is density-wrong.
+// share the DP space or every derived scale is density-wrong. LOAD-BEARING and unchanged by AOD-197: it is
+// the nominal render unit for card internals (FitBody/fitLadder), the host, and the kiosk wall; cellPxFor
+// below is a SEPARATE, additive fit-to-width scale, never a replacement for UNIT_PX.
 export const UNIT_PX = 96;
 export const MIN_W = 1; // smallest widget extent (nominal units)
 export const MIN_H = 1;
+
+// AOD-197 responsive placement scale (design §4). The handheld arrange/Glance canvas fits the grid to the
+// viewport WIDTH: each cell is cellPxFor(columns, viewportW) DP wide, so `columns` cells plus their gutters
+// plus the two outer margins exactly span the screen. ADDITIVE and separate from UNIT_PX (see above): S4
+// applies cellPx as a fit-to-width scale over the nominal UNIT_PX canvas — exactly as KioskWall scales the
+// wall — so FitBody/fitLadder/the host/the wall never see a changed unit. Margins + gutters are the Many
+// Skies §1c "24px gutters" intent, tunable per orientation; both derive from rt.screen in DP (AOD-81).
+export const GRID_MARGIN = 24; // DP, the outer margin on each side of the placement grid
+export const GRID_GUTTER = 24; // DP, the inter-cell gutter
+
+/** The pixel width of one grid cell when `columns` cells (plus their gutters and the two outer margins)
+ *  fit a `viewportW`-DP-wide canvas: cellPx = (viewportW - 2*margin - (columns-1)*gutter) / columns. Pure;
+ *  the S4 fit-to-width scale is cellPx / UNIT_PX applied over the nominal canvas, UNIT_PX itself untouched. */
+export function cellPxFor(
+  columns: number,
+  viewportW: number,
+  margin: number = GRID_MARGIN,
+  gutter: number = GRID_GUTTER,
+): number {
+  return (viewportW - 2 * margin - (columns - 1) * gutter) / columns;
+}
 
 // Hundredths of a unit (~0.96px at UNIT_PX): kills floating-point drift in persisted geometry.
 export function snapUnit(n: number): number {
@@ -68,14 +92,14 @@ function snapClamp(n: number, lo: number, hi: number): number {
 
 /**
  * The DISCRETE sibling of applyDrag (AOD-138): move by a pixel delta, then snap the ORIGIN to the nearest
- * slot — column rounded and clamped into the two columns so the footprint stays on-grid (x + w <=
- * GRID_COLUMNS), row rounded and floored at 0 (rows are unbounded downward). The footprint (w/h) is also
- * legalised onto the slot ladder ({1..GRID_COLUMNS} x {1..MAX_SLOT_H}) so a rect carried over from the
- * pre-slot free-form canvas lands as a valid slot; a rect that is already a slot is unchanged. z passes
- * through. This is what the arrange canvas commits on drop; grid.reflow then re-packs the neighbours.
+ * slot — column rounded and clamped so the footprint stays on-grid (x + w <= GRID_COLUMNS, the landscape
+ * count; S4 wires the active orientation), row rounded and floored at 0 (rows are unbounded downward). The
+ * footprint (w/h) is also legalised onto the slot ladder ({1..MAX_SLOT_W} x {1..MAX_SLOT_H}) so a rect
+ * carried over from the pre-slot free-form canvas lands as a valid slot; a rect that is already a slot is
+ * unchanged. z passes through. This is what the arrange canvas commits on drop.
  */
 export function snapDrag(rect: LayoutRect, dxPx: number, dyPx: number): LayoutRect {
-  const w = snapClamp(rect.w, MIN_W, GRID_COLUMNS);
+  const w = snapClamp(rect.w, MIN_W, MAX_SLOT_W);
   const h = snapClamp(rect.h, MIN_H, MAX_SLOT_H);
   return {
     ...rect,
@@ -88,13 +112,13 @@ export function snapDrag(rect: LayoutRect, dxPx: number, dyPx: number): LayoutRe
 
 /**
  * The DISCRETE sibling of applyResize (AOD-138): grow/shrink by a pixel delta, then snap each extent to
- * the nearest S/M/W/L step (w in {1..GRID_COLUMNS}, h in {1..MAX_SLOT_H}) so what you drag is what you
+ * the nearest S/M/W/L step (w in {1..MAX_SLOT_W}, h in {1..MAX_SLOT_H}) so what you drag is what you
  * get — no free-form bounds that only reconcile to a class on release. The origin column is clamped so a
- * card grown to full width at column 1 shifts to column 0 (x + w <= GRID_COLUMNS) rather than hanging off
- * the grid; y and z pass through. grid.reflow owns re-packing the neighbours after the snap.
+ * footprint grown near the right edge shifts left to stay on-grid (x + w <= GRID_COLUMNS, the landscape
+ * count) rather than hanging off; y and z pass through.
  */
 export function snapResize(rect: LayoutRect, dwPx: number, dhPx: number): LayoutRect {
-  const w = snapClamp(rect.w + dwPx / UNIT_PX, MIN_W, GRID_COLUMNS);
+  const w = snapClamp(rect.w + dwPx / UNIT_PX, MIN_W, MAX_SLOT_W);
   const h = snapClamp(rect.h + dhPx / UNIT_PX, MIN_H, MAX_SLOT_H);
   return {
     ...rect,

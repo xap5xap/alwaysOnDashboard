@@ -15,7 +15,9 @@ function inst(id: string, r: LayoutRect, size: WidgetInstance['size'] = 'S'): Wi
 
 const A = inst('A', rect(0, 0, 1, 1));
 const B = inst('B', rect(1, 0, 1, 1));
-const C = inst('C', rect(0, 1, 1, 1));
+// C sits at the reading-order-compact slot AFTER A and B on the 6-col landscape grid (col2, row0), so a
+// reflow that shuffles A/B leaves C put — the "unchanged neighbour" the commit tests turn on (AOD-197).
+const C = inst('C', rect(2, 0, 1, 1));
 
 describe('useArrangeReflow', () => {
   it('is inert until a gesture moves (no active id, no slot, no preview)', () => {
@@ -37,9 +39,9 @@ describe('useArrangeReflow', () => {
     expect(result.current.activeSlot).toEqual({ x: 0, y: 0, w: 1, h: 1 });
     // The active card follows its own gesture -> no preview for it.
     expect(result.current.previewFor('B')).toBeNull();
-    // Neighbours get their reflowed slots (B pinned at 0,0 pushes A to col1; C stays at row1).
+    // Neighbours get their reflowed slots (B pinned at 0,0 packs A to col1; C stays put at col2, row 0).
     expect(result.current.previewFor('A')).toEqual(rect(1, 0, 1, 1));
-    expect(result.current.previewFor('C')).toEqual(rect(0, 1, 1, 1));
+    expect(result.current.previewFor('C')).toEqual(rect(2, 0, 1, 1));
     expect(commit).not.toHaveBeenCalled(); // nothing persists mid-gesture
   });
 
@@ -65,7 +67,7 @@ describe('useArrangeReflow', () => {
     const { result } = renderHook(() => useArrangeReflow([A, B], commit));
     act(() => result.current.onArrangeEnd('A', { x: 0, y: 0, w: 2, h: 2 }));
     expect(commit).toHaveBeenCalledWith('A', { rect: rect(0, 0, 2, 2), size: 'L' });
-    expect(commit).toHaveBeenCalledWith('B', { rect: rect(0, 2, 1, 1), size: 'S' });
+    expect(commit).toHaveBeenCalledWith('B', { rect: rect(2, 0, 1, 1), size: 'S' }); // packed beside the L (col2)
   });
 
   it('cancel commits nothing and clears the preview', () => {

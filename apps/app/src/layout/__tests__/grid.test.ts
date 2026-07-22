@@ -10,8 +10,10 @@ import {
   type GridRect,
   cellsOverlap,
   firstFreeSlot,
+  nearestFreeSlot,
   pixelsToSlot,
   reflow,
+  reflowToColumns,
   slotToPixels,
 } from '../grid';
 
@@ -69,42 +71,70 @@ describe('cellsOverlap (half-open grid cells)', () => {
   });
 });
 
-describe('firstFreeSlot: reading order = row-major, top-to-bottom, left-column-first', () => {
+describe('firstFreeSlot: reading order on a narrow (2-column) grid — wrapping and stacking', () => {
+  // These lock the reading-order packing (row-major, top-to-bottom, left-column-first, wrapping when a row
+  // fills) at an EXPLICIT narrow width. `columns` is now a first-class param (AOD-197: GRID_COLUMNS=6
+  // landscape / PORTRAIT_COLUMNS=4 portrait); a 2-column grid exercises the wrap crisply, and the
+  // landscape/portrait DEFAULTS are locked in the next describe.
   it('places the first card at the origin on an empty grid', () => {
-    expect(firstFreeSlot(S, [])).toEqual(cell(0, 0, 1, 1));
-    expect(firstFreeSlot(L, [])).toEqual(cell(0, 0, 2, 2));
+    expect(firstFreeSlot(S, [], 2)).toEqual(cell(0, 0, 1, 1));
+    expect(firstFreeSlot(L, [], 2)).toEqual(cell(0, 0, 2, 2));
   });
 
   it('an S walks col0 -> col1 -> next row as the grid fills', () => {
-    expect(firstFreeSlot(S, [cell(0, 0, 1, 1)])).toEqual(cell(1, 0, 1, 1)); // col1, same row
-    expect(firstFreeSlot(S, [cell(0, 0, 1, 1), cell(1, 0, 1, 1)])).toEqual(cell(0, 1, 1, 1)); // next row
-    expect(firstFreeSlot(S, [cell(0, 0, 1, 1), cell(1, 0, 1, 1), cell(0, 1, 1, 1)])).toEqual(cell(1, 1, 1, 1));
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 1)], 2)).toEqual(cell(1, 0, 1, 1)); // col1, same row
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 1), cell(1, 0, 1, 1)], 2)).toEqual(cell(0, 1, 1, 1)); // next row
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 1), cell(1, 0, 1, 1), cell(0, 1, 1, 1)], 2)).toEqual(cell(1, 1, 1, 1));
   });
 
   it('an M (1x2) drops into the first column that has two free rows', () => {
-    expect(firstFreeSlot(M, [cell(0, 0, 1, 1)])).toEqual(cell(1, 0, 1, 2)); // col1 spans rows 0-1
-    expect(firstFreeSlot(M, [])).toEqual(cell(0, 0, 1, 2));
+    expect(firstFreeSlot(M, [cell(0, 0, 1, 1)], 2)).toEqual(cell(1, 0, 1, 2)); // col1 spans rows 0-1
+    expect(firstFreeSlot(M, [], 2)).toEqual(cell(0, 0, 1, 2));
   });
 
   it('a W (2x1) only fits in a fully-free row; otherwise it stacks below', () => {
-    expect(firstFreeSlot(W, [cell(0, 0, 2, 1)])).toEqual(cell(0, 1, 2, 1)); // below another W
-    expect(firstFreeSlot(W, [cell(0, 0, 1, 1)])).toEqual(cell(0, 1, 2, 1)); // a single S blocks the row
+    expect(firstFreeSlot(W, [cell(0, 0, 2, 1)], 2)).toEqual(cell(0, 1, 2, 1)); // below another W
+    expect(firstFreeSlot(W, [cell(0, 0, 1, 1)], 2)).toEqual(cell(0, 1, 2, 1)); // a single S blocks the row
   });
 
-  it('an L (2x2) needs the whole grid, so it appends below any occupant', () => {
-    expect(firstFreeSlot(L, [cell(0, 0, 1, 1)])).toEqual(cell(0, 1, 2, 2));
+  it('an L (2x2) needs the whole 2-col grid, so it appends below any occupant', () => {
+    expect(firstFreeSlot(L, [cell(0, 0, 1, 1)], 2)).toEqual(cell(0, 1, 2, 2));
   });
 
   it('fills an interior hole in reading order before appending', () => {
     // M in col0 (rows 0-1) + S in col1 row0 -> the hole is col1 row1.
-    expect(firstFreeSlot(S, [cell(0, 0, 1, 2), cell(1, 0, 1, 1)])).toEqual(cell(1, 1, 1, 1));
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 2), cell(1, 0, 1, 1)], 2)).toEqual(cell(1, 1, 1, 1));
   });
 
   it('a full grid never blocks — it appends at a fresh row below everything (the sky scrolls)', () => {
     // Two stacked full-width rows: no interior gap, next S lands at row 2.
-    expect(firstFreeSlot(S, [cell(0, 0, 2, 1), cell(0, 1, 2, 1)])).toEqual(cell(0, 2, 1, 1));
+    expect(firstFreeSlot(S, [cell(0, 0, 2, 1), cell(0, 1, 2, 1)], 2)).toEqual(cell(0, 2, 1, 1));
     // An L filling rows 0-1 -> append at row 2.
-    expect(firstFreeSlot(S, [cell(0, 0, 2, 2)])).toEqual(cell(0, 2, 1, 1));
+    expect(firstFreeSlot(S, [cell(0, 0, 2, 2)], 2)).toEqual(cell(0, 2, 1, 1));
+  });
+});
+
+describe('firstFreeSlot honors the columns param (AOD-197: landscape 6 default / portrait 4)', () => {
+  it('defaults to the landscape count (GRID_COLUMNS = 6): S cards fill a wide row before wrapping', () => {
+    // No columns arg -> 6. An S beside a single S goes to col1, still row 0; two S at cols 0-1 leave col2
+    // free in the SAME row (it does not wrap as it would at 2 columns).
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 1)])).toEqual(cell(1, 0, 1, 1));
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 1), cell(1, 0, 1, 1)])).toEqual(cell(2, 0, 1, 1)); // col2, row 0
+    // Only a full row of six S wraps to row 1.
+    const rowOfSix: GridRect[] = [0, 1, 2, 3, 4, 5].map((x) => cell(x, 0, 1, 1));
+    expect(firstFreeSlot(S, rowOfSix)).toEqual(cell(0, 1, 1, 1));
+    // A W fits BESIDE a single W on the wide row (cols 2-3), no stacking.
+    expect(firstFreeSlot(W, [cell(0, 0, 2, 1)])).toEqual(cell(2, 0, 2, 1));
+    // An L fits beside a single S on the wide row (cols 1-2), no stacking.
+    expect(firstFreeSlot(L, [cell(0, 0, 1, 1)])).toEqual(cell(1, 0, 2, 2));
+  });
+
+  it('packs into an explicit portrait grid (columns = 4): wraps after four columns', () => {
+    expect(firstFreeSlot(S, [cell(0, 0, 1, 1), cell(1, 0, 1, 1), cell(2, 0, 1, 1)], 4)).toEqual(cell(3, 0, 1, 1));
+    const rowOfFour: GridRect[] = [0, 1, 2, 3].map((x) => cell(x, 0, 1, 1));
+    expect(firstFreeSlot(S, rowOfFour, 4)).toEqual(cell(0, 1, 1, 1)); // full row of 4 -> wrap to row 1
+    // Two W fill a 4-col row (cols 0-1, 2-3); a third W appends below.
+    expect(firstFreeSlot(W, [cell(0, 0, 2, 1), cell(2, 0, 2, 1)], 4)).toEqual(cell(0, 1, 2, 1));
   });
 });
 
@@ -118,13 +148,15 @@ describe('reflow: pinned card stays put, neighbours re-pack, overlap becomes imp
     expect(out).toHaveLength(3);
   });
 
-  it('clamps a W/L pinned at column 1 back onto the grid before packing (x + w <= 2)', () => {
-    // Caller set the pinned card to a full-width footprint anchored at column 1 (off-grid); reflow shifts it left.
-    const rects = [rect(1, 0, 2, 1, 5), rect(0, 0, 1, 1, 0)];
+  it('clamps a W pinned off the right edge back onto the landscape grid before packing (x + w <= GRID_COLUMNS)', () => {
+    // reflow keeps the landscape count (6). A 2-wide card dropped at column 5 runs off (5 + 2 > 6); reflow
+    // shifts it to the last legal column (4), footprint + z intact. The S neighbour then packs into the
+    // freed left of the SAME wide row (reading-order pack, overlap-free) — no longer pushed below as at 2 cols.
+    const rects = [rect(5, 0, 2, 1, 5), rect(0, 0, 1, 1, 0)];
     const out = reflow(rects, 0);
-    expect(out[0]).toEqual(rect(0, 0, 2, 1, 5)); // clamped col1 -> col0, footprint + z intact
+    expect(out[0]).toEqual(rect(4, 0, 2, 1, 5)); // clamped col5 -> col4, footprint + z intact
     expect(anyOverlap(cellsOf(out))).toBe(false);
-    expect(out[1].y).toBeGreaterThan(0); // the neighbour was pushed below the pinned W
+    expect(out[1]).toEqual(rect(0, 0, 1, 1, 0)); // the S packs into the freed left columns of row 0
   });
 
   it('makes overlap impossible even from a fully-overlapping input (every card stacked at the origin)', () => {
@@ -143,14 +175,14 @@ describe('reflow: pinned card stays put, neighbours re-pack, overlap becomes imp
 
     const out1 = reflow([pin, a, b], 0);
     expect(out1).toEqual(reflow([pin, a, b], 0)); // referentially deterministic
-    // `a` is earlier in the array, so it packs into the earlier reading-order slot (col1 row0) and `b`
-    // into the next (col0 row1). Swapping their array order swaps which slot each card gets.
+    // `a` is earlier in the array, so it packs into the earlier reading-order slot (col1 row0) and `b` into
+    // the next (col2 row0 — the wide landscape row still has room). Swapping their array order swaps slots.
     expect(out1[1]).toEqual(rect(1, 0, 1, 1, 5)); // a -> (col1, row0)
-    expect(out1[2]).toEqual(rect(0, 1, 1, 1, 6)); // b -> (col0, row1)
+    expect(out1[2]).toEqual(rect(2, 0, 1, 1, 6)); // b -> (col2, row0)
 
     const out2 = reflow([pin, b, a], 0);
     expect(out2[1]).toEqual(rect(1, 0, 1, 1, 6)); // now b is earlier -> b takes (col1, row0)
-    expect(out2[2]).toEqual(rect(0, 1, 1, 1, 5)); // a -> (col0, row1)
+    expect(out2[2]).toEqual(rect(2, 0, 1, 1, 5)); // a -> (col2, row0)
   });
 
   it('preserves array order, footprint (w/h) and z for every card — only x/y move', () => {
@@ -165,7 +197,10 @@ describe('reflow: pinned card stays put, neighbours re-pack, overlap becomes imp
   });
 
   it('a single-card reflow just clamps the pin onto the grid', () => {
-    expect(reflow([rect(1, 0, 2, 1, 0)], 0)).toEqual([rect(0, 0, 2, 1, 0)]);
+    // x=5 with a 2-wide footprint runs off the 6-col landscape grid (5 + 2 > 6) -> clamps to the last legal
+    // column (4); an on-grid card (1 + 2 <= 6) is untouched.
+    expect(reflow([rect(5, 0, 2, 1, 0)], 0)).toEqual([rect(4, 0, 2, 1, 0)]);
+    expect(reflow([rect(1, 0, 2, 1, 0)], 0)).toEqual([rect(1, 0, 2, 1, 0)]);
   });
 
   it('keeps a neighbour that is already well-placed but compacts a gap in reading order', () => {
@@ -174,5 +209,76 @@ describe('reflow: pinned card stays put, neighbours re-pack, overlap becomes imp
     const out = reflow(rects, 0);
     expect(out[1]).toEqual(rect(1, 0, 1, 1, 1)); // compacted to col1 row0
     expect(anyOverlap(cellsOf(out))).toBe(false);
+  });
+});
+
+describe('reflowToColumns (AOD-197 §6.3: derive an orientation by packing reading-order)', () => {
+  it('packs a spread-out layout "one next to the other" into the target column count', () => {
+    // Three S cards spread across rows repack into the top row of a 6-col grid in reading order (y,x,index),
+    // but are RETURNED in input order. Reading order here: (0,0) -> (3,1) -> (0,2).
+    const rects = [rect(0, 0, 1, 1, 0), rect(0, 2, 1, 1, 1), rect(3, 1, 1, 1, 2)];
+    const out = reflowToColumns(rects, 6);
+    expect(out[0]).toMatchObject({ x: 0, y: 0 }); // (0,0): first in reading order -> col0
+    expect(out[2]).toMatchObject({ x: 1, y: 0 }); // (3,1): second in reading order -> col1
+    expect(out[1]).toMatchObject({ x: 2, y: 0 }); // (0,2): third in reading order -> col2
+    expect(anyOverlap(cellsOf(out))).toBe(false);
+  });
+
+  it('appends below when a row fills (rows unbounded), preserving each footprint and z', () => {
+    // Four W (each 2 wide) into a 4-col grid: two per row -> rows 0 and 1.
+    const rects = [rect(0, 5, 2, 1, 3), rect(0, 6, 2, 1, 4), rect(0, 7, 2, 1, 5), rect(0, 8, 2, 1, 6)];
+    const out = reflowToColumns(rects, 4);
+    expect(out.map((r) => ({ x: r.x, y: r.y }))).toEqual([
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      { x: 0, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    for (let i = 0; i < rects.length; i++) {
+      expect(out[i].w).toBe(2); // footprint rides through untouched
+      expect(out[i].h).toBe(1);
+      expect(out[i].z).toBe(rects[i].z); // z preserved
+    }
+    expect(anyOverlap(cellsOf(out))).toBe(false);
+  });
+
+  it('is order-preserving (returns input order) and NEVER mutates the input', () => {
+    const rects = [rect(2, 3, 1, 1, 0), rect(0, 0, 2, 2, 1)];
+    const snapshot = rects.map((r) => ({ ...r }));
+    const out = reflowToColumns(rects, 6);
+    expect(out).toHaveLength(2);
+    expect(out).not.toBe(rects); // a fresh array
+    expect(rects).toEqual(snapshot); // input untouched
+    // Reading order: the L (0,0) lands at the origin, the S (2,3) packs after it at col2 row0.
+    expect(out[1]).toMatchObject({ x: 0, y: 0, w: 2, h: 2 }); // input index 1 = the L
+    expect(out[0]).toMatchObject({ x: 2, y: 0, w: 1, h: 1 }); // input index 0 = the S
+  });
+});
+
+describe("nearestFreeSlot (AOD-197 §8: the place-don't-pack hairline)", () => {
+  it('returns the target cell itself when it is free and on-grid (WYSIWYG, no neighbour moves)', () => {
+    expect(nearestFreeSlot(S, [], { x: 3, y: 2 })).toEqual(cell(3, 2, 1, 1)); // empty grid: land at the finger
+    expect(nearestFreeSlot(S, [cell(0, 0, 1, 1)], { x: 4, y: 0 })).toEqual(cell(4, 0, 1, 1)); // free cell beside an occupant, unchanged
+  });
+
+  it('snaps to the NEAREST free fitting cell when the target is occupied (ties by reading order y,x)', () => {
+    // Target (0,0) is taken; the nearest fits (1,0) and (0,1) are both distance 1, so reading order (y then
+    // x) breaks the tie -> (1,0). No neighbour moves (gaps preserved, unlike reflow's pack).
+    expect(nearestFreeSlot(S, [cell(0, 0, 1, 1)], { x: 0, y: 0 })).toEqual(cell(1, 0, 1, 1));
+  });
+
+  it('snaps a footprint dropped past the right edge back to the last legal column (nearest on-grid fit)', () => {
+    // A W with target x=5 runs off the 6-col grid (5 + 2 > 6); the nearest fitting on-grid origin is col4.
+    expect(nearestFreeSlot(W, [], { x: 5, y: 0 })).toEqual(cell(4, 0, 2, 1));
+  });
+
+  it('appends below all cards when no interior gap fits (rows unbounded)', () => {
+    const fullRow: GridRect[] = [0, 1, 2, 3, 4, 5].map((x) => cell(x, 0, 1, 1)); // row 0 full across 6 cols
+    expect(nearestFreeSlot(S, fullRow, { x: 0, y: 0 })).toEqual(cell(0, 1, 1, 1)); // to the fresh row below
+  });
+
+  it('honors an explicit portrait column count (columns = 4)', () => {
+    // The same off-right-edge W snaps to col2 on a 4-col portrait grid (3 + 2 > 4 -> nearest on-grid fit col2).
+    expect(nearestFreeSlot(W, [], { x: 3, y: 0 }, 4)).toEqual(cell(2, 0, 2, 1));
   });
 });

@@ -27,13 +27,14 @@ function assertNoOverlap(map: Map<string, LayoutRect>): void {
 
 describe('reflowForTarget: pins the active card at its target, re-packs the rest', () => {
   it('drops a card onto an occupied slot; the neighbours re-pack around it, overlap-free', () => {
-    // A(0,0) B(1,0) C(0,1); carry B onto A's slot (0,0). Matches the grid.reflow reading-order pack.
+    // A(0,0) B(1,0) C(0,1); carry B onto A's slot (0,0). Matches the grid.reflow reading-order pack on the
+    // 6-col landscape grid, where the displaced cards fill the wide row rather than wrapping.
     const instances = [inst('A', rect(0, 0, 1, 1)), inst('B', rect(1, 0, 1, 1)), inst('C', rect(0, 1, 1, 1))];
     const map = reflowForTarget(instances, { instanceId: 'B', slot: { x: 0, y: 0, w: 1, h: 1 } });
 
     expect(map.get('B')).toEqual(rect(0, 0, 1, 1)); // pinned at the target
-    expect(map.get('A')).toEqual(rect(1, 0, 1, 1)); // A pushed to col1
-    expect(map.get('C')).toEqual(rect(0, 1, 1, 1)); // C stays at row1
+    expect(map.get('A')).toEqual(rect(1, 0, 1, 1)); // A packs to col1, row 0
+    expect(map.get('C')).toEqual(rect(2, 0, 1, 1)); // C packs to col2, row 0 (the wide row has room)
     assertNoOverlap(map);
   });
 
@@ -47,18 +48,18 @@ describe('reflowForTarget: pins the active card at its target, re-packs the rest
     assertNoOverlap(map);
   });
 
-  it('reflows around a RESIZE: growing the active card to L pushes a neighbour below it', () => {
+  it('reflows around a RESIZE: growing the active card to L packs a neighbour beside it', () => {
     const instances = [inst('A', rect(0, 0, 1, 1)), inst('B', rect(1, 0, 1, 1))];
     const map = reflowForTarget(instances, { instanceId: 'A', slot: { x: 0, y: 0, w: 2, h: 2 } });
     expect(map.get('A')).toEqual(rect(0, 0, 2, 2)); // the grown footprint, pinned
-    expect(map.get('B')).toEqual(rect(0, 2, 1, 1)); // no room in rows 0-1 -> appended below
+    expect(map.get('B')).toEqual(rect(2, 0, 1, 1)); // no room in cols 0-1 (the L) -> packs to col2 in row 0
     assertNoOverlap(map);
   });
 
-  it('clamps a full-width target dropped at column 1 back onto the two-column grid', () => {
+  it('clamps a full-width target dropped off the right edge back onto the landscape grid', () => {
     const instances = [inst('A', rect(0, 0, 2, 1, 5)), inst('B', rect(0, 1, 1, 1))];
-    const map = reflowForTarget(instances, { instanceId: 'A', slot: { x: 1, y: 0, w: 2, h: 1 } });
-    expect(map.get('A')).toMatchObject({ x: 0, w: 2, z: 5 }); // col1 -> col0 (x + w <= 2)
+    const map = reflowForTarget(instances, { instanceId: 'A', slot: { x: 5, y: 0, w: 2, h: 1 } });
+    expect(map.get('A')).toMatchObject({ x: 4, w: 2, z: 5 }); // col5 -> col4 (x + w <= GRID_COLUMNS)
     assertNoOverlap(map);
   });
 
@@ -72,10 +73,12 @@ describe('reflowForTarget: pins the active card at its target, re-packs the rest
 
 describe('collectArrangeCommits: one patch per MOVED card, size from the footprint', () => {
   it('commits the dragged card + every displaced neighbour, and NOT an unchanged one', () => {
-    const instances = [inst('A', rect(0, 0, 1, 1)), inst('B', rect(1, 0, 1, 1)), inst('C', rect(0, 1, 1, 1))];
+    // C already sits at its packed slot (2,0), so the reflow leaves it put -> no patch. (A(0,0), B(1,0),
+    // C(2,0) is the reading-order-compact wide row; dropping B onto (0,0) shuffles A/B but not C.)
+    const instances = [inst('A', rect(0, 0, 1, 1)), inst('B', rect(1, 0, 1, 1)), inst('C', rect(2, 0, 1, 1))];
     const map = reflowForTarget(instances, { instanceId: 'B', slot: { x: 0, y: 0, w: 1, h: 1 } });
     const commits = collectArrangeCommits(instances, map);
-    // B moved (1,0)->(0,0), A moved (0,0)->(1,0); C stayed at (0,1) -> no patch.
+    // B moved (1,0)->(0,0), A moved (0,0)->(1,0); C stayed at (2,0) -> no patch.
     expect(commits.map((c) => c.instanceId).sort()).toEqual(['A', 'B']);
     expect(commits.find((c) => c.instanceId === 'C')).toBeUndefined();
   });
@@ -87,7 +90,7 @@ describe('collectArrangeCommits: one patch per MOVED card, size from the footpri
     const A = commits.find((c) => c.instanceId === 'A');
     const B = commits.find((c) => c.instanceId === 'B');
     expect(A?.patch).toEqual({ rect: rect(0, 0, 2, 2), size: 'L' }); // grown to L
-    expect(B?.patch).toEqual({ rect: rect(0, 2, 1, 1), size: 'S' }); // pushed below, still S
+    expect(B?.patch).toEqual({ rect: rect(2, 0, 1, 1), size: 'S' }); // packed beside the L (col2), still S
   });
 
   it('maps each footprint to its slot id (S 1x1 / M 1x2 / W 2x1 / L 2x2)', () => {
