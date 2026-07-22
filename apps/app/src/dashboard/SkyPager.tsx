@@ -1,6 +1,15 @@
 // The Glance sky pager (AOD-144; design "Many Skies" §1a "the paged canvas" + §1f "the second sky"). In
 // Glance the dashboard is a HORIZONTAL pager over the user's skies — one full-width page per sky, each
-// rendered READ-ONLY (a LayoutCanvas with arranging=false over that sky's own instances from useSkyInstances).
+// rendered READ-ONLY (a LayoutCanvas with arranging=false).
+//
+// AOD-194 (design-layout-foundation §9 "one source of truth"): the ACTIVE sky's page (id === activeId) does
+// NOT read its own ['sky', id] cache. It renders `activeInstances` — the SAME ['dashboard', userId] cache
+// Arrange and the kiosk wall read (handed down from Dashboard's useDashboards().instances). Only NON-active
+// pages read ['sky', id] via useSkyInstances. Before, the sky you were ON was held in TWO independently
+// MMKV-persisted staleTime:Infinity caches (Glance's ['sky'] and Arrange's ['dashboard']); an interrupted
+// persist could leave them permanently divergent, so Glance showed a phantom layout Arrange did not (broken
+// WYSIWYG on the flagship surface). Routing the active page through ['dashboard'] means the calm and edit
+// views can never disagree about the sky you are on.
 // Paging is a plain horizontal FlatList (pagingEnabled) — NO native pager dependency. "Swipe never edits": a
 // page only turns; entering the edit surface is the deliberate dial flip or a long-press on a card, both of
 // which LEAVE the pager (Dashboard renders the single active-sky LayoutCanvas in Arrange instead). The
@@ -20,6 +29,7 @@ import { useEntitlements } from '../entitlements/useEntitlements';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import type { DashboardSummary } from '../layout/dashboardRepo';
 import { useSkyInstances } from '../layout/useSkyInstances';
+import type { WidgetInstance } from '../registry/types';
 import { EmptyState, ErrorState, LoadingState } from '../shell';
 import { AddGlyph } from './glyphs';
 import { PageDots } from './PageDots';
@@ -32,6 +42,10 @@ export interface SkyPagerProps {
   dashboards: DashboardSummary[];
   /** The resolved active sky — the mount landing page (return-from-arrange lands on the sky you edited). */
   activeId: string | null;
+  /** The active sky's instances, from the SAME ['dashboard', userId] cache Arrange and the wall read
+   *  (Dashboard passes useDashboards().instances). AOD-194: the active page (id === activeId) renders THESE,
+   *  never its own ['sky', activeId] cache, so Glance and Arrange can never diverge on the sky you are on. */
+  activeInstances: WidgetInstance[];
   /** Long-press a card on a page -> arrange THAT sky (Dashboard: setActive + arranging). */
   onEnterArrange(skyId: string): void;
   /** An empty page's "Add a card" -> Dashboard opens the add flow for that sky. */
@@ -49,6 +63,7 @@ export interface SkyPagerProps {
 export function SkyPager({
   dashboards,
   activeId,
+  activeInstances,
   onEnterArrange,
   onAddCard,
   createDashboard,
@@ -145,14 +160,28 @@ export function SkyPager({
         style={styles.list}
         data={dashboards}
         keyExtractor={(d) => d.id}
-        renderItem={({ item }) => (
-          <SkyPage
-            sky={item}
-            width={pageWidth}
-            onEnterArrange={() => onEnterArrange(item.id)}
-            onAddCard={() => onAddCard(item.id)}
-          />
-        )}
+        renderItem={({ item }) =>
+          // AOD-194: the active page renders the ['dashboard'] cache (activeInstances), a DIFFERENT component
+          // that never calls useSkyInstances — so ['sky', activeId] is never read as a divergent source. Every
+          // other page keeps its own ['sky', id] read. Branching the COMPONENT (not a conditional hook) keeps
+          // each page's hook calls unconditional.
+          item.id === activeId ? (
+            <ActiveSkyPage
+              sky={item}
+              instances={activeInstances}
+              width={pageWidth}
+              onEnterArrange={() => onEnterArrange(item.id)}
+              onAddCard={() => onAddCard(item.id)}
+            />
+          ) : (
+            <SkyPage
+              sky={item}
+              width={pageWidth}
+              onEnterArrange={() => onEnterArrange(item.id)}
+              onAddCard={() => onAddCard(item.id)}
+            />
+          )
+        }
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -188,10 +217,11 @@ export function SkyPager({
   );
 }
 
-/** One read-only pager page: a sky's own instances (useSkyInstances), rendered through a non-arranging
- *  LayoutCanvas. Its own loading / error / empty states so a slow or empty sky never blanks the whole pager.
- *  A long-press on a card drops into Arrange for this sky (§1b "holding a card in Glance still drops straight
- *  into card Tend"); an empty sky offers "Add a card" (§1g). */
+/** A NON-active read-only pager page: a sky's OWN instances (useSkyInstances, the ['sky', id] cache), rendered
+ *  through a non-arranging LayoutCanvas. Its own loading / error states so a slow or failed sky never blanks
+ *  the whole pager. A long-press on a card drops into Arrange for this sky (§1b "holding a card in Glance still
+ *  drops straight into card Tend"); an empty sky offers "Add a card" (§1g). The ACTIVE sky uses ActiveSkyPage
+ *  instead (AOD-194) — only the instance SOURCE differs, so the resolved body is the shared SkyPageContent. */
 function SkyPage({
   sky,
   width,
@@ -203,7 +233,6 @@ function SkyPage({
   onEnterArrange(): void;
   onAddCard(): void;
 }) {
-  const { theme } = useUnistyles();
   const { instances, isLoading, isError, refetch } = useSkyInstances(sky.id);
   return (
     // Fixed to the pager width so pagingEnabled snaps; height comes from the list's cross-axis stretch,
@@ -213,27 +242,75 @@ function SkyPage({
         <LoadingState testID={`sky-page-${sky.id}-loading`} />
       ) : isError ? (
         <ErrorState line="Could not load this sky." onRetry={() => refetch()} testID={`sky-page-${sky.id}-error`} />
-      ) : instances.length === 0 ? (
-        <EmptyState
-          glyph={<AddGlyph color={theme.colors.accent} />}
-          line="Nothing here yet."
-          subline="Add a card to get started."
-          actionLabel="Add a card"
-          onAction={onAddCard}
-          testID={`sky-page-${sky.id}-empty`}
-        />
       ) : (
-        <LayoutCanvas
-          instances={instances}
-          arranging={false}
-          onEnterArrange={onEnterArrange}
-          onExitArrange={noop}
-          onCommit={noop}
-          onRequestConfigure={noop}
-          onRemove={noop}
-        />
+        <SkyPageContent skyId={sky.id} instances={instances} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
       )}
     </View>
+  );
+}
+
+/** The ACTIVE sky's pager page (AOD-194). It renders the `activeInstances` handed down from Dashboard — the
+ *  SAME ['dashboard', userId] cache Arrange and the kiosk wall read — instead of its own ['sky', id] cache, so
+ *  the calm (Glance) and edit (Arrange) views can never disagree on the sky you are on. NO loading / error
+ *  branch: Dashboard gates the whole pager behind its combined isLoading/isError (useDashboards), so the
+ *  active instances are already resolved when the pager mounts; a genuinely empty active sky just shows the
+ *  empty state. Deliberately does NOT call useSkyInstances, so ['sky', activeId] is never read as a divergent
+ *  source. Its testIDs match SkyPage's, so the pager's page contract is identical from the outside. */
+function ActiveSkyPage({
+  sky,
+  instances,
+  width,
+  onEnterArrange,
+  onAddCard,
+}: {
+  sky: DashboardSummary;
+  instances: WidgetInstance[];
+  width: number;
+  onEnterArrange(): void;
+  onAddCard(): void;
+}) {
+  return (
+    <View style={{ width }} testID={`sky-page-${sky.id}`}>
+      <SkyPageContent skyId={sky.id} instances={instances} onEnterArrange={onEnterArrange} onAddCard={onAddCard} />
+    </View>
+  );
+}
+
+/** The read-only page body shared by ActiveSkyPage and SkyPage: a resolved instance list renders as either the
+ *  §1g empty-state "Add a card" (empty sky) or a non-arranging LayoutCanvas (a long-press drops into Arrange for
+ *  this sky, §1b). Only the instance SOURCE (['dashboard'] for the active page, ['sky', id] for the rest)
+ *  differs between the two callers; the rendered contract — testIDs and affordances — is identical. */
+function SkyPageContent({
+  skyId,
+  instances,
+  onEnterArrange,
+  onAddCard,
+}: {
+  skyId: string;
+  instances: WidgetInstance[];
+  onEnterArrange(): void;
+  onAddCard(): void;
+}) {
+  const { theme } = useUnistyles();
+  return instances.length === 0 ? (
+    <EmptyState
+      glyph={<AddGlyph color={theme.colors.accent} />}
+      line="Nothing here yet."
+      subline="Add a card to get started."
+      actionLabel="Add a card"
+      onAction={onAddCard}
+      testID={`sky-page-${skyId}-empty`}
+    />
+  ) : (
+    <LayoutCanvas
+      instances={instances}
+      arranging={false}
+      onEnterArrange={onEnterArrange}
+      onExitArrange={noop}
+      onCommit={noop}
+      onRequestConfigure={noop}
+      onRemove={noop}
+    />
   );
 }
 

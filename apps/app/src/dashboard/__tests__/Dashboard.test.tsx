@@ -25,11 +25,13 @@ jest.mock('../SkyPager', () => {
     SkyPager: ({
       dashboards,
       activeId,
+      activeInstances,
       onPageChange,
       onEnterArrange,
     }: {
       dashboards: { id: string }[];
       activeId: string | null;
+      activeInstances: { instanceId: string }[];
       onPageChange: (i: number) => void;
       onEnterArrange: (id: string) => void;
     }) =>
@@ -38,6 +40,8 @@ jest.mock('../SkyPager', () => {
         { testID: 'sky-pager' },
         React.createElement(Text, { testID: 'pager-active' }, activeId ?? 'none'),
         React.createElement(Text, { testID: 'pager-count' }, String(dashboards.length)),
+        // AOD-194: the active-sky instances the shell hands down (the ['dashboard'] cache the active page renders).
+        React.createElement(Text, { testID: 'pager-active-instances' }, activeInstances.map((i) => i.instanceId).join(',')),
         React.createElement(Pressable, { testID: 'pager-swipe-to-1', onPress: () => onPageChange(1) }, React.createElement(Text, null, 'swipe')),
         React.createElement(Pressable, { testID: 'pager-longpress-d2', onPress: () => onEnterArrange('d2') }, React.createElement(Text, null, 'lp')),
       ),
@@ -180,6 +184,13 @@ describe('Dashboard — the Glance-pager / Arrange split §1a/§1e', () => {
     renderDashboard();
     expect(screen.getByTestId('pager-count').props.children).toBe('2');
     expect(screen.getByTestId('pager-active').props.children).toBe('d1');
+  });
+
+  it('hands the active-sky instances (the ["dashboard"] cache) to the pager as activeInstances (AOD-194)', () => {
+    renderDashboard();
+    // useDashboards().instances IS the ['dashboard'] cache the wall + Arrange read; the pager's active page
+    // renders THESE, so Glance and Arrange share one source of truth (they can never diverge on the active sky).
+    expect(screen.getByTestId('pager-active-instances').props.children).toBe('i1');
   });
 
   it('flipping the dial to Arrange swaps to the active-sky canvas + Preview (never a Done)', () => {
