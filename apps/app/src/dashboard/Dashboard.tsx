@@ -85,8 +85,10 @@ export function Dashboard() {
     reorderDashboards,
     deleteDashboard,
   } = useDashboards(orientation);
-  const { removeWidget } = useRemoveWidget();
-  const { moveInstance } = useMoveInstance();
+  // AOD-197 (Pass B2): thread the active orientation so an add/remove/move edits the orientation you are
+  // holding — the hooks optimistically repaint THAT orientation and reconcile the other.
+  const { removeWidget } = useRemoveWidget(orientation);
+  const { moveInstance } = useMoveInstance(orientation);
   const [arranging, setArranging] = useState(false);
   // AOD-145: the SECOND Arrange altitude. `arranging` gates Glance vs Arrange; within Arrange this flag gates
   // card altitude (edit one sky, the shipped surface) vs page altitude (manage the skies as thumbnails). Only
@@ -348,7 +350,7 @@ export function Dashboard() {
             </View>
           )}
 
-          {picking && <AddGallery onClose={() => setPicking(false)} cellPx={cellPx} columns={columns} />}
+          {picking && <AddGallery onClose={() => setPicking(false)} cellPx={cellPx} columns={columns} orientation={orientation} />}
           {configuring && <ConfigureInstanceModal instance={configuring} onClose={() => setConfiguring(null)} />}
         </View>
       </Screen>

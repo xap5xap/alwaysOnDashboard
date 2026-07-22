@@ -92,4 +92,47 @@ describe('useRemoveWidget', () => {
     expect(idsInCache(client)).toEqual(['a', 'b']);
     await waitFor(() => expect(result.current.error?.message).toBe('rls denied'));
   });
+
+  // AOD-197 (Pass B2): removing while holding portrait drops from the PORTRAIT cache instantly (so the sky
+  // repaints without a rotate) and reconciles the OTHER orientation (the delete strips the row everywhere).
+  it('in portrait: drops from the PORTRAIT cache optimistically and invalidates the other (landscape) orientation', async () => {
+    // A deferred delete so we can observe the portrait cache mid-flight; landscape stays untouched until the
+    // cross-orientation reconcile fires after the delete resolves.
+    let resolveDelete!: () => void;
+    (deleteWidgetInstance as jest.Mock).mockReturnValue(new Promise<void>((res) => (resolveDelete = res)));
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    const seed = () =>
+      ({ dashboardId: 'dash-1', name: 'Wall', instances: [instance('a'), instance('b')] }) as LoadedDashboard;
+    client.setQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'landscape'), seed());
+    client.setQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'portrait'), seed());
+    const invalidate = jest.spyOn(client, 'invalidateQueries');
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useRemoveWidget('portrait'), { wrapper });
+
+    const idsIn = (o: 'landscape' | 'portrait') =>
+      (client.getQueryData<LoadedDashboard>(dashboardQueryKey('u1', o))?.instances ?? []).map((i) => i.instanceId);
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.removeWidget('a');
+    });
+
+    // Optimism hits ONLY the portrait cache; landscape is untouched until the reconcile below.
+    expect(idsIn('portrait')).toEqual(['b']);
+    expect(idsIn('landscape')).toEqual(['a', 'b']);
+    expect(deleteWidgetInstance).toHaveBeenCalledWith('a');
+
+    await act(async () => {
+      resolveDelete();
+      await pending;
+    });
+
+    expect(idsIn('portrait')).toEqual(['b']);
+    // The OTHER orientation (landscape) is invalidated (exact) so it drops the card there too.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: dashboardQueryKey('u1', 'landscape'), exact: true });
+    expect(result.current.error).toBeNull();
+  });
 });

@@ -7,7 +7,7 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
-import { dashboardQueryKey } from '../layout/useDashboard';
+import { dashboardQueryPrefix } from '../layout/useDashboard';
 import {
   disconnectConnection,
   openExternalUrl,
@@ -34,7 +34,9 @@ export function useConnectionActions(): ConnectionActions {
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: connectionsQueryKey(userId) });
-    queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId) });
+    // AOD-197 (Pass B2): dashboard membership is orientation-INDEPENDENT (a disconnect deletes the service's
+    // instances regardless of orientation), so reconcile BOTH orientations via the prefix.
+    queryClient.invalidateQueries({ queryKey: dashboardQueryPrefix(userId) });
     // Widget host queries are keyed by requestKey ("serviceId:widgetType:params", scheduler.ts), so a
     // string key containing ":" is a widget query. Invalidating them re-runs the proxy, which is what
     // flips a widget out of the disconnected state on connect (no longer 409) and clears it on disconnect.

@@ -17,10 +17,17 @@
 // query is staleTime:Infinity with no refetchInterval (useDashboard), so no background refetch lands during
 // the insert window to wipe an in-flight provisional. Lowering staleTime or adding a poll here without a
 // cancelQueries would silently reintroduce a lost-card race.
+//
+// AOD-197 (Pass B2): the hook now threads the ACTIVE orientation (from useOrientation, via AddGallery) into
+// the read + write + reconcile path, so an add in portrait paints the portrait sky instantly. `orientation`
+// DEFAULTS to 'landscape', so every no-arg path (tests) and the wall stay byte-identical. The insert stamps
+// the card into every OTHER designed orientation (buildAddPos), so on success the OTHER orientation's cache
+// is invalidated to re-derive, mirroring useDashboard.commit.
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
 import type { WidgetDefinition, WidgetInstance, WidgetSize } from '../registry/types';
+import { columnsFor, type Orientation } from '../widgets/sizes';
 import { addWidgetInstance, type LoadedDashboard } from './dashboardRepo';
 import type { InstanceSeed } from './mapper';
 import { defaultSeedFor } from './placement';
@@ -60,7 +67,7 @@ function provisionalInstance(seed: InstanceSeed, instanceId: string): WidgetInst
   };
 }
 
-export function useAddWidget(): UseAddWidgetResult {
+export function useAddWidget(orientation: Orientation = 'landscape'): UseAddWidgetResult {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const queryClient = useQueryClient();
@@ -70,7 +77,10 @@ export function useAddWidget(): UseAddWidgetResult {
   const addWidget = useCallback(
     async (def: WidgetDefinition, config?: Record<string, unknown>, size?: WidgetSize) => {
       if (!userId) throw new Error('Not signed in');
-      const key = dashboardQueryKey(userId);
+      // AOD-197 (Pass B2): read + write the ACTIVE orientation's cache so an add in the orientation you are
+      // holding paints THAT sky (design §9). Defaults to landscape, so the wall + every no-arg path stay
+      // byte-identical to pre-AOD-197.
+      const key = dashboardQueryKey(userId, orientation);
       const dashboard = queryClient.getQueryData<LoadedDashboard | null>(key);
       if (!dashboard) throw new Error('No dashboard loaded');
 
@@ -78,7 +88,10 @@ export function useAddWidget(): UseAddWidgetResult {
       // await) so a concurrent second add sees this slot occupied. The provisional may briefly render as a
       // loading tile at its computed slot until the swap below replaces it with the real row. `size`, when
       // the gallery passes the selected S/M/W/L (AOD-148), lands the card at that size; omitted -> default.
-      const seed = defaultSeedFor(def, dashboard.instances, config, size);
+      // Place the seed in the ACTIVE orientation's grid (landscape 6 / portrait 4 columns, columnsFor);
+      // addWidgetInstance(…, orientation) then stamps the card into every OTHER designed orientation at its
+      // own firstFreeSlot (buildAddPos), so every designed orientation stays complete.
+      const seed = defaultSeedFor(def, dashboard.instances, config, size, columnsFor(orientation));
       const placeholderId = nextProvisionalId();
       const provisional = provisionalInstance(seed, placeholderId);
       queryClient.setQueryData<LoadedDashboard | null>(key, (prev) =>
@@ -88,7 +101,7 @@ export function useAddWidget(): UseAddWidgetResult {
       setPending(true);
       setError(null);
       try {
-        const inserted = await addWidgetInstance(dashboard.dashboardId, userId, seed);
+        const inserted = await addWidgetInstance(dashboard.dashboardId, userId, seed, orientation);
         // Reconcile. Happy path: swap the provisional for the real row (real id + server-coerced rect),
         // keeping every other tile's object identity, so the host drives the true instance without a
         // refetch (like useRemoveWidget, no invalidate). If the row could not be mapped back
@@ -113,6 +126,11 @@ export function useAddWidget(): UseAddWidgetResult {
           );
           await queryClient.invalidateQueries({ queryKey: key });
         }
+        // AOD-197 (Pass B2): the insert stamped a position into every OTHER designed orientation
+        // (buildAddPos), so its cache must re-derive on next read. Invalidate the OTHER orientation (exact),
+        // mirroring useDashboard.commit; the current orientation is already optimistic (swap) or reconciled.
+        const other: Orientation = orientation === 'landscape' ? 'portrait' : 'landscape';
+        void queryClient.invalidateQueries({ queryKey: dashboardQueryKey(userId, other), exact: true });
       } catch (err) {
         // Roll the provisional back out by id (NOT a wholesale snapshot restore like useRemoveWidget: a
         // concurrent add may have added its own provisional we must not clobber). The picker keeps its form
@@ -128,7 +146,7 @@ export function useAddWidget(): UseAddWidgetResult {
         setPending(false);
       }
     },
-    [queryClient, userId],
+    [queryClient, userId, orientation],
   );
 
   return { addWidget, pending, error };

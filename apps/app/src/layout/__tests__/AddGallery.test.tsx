@@ -170,7 +170,8 @@ describe('adding a widget (Add never leaves Arrange)', () => {
         config: {},
         size: 'W', // AOD-122 default placement slot
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-      }),
+        // AOD-197 (Pass B2): the gallery threads the active orientation (landscape default) to the repo.
+      }, 'landscape'),
     );
     // "Add never leaves Arrange": the sheet is NOT closed after an add.
     expect(onClose).not.toHaveBeenCalled();
@@ -211,7 +212,7 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
         config: { name: 'My Board' },
         size: 'W',
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-      }),
+      }, 'landscape'),
     );
     // Back on the gallery (the config sheet closed), still open for the next card.
     await waitFor(() => expect(screen.getByTestId('add-gallery')).toBeTruthy());
@@ -235,7 +236,7 @@ describe('configure-on-add (AOD-10 §4): a widget needing config routes through 
         config: { name: 'My Board' },
         size: 'S', // the size chosen before the form, carried through — not the default W
         rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, // the S 1x1 footprint at the origin
-      }),
+      }, 'landscape'),
     );
   });
 });
@@ -301,7 +302,7 @@ describe('already-added state (AOD-148 §2 "Added is visible": a quiet mark + "A
         config: {},
         size: 'W',
         rect: { x: 2, y: 0, w: 2, h: 1, z: 1 },
-      }),
+      }, 'landscape'),
     );
   });
 
@@ -357,7 +358,7 @@ describe('size-by-seeing (AOD-148 §2: S/M/W/L flips the tile + the on-sky previ
         config: {},
         size: 'S', // the SELECTED size, not the default W
         rect: { x: 0, y: 0, w: 1, h: 1, z: 0 }, // the S 1x1 footprint at the origin
-      }),
+      }, 'landscape'),
     );
   });
 
@@ -382,7 +383,7 @@ describe('size-by-seeing (AOD-148 §2: S/M/W/L flips the tile + the on-sky previ
         config: {},
         size: 'W', // reset to cal's default, NOT the leaked S
         rect: { x: 0, y: 0, w: 2, h: 1, z: 0 },
-      }),
+      }, 'landscape'),
     );
   });
 });

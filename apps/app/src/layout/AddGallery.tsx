@@ -49,7 +49,7 @@ import type {
   WidgetInstance,
   WidgetSize,
 } from '../registry/types';
-import { GRID_COLUMNS } from '../widgets/sizes';
+import { GRID_COLUMNS, type Orientation } from '../widgets/sizes';
 import { ResolvedConfigFormModal } from '../widgets/ResolvedConfigFormModal';
 import { Button, Input, Segmented, Sheet, type SegmentedOption } from '../ui';
 import { UNIT_PX } from './geometry';
@@ -66,6 +66,11 @@ export interface AddGalleryProps {
    *  to 6). Absent (tests / a caller without them) falls back to the nominal UNIT_PX + landscape GRID_COLUMNS. */
   cellPx?: number;
   columns?: number;
+  /** AOD-197 (Pass B2): the active device orientation, from Dashboard. Threaded to useAddWidget (so the add
+   *  reads + writes the active orientation's cache and places on its column grid) and to useDashboard (so the
+   *  silhouette + firstFreeSlot preview read the SAME per-orientation cache the add mutates). Absent (tests /
+   *  a caller without it) falls back to 'landscape', keeping the no-arg path byte-identical. */
+  orientation?: Orientation;
 }
 
 // The scaled-sky region (DP). SKY_MAX_CELL is a "step back" from the real UNIT_PX (96) — the same zoom-out
@@ -117,13 +122,19 @@ function sizeOptions(supported: WidgetSize[]): SegmentedOption<WidgetSize>[] {
   return SIZE_ORDER.filter((s) => supported.includes(s)).map((s) => ({ label: s, value: s }));
 }
 
-export function AddGallery({ onClose, cellPx = UNIT_PX, columns = GRID_COLUMNS }: AddGalleryProps) {
+export function AddGallery({
+  onClose,
+  cellPx = UNIT_PX,
+  columns = GRID_COLUMNS,
+  orientation = 'landscape',
+}: AddGalleryProps) {
   const registry = useRegistry();
   const { connections, isLoading, isError } = useConnections();
-  const { addWidget, pending, error } = useAddWidget();
-  // The active sky, read reactively from the same cache useAddWidget writes into, so the silhouette + the
-  // firstFreeSlot preview track an add (a provisional appears immediately). Registry-free: it is just geometry.
-  const { instances } = useDashboard();
+  const { addWidget, pending, error } = useAddWidget(orientation);
+  // The active sky, read reactively from the same cache useAddWidget writes into (AOD-197: the ACTIVE
+  // orientation's cache), so the silhouette + the firstFreeSlot preview track an add (a provisional appears
+  // immediately). Registry-free: it is just geometry.
+  const { instances } = useDashboard(orientation);
 
   const [search, setSearch] = useState('');
   // The focused (centered) widget → its live preview on the sky. Null = browsing: the sky shows exactly what
@@ -174,7 +185,10 @@ export function AddGallery({ onClose, cellPx = UNIT_PX, columns = GRID_COLUMNS }
       serviceId: previewable.serviceId,
       widgetType: previewable.type,
       config: defaultConfig(previewable.configSchema),
-      rect: defaultPlacementRect(effectiveSize, instances),
+      // AOD-197 (Pass B2): place on the ACTIVE orientation's column grid (via the `columns` prop, which is
+      // columnsFor(orientation) from Dashboard) so the ringed preview lands at the SAME firstFreeSlot the add
+      // will use — WYSIWYG in portrait (4 cols) as well as landscape (6). Defaults to GRID_COLUMNS.
+      rect: defaultPlacementRect(effectiveSize, instances, columns),
       size: effectiveSize,
     };
   }

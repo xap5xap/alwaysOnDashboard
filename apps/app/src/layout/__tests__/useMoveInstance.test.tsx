@@ -107,4 +107,48 @@ describe('useMoveInstance', () => {
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'dash-1') }); // no source invalidate either — the move never happened
     await waitFor(() => expect(result.current.error?.message).toBe('rls denied'));
   });
+
+  // AOD-197 (Pass B2): a cross-sky move while holding portrait drops from the PORTRAIT active-sky cache
+  // instantly (so the surface repaints without a rotate) and reconciles the OTHER orientation; the per-sky
+  // read caches are still invalidated so neither sky ghosts the moved card.
+  it('in portrait: drops from the PORTRAIT cache optimistically, invalidates the other (landscape) orientation, and still invalidates the destination + source skies', async () => {
+    let resolveMove!: () => void;
+    (moveInstanceToDashboard as jest.Mock).mockReturnValue(new Promise<void>((res) => (resolveMove = res)));
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    const seed = () =>
+      ({ dashboardId: 'dash-1', name: 'Wall', instances: [instance('a'), instance('b')] }) as LoadedDashboard;
+    client.setQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'landscape'), seed());
+    client.setQueryData<LoadedDashboard>(dashboardQueryKey('u1', 'portrait'), seed());
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useMoveInstance('portrait'), { wrapper });
+
+    const idsIn = (o: 'landscape' | 'portrait') =>
+      (client.getQueryData<LoadedDashboard>(dashboardQueryKey('u1', o))?.instances ?? []).map((i) => i.instanceId);
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.moveInstance('a', 'd-dest');
+    });
+
+    // Optimism hits ONLY the portrait cache; landscape is untouched until the reconcile below.
+    expect(idsIn('portrait')).toEqual(['b']);
+    expect(idsIn('landscape')).toEqual(['a', 'b']);
+
+    await act(async () => {
+      resolveMove();
+      await pending;
+    });
+
+    expect(idsIn('portrait')).toEqual(['b']);
+    // The OTHER orientation (landscape) active-sky cache is invalidated (exact) so it drops the card too.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: dashboardQueryKey('u1', 'landscape'), exact: true });
+    // The destination + source per-sky read caches are still invalidated (unchanged behavior).
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'd-dest') });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: skyQueryKey('u1', 'dash-1') });
+    expect(result.current.error).toBeNull();
+  });
 });
