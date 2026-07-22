@@ -1,0 +1,78 @@
+<svg width="100%" viewBox="0 0 860 470" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The layout problem: the editor grid is a fixed 192dp left strip, unreachable across a landscape screen</title>
+  <desc>Left: a landscape device frame. Its widget grid is pinned to a narrow two-column strip on the left, about a fifth of the width; the remaining four fifths is a hatched dead zone labelled unreachable because snapDrag clamps the column to zero or one. Right: a portrait phone frame where the same two columns roughly fill the width, the only case the model works, labelled the phone-grid assumption. Bottom: the root cause, that UNIT_PX is a fixed ninety-six density-independent pixels and GRID_COLUMNS is two, so the grid is always one hundred ninety-two density-independent pixels wide anchored left, and the wall hides this by scaling to fill while the editor never scales.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .lbl{font-size:11px;fill:#C9C9D4;}
+    .meta{font-size:10px;fill:#9B9BA8;}
+    .bad{fill:#E06B6B;font-weight:700;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .num{font-size:9px;font-weight:700;fill:#0B0B0F;}
+  </style>
+  <defs>
+    <pattern id="deadhatch" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="10" height="10" fill="#141018"/>
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#3A2630" stroke-width="1.4"/>
+    </pattern>
+  </defs>
+  <rect x="0.5" y="0.5" width="859" height="469" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">The problem · the editing grid is a 192dp strip, not the screen</text>
+  <text x="32" y="60" class="sub">Confirmed on the Fire HD 8 (AOD-190 Phase C): a card dragged right snaps back to a narrow left strip. The wall masks it by scaling to fill; the editor does not.</text>
+
+  <!-- ===== LANDSCAPE FRAME ===== -->
+  <text x="32" y="92" class="cap">DASHBOARD EDITOR · LANDSCAPE (~962 x 601 dp)</text>
+  <rect x="32" y="104" width="452" height="286" rx="16" fill="#0C0C11" stroke="#2A2A36"/>
+  <rect x="46" y="118" width="424" height="258" rx="8" fill="#0A0A0E" stroke="#20202A"/>
+
+  <!-- the 192dp usable strip (2 columns), anchored left -->
+  <rect x="54" y="126" width="86" height="242" rx="6" fill="#111119" stroke="#2A2A36" stroke-dasharray="3 3"/>
+  <!-- cards packed into the strip -->
+  <rect x="58" y="130" width="37" height="37" rx="7" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="99" y="130" width="37" height="37" rx="7" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="58" y="171" width="78" height="37" rx="7" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="58" y="212" width="37" height="78" rx="7" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="99" y="212" width="37" height="37" rx="7" fill="#1A1A22" stroke="#33333F"/>
+  <text x="60" y="360" class="tok" font-size="8.5">2 cols · 192dp</text>
+
+  <!-- dead zone -->
+  <rect x="150" y="126" width="312" height="242" rx="6" fill="url(#deadhatch)" stroke="#3A2630"/>
+  <text x="306" y="238" text-anchor="middle" class="bad" font-size="13">~80% unreachable</text>
+  <text x="306" y="258" text-anchor="middle" class="meta">snapDrag clamps x to [0, GRID_COLUMNS - w]</text>
+  <text x="306" y="273" text-anchor="middle" class="meta">a 1-wide card can only be column 0 or 1</text>
+
+  <!-- ===== PORTRAIT FRAME ===== -->
+  <text x="520" y="92" class="cap">PORTRAIT PHONE</text>
+  <rect x="520" y="104" width="150" height="286" rx="18" fill="#0C0C11" stroke="#2A2A36"/>
+  <rect x="532" y="118" width="126" height="258" rx="8" fill="#0A0A0E" stroke="#20202A"/>
+  <!-- 2 cols roughly fill -->
+  <rect x="540" y="126" width="55" height="55" rx="8" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="601" y="126" width="55" height="55" rx="8" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="540" y="187" width="116" height="55" rx="8" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="540" y="248" width="55" height="116" rx="8" fill="#1A1A22" stroke="#33333F"/>
+  <rect x="601" y="248" width="55" height="55" rx="8" fill="#1A1A22" stroke="#33333F"/>
+  <path d="M540 372 H656" stroke="#6E8BFF" stroke-opacity="0.35" stroke-width="1.5"/>
+  <text x="598" y="386" text-anchor="middle" class="meta" fill="#7F9A6E">2 cols ≈ fills width ✓</text>
+
+  <!-- right note -->
+  <text x="694" y="128" class="cap">THE ASSUMPTION</text>
+  <text x="694" y="150" class="lbl" style="font-size:11.5px">The 2-col grid is a</text>
+  <text x="694" y="166" class="lbl" style="font-size:11.5px">phone-portrait construct.</text>
+  <text x="694" y="188" class="meta">The design board itself</text>
+  <text x="694" y="203" class="meta">labels it "FOUR SIZES ON</text>
+  <text x="694" y="218" class="meta">THE PHONE GRID"</text>
+  <text x="694" y="233" class="meta">(Many Skies §1c).</text>
+  <text x="694" y="260" class="meta">The stored rects are</text>
+  <text x="694" y="275" class="meta">device-independent —</text>
+  <text x="694" y="290" class="meta">worth keeping. The</text>
+  <text x="694" y="305" class="meta">editor just never scales</text>
+  <text x="694" y="320" class="meta">them to the device.</text>
+
+  <!-- ===== ROOT CAUSE ===== -->
+  <rect x="32" y="404" width="796" height="50" rx="8" fill="#12121A" stroke="#3A3A57"/>
+  <text x="46" y="424" class="lbl"><tspan class="acc">Root cause</tspan>  geometry.toPixels renders every card at left = x·UNIT_PX, width = w·UNIT_PX, with <tspan class="tok" style="font-size:11px">UNIT_PX = 96</tspan> fixed and <tspan class="tok" style="font-size:11px">GRID_COLUMNS = 2</tspan>.</text>
+  <text x="46" y="443" class="meta">The grid is therefore always 192dp wide, anchored left, on every screen. The wall's wallFitScale scales it to fill; the editing surface (LayoutCanvas / PlacedInstance) has no scale layer.</text>
+</svg>

@@ -1,0 +1,74 @@
+<svg width="100%" viewBox="0 0 860 430" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>One canonical layout, three fit policies: Glance and Arrange fit-to-width and scroll, the wall fits-to-bounds</title>
+  <desc>Left: one canonical layout, stored as rect jsonb in nominal cell units, device-independent. Three arrows to three surfaces. Glance on the handheld uses fit-to-width plus vertical scroll. Arrange on the handheld uses the identical fit-to-width plus scroll, so what you edit is what you glance. The kiosk wall uses fit-to-bounds via wallFitScale, scaling the whole board to fill the landscape screen with no scroll, unchanged from today. All scales are computed from the screen in density-independent pixels, never physical pixels.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:9px;font-weight:700;fill:#C9C9D4;letter-spacing:1px;}
+    .lbl{font-size:11px;fill:#C9C9D4;}
+    .meta{font-size:10px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:9.5px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .chip{font-size:9.5px;font-weight:700;fill:#B9C6EE;letter-spacing:0.5px;}
+    .cardlbl{font-size:9px;font-weight:700;fill:#C9D4E8;}
+  </style>
+  <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto"><path d="M0,1 L7,4.5 L0,8 Z" fill="#6E8BFF"/></marker></defs>
+  <rect x="0.5" y="0.5" width="859" height="429" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">One layout, three fit policies · the source of truth</text>
+  <text x="32" y="60" class="sub">The canonical layout is stored once. Each surface chooses how it fits that layout to its viewport. Glance and Arrange share a policy, so they can never disagree.</text>
+
+  <!-- ===== CANONICAL LAYOUT ===== -->
+  <rect x="32" y="96" width="218" height="266" rx="12" fill="#12121A" stroke="#3A3A57"/>
+  <text x="46" y="120" class="cap" fill="#6E8BFF">CANONICAL LAYOUT</text>
+  <!-- mini grid -->
+  <g fill="#101017" stroke="#22222C" stroke-dasharray="2 3">
+    <rect x="60" y="132" width="36" height="36" rx="5"/><rect x="100" y="132" width="36" height="36" rx="5"/><rect x="140" y="132" width="36" height="36" rx="5"/><rect x="180" y="132" width="36" height="36" rx="5"/>
+    <rect x="60" y="172" width="36" height="36" rx="5"/><rect x="100" y="172" width="36" height="36" rx="5"/><rect x="140" y="172" width="36" height="36" rx="5"/><rect x="180" y="172" width="36" height="36" rx="5"/>
+  </g>
+  <rect x="60" y="132" width="76" height="36" rx="5" fill="#1B2233" stroke="#39507F"/><text x="66" y="153" class="cardlbl">A</text>
+  <rect x="140" y="132" width="36" height="36" rx="5" fill="#1B2233" stroke="#39507F"/><text x="146" y="153" class="cardlbl">B</text>
+  <rect x="60" y="172" width="36" height="36" rx="5" fill="#1B2233" stroke="#39507F"/><text x="66" y="193" class="cardlbl">C</text>
+  <rect x="140" y="172" width="36" height="36" rx="5" fill="#1B2233" stroke="#39507F"/><text x="146" y="193" class="cardlbl">D</text>
+  <text x="46" y="236" class="tok">widget_instances.rect</text>
+  <text x="46" y="251" class="tok">jsonb {x,y,w,h,z}</text>
+  <text x="46" y="272" class="meta">Nominal cell units on a</text>
+  <text x="46" y="287" class="meta">C-column grid. Device-</text>
+  <text x="46" y="302" class="meta">independent. Unchanged</text>
+  <text x="46" y="317" class="meta">by this design — no</text>
+  <text x="46" y="332" class="meta">migration, one row per</text>
+  <text x="46" y="347" class="meta">placement.</text>
+
+  <!-- arrows -->
+  <path d="M254 150 H300" stroke="#6E8BFF" stroke-width="1.5" marker-end="url(#ar)"/>
+  <path d="M254 232 H300" stroke="#6E8BFF" stroke-width="1.5" marker-end="url(#ar)"/>
+  <path d="M254 314 H300" stroke="#6E8BFF" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ===== GLANCE ===== -->
+  <rect x="306" y="112" width="522" height="76" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <rect x="320" y="124" width="34" height="52" rx="6" fill="#0A0A0E" stroke="#2A2A36"/>
+  <rect x="325" y="130" width="10" height="10" rx="2" fill="#20202C"/><rect x="339" y="130" width="10" height="10" rx="2" fill="#20202C"/><rect x="325" y="144" width="24" height="10" rx="2" fill="#20202C"/><rect x="325" y="158" width="10" height="12" rx="2" fill="#20202C"/>
+  <text x="372" y="134" class="cap">GLANCE · handheld</text>
+  <rect x="372" y="142" width="196" height="18" rx="5" fill="#161B2B" stroke="#39507F"/><text x="380" y="155" class="chip">FIT-TO-WIDTH + VERTICAL SCROLL</text>
+  <text x="372" y="178" class="meta">Calm, read-only, no chrome. Scrolls below the fold (AOD-196).</text>
+
+  <!-- ===== ARRANGE ===== -->
+  <rect x="306" y="194" width="522" height="76" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <rect x="320" y="206" width="34" height="52" rx="6" fill="#0A0A0E" stroke="#6E8BFF" stroke-opacity="0.5"/>
+  <rect x="325" y="212" width="10" height="10" rx="2" fill="#1B2233" stroke="#39507F"/><rect x="339" y="212" width="10" height="10" rx="2" fill="#20202C"/><rect x="325" y="226" width="24" height="10" rx="2" fill="#1B2233" stroke="#39507F"/><rect x="325" y="240" width="10" height="12" rx="2" fill="#1B2233" stroke="#39507F"/>
+  <text x="372" y="216" class="cap">ARRANGE · handheld</text>
+  <rect x="372" y="224" width="288" height="18" rx="5" fill="#161B2B" stroke="#39507F"/><text x="380" y="237" class="chip">FIT-TO-WIDTH + VERTICAL SCROLL · same geometry</text>
+  <text x="372" y="260" class="meta">WYSIWYG: byte-identical to Glance (AOD-194). Place anywhere, gaps allowed, live-snap.</text>
+
+  <!-- ===== WALL ===== -->
+  <rect x="306" y="276" width="522" height="76" rx="10" fill="#101016" stroke="#2A2A36"/>
+  <rect x="318" y="298" width="58" height="38" rx="5" fill="#050507" stroke="#2A2A36"/>
+  <rect x="323" y="303" width="16" height="12" rx="2" fill="#171720"/><rect x="342" y="303" width="9" height="12" rx="2" fill="#171720"/><rect x="323" y="319" width="9" height="12" rx="2" fill="#171720"/>
+  <text x="392" y="298" class="cap">KIOSK WALL · landscape</text>
+  <rect x="392" y="306" width="250" height="18" rx="5" fill="#161B2B" stroke="#39507F"/><text x="400" y="319" class="chip">FIT-TO-BOUNDS (wallFitScale) · no scroll</text>
+  <text x="392" y="342" class="meta">Whole board scaled to fill; zero-interaction. Render path UNCHANGED (AOD-81).</text>
+
+  <!-- bottom note -->
+  <text x="32" y="392" class="lbl"><tspan class="acc">Density:</tspan> every scale derives from <tspan class="tok" style="font-size:11px">rt.screen</tspan> in DP, never physical px — the AOD-81 lesson (the editor's bug was a hardcoded 96dp unit that ignored the viewport).</text>
+  <text x="32" y="412" class="meta">The wall differs only by fit policy, and the arrange <tspan class="acc" style="font-size:10px">Preview</tspan> pill already renders the fit-to-bounds wall view of the draft — so a portrait-authored board can be checked against the landscape wall before it is hung.</text>
+</svg>
