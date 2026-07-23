@@ -419,6 +419,7 @@ export function PlacedInstance({
       <Animated.View style={[styles.positioned, animatedStyle]}>
         <GestureDetector gesture={drag}>
           <View
+            testID={`card-face-${instance.instanceId}`}
             style={[
               styles.body,
               arranging && { borderColor: arrangeColor(a.selectBorder), backgroundColor: arrangeColor(a.selectFill) },
@@ -523,6 +524,14 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: 'transparent',
+    // AOD-195 (C3, from the AOD-190 device pass round 2): a near-invisible but HITTABLE fill so the whole calm
+    // card face is one long-press target.
+    // On Android a fully transparent container is not a touch target, so the outer Gesture.LongPress only
+    // fired on the opaque leaf views (the card's text/glyphs) — empty card space did not open the menu. A
+    // 1%-alpha fill is imperceptible over the card surface AND over a transparent ghost tile (so ghost stays
+    // transparent) and the wall (pointerEvents:'none') is unaffected. In Arrange the inline selectFill
+    // overrides this; the render is otherwise unchanged.
+    backgroundColor: 'rgba(0,0,0,0.01)',
   },
   // §4 the Configure affordance, top-left so it never overlaps the bottom-right resize dot (bg is inline).
   configurePill: {
