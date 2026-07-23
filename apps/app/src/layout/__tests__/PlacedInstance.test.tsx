@@ -7,6 +7,7 @@
 // PlacedInstance's own arrange chrome: the Configure/Remove pills, the 44pt resize handle, and the
 // two-step "Remove?" confirm face.
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import type { WidgetInstance } from '../../registry/types';
 
@@ -184,5 +185,19 @@ describe('scroll-vs-drag arbitration (AOD-196)', () => {
   it('does NOT block any external gesture on the wall (no scrollRef -> byte-identical gesture config)', () => {
     renderCard(); // no scrollRef
     expect(mockBlocksExternal).not.toHaveBeenCalled();
+  });
+});
+
+// AOD-195 (C3, from the AOD-190 device pass round 2): the calm long-press quick-actions menu opened ONLY
+// where the finger landed on an opaque leaf (the card's text/glyphs), not on empty card space — on Android a
+// fully transparent container is not a touch target. The fix gives the gesture-wrapped card face a
+// near-invisible but HITTABLE background in calm mode so the whole slot box is one long-press target (Arrange's
+// inline selectFill still overrides it). Guard: the calm face carries a non-transparent background.
+describe('calm card face is a long-press hit target (AOD-195 C3)', () => {
+  it('the calm card face carries a non-transparent background (the Android long-press hit target)', () => {
+    renderCard({ arranging: false });
+    const face = StyleSheet.flatten(screen.getByTestId('card-face-card-1').props.style);
+    expect(face.backgroundColor).toBeDefined();
+    expect(face.backgroundColor).not.toBe('transparent');
   });
 });
