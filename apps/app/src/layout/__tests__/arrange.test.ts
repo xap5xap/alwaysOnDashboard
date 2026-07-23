@@ -4,6 +4,7 @@
 // an occupied target nudges to the nearest free fit, neighbours never move, and a no-op drop commits nothing.
 import type { LayoutRect, WidgetInstance } from '../../registry/types';
 import { activeCommit, placeActive } from '../arrange';
+import { cellsOverlap } from '../grid';
 
 const rect = (x: number, y: number, w: number, h: number, z = 0): LayoutRect => ({ x, y, w, h, z });
 
@@ -87,5 +88,41 @@ describe('activeCommit: exactly one commit for the active card, or null', () => 
   it('returns null when the active id is not present (defensive)', () => {
     const instances = [inst('A', rect(0, 0, 1, 1))];
     expect(activeCommit(instances, { instanceId: 'ghost', slot: { x: 2, y: 0, w: 1, h: 1 } }, 6)).toBeNull();
+  });
+});
+
+// AOD-190 (C2) / AOD-197 (S4): the EXACT board from the device pass round 2 — a tall M (Weather Current, 1x2)
+// pinned top-left, a wide W (Forecast) at the right, and an active Clock W dragged onto the M. On device the
+// dropped W appeared to "land overlapping" the tall M; the hosted DB proved the STORED data was correct and
+// these lock why: the pure placement NEVER overlaps the M (it nudges to the nearest free slot). The visible
+// overlap was a RENDER transient in PlacedInstance's settle (fixed there), not a placeActive/activeCommit bug.
+// Honest scope: the gesture worklets can't run under jest (react-native-gesture-handler is a no-op stub), so
+// the settle itself is device-verified; this suite locks the pure contract the transient was mistaken for.
+describe('AOD-190 C2: a W dropped onto the tall M lands nearest-free, never overlapping it', () => {
+  const M = rect(0, 0, 1, 2); // Weather Current — the tall M the W appeared to land on
+  const forecast = rect(4, 0, 2, 1); // Forecast — a wide W at the right of the designed row
+  // The active Clock W rests a row below the designed pair; placeActive excludes it from occupancy, so the
+  // only occupancy the drop sees is the tall M + Forecast.
+  const board = [
+    inst('weather-current', M, 'M'),
+    inst('forecast', forecast, 'W'),
+    inst('clock', rect(0, 3, 2, 1), 'W'),
+  ];
+
+  it('dropped on the M LOWER cell (0,1): lands at (1,1), clear of the M', () => {
+    const landing = placeActive(board, { instanceId: 'clock', slot: { x: 0, y: 1, w: 2, h: 1 } }, 6);
+    expect(landing).toEqual({ x: 1, y: 1, w: 2, h: 1 });
+    expect(cellsOverlap(landing, M)).toBe(false);
+  });
+
+  it('dropped on the M UPPER cell (0,0): nudged off, clear of the M', () => {
+    const landing = placeActive(board, { instanceId: 'clock', slot: { x: 0, y: 0, w: 2, h: 1 } }, 6);
+    expect(cellsOverlap(landing, M)).toBe(false);
+  });
+
+  it('activeCommit persists a rect that does not overlap the M', () => {
+    const c = activeCommit(board, { instanceId: 'clock', slot: { x: 0, y: 1, w: 2, h: 1 } }, 6);
+    expect(c).not.toBeNull();
+    expect(cellsOverlap(c!.patch.rect, M)).toBe(false);
   });
 });
