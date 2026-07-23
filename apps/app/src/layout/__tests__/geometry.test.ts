@@ -4,6 +4,7 @@ import {
   cellPxFor,
   GRID_GUTTER,
   GRID_MARGIN,
+  nominalGutter,
   snapDrag,
   snapUnit,
   toPixels,
@@ -73,6 +74,38 @@ describe('snapDrag honors the AOD-197 (S4) cellPx + columns params', () => {
     // A W dragged far right pins to the last legal column: col 2 on a 4-col grid (x + 2 <= 4), col 4 on 6 cols.
     expect(snapDrag(r(0, 0, 2, 1), 100 * UNIT_PX, 0, UNIT_PX, 4).x).toBe(2);
     expect(snapDrag(r(0, 0, 2, 1), 100 * UNIT_PX, 0, UNIT_PX, 6).x).toBe(4);
+  });
+
+  it('one slot step is the PITCH (cellPx + gutter) once AOD-198 gutters exist, passed as the unit', () => {
+    // With gutters the on-screen distance between adjacent slot origins is cellPx + gutter (the "pitch"): a
+    // 132 px cell + a 24 px gutter is a 156 px step. PlacedInstance passes THAT pitch as snapDrag's unit, so a
+    // finger travel of one pitch lands exactly one column over and a travel under half a pitch rounds back.
+    expect(snapDrag(r(0, 0, 1, 1), 156, 0, 156).x).toBe(1); // one pitch -> one column
+    expect(snapDrag(r(0, 0, 1, 1), 312, 0, 156).x).toBe(2); // two pitches -> two columns
+    expect(snapDrag(r(0, 0, 1, 1), 70, 0, 156).x).toBe(0); // 70/156 = 0.45 rounds back to the origin
+  });
+});
+
+describe('nominalGutter (AOD-198 handheld inter-cell gutter, design §4)', () => {
+  it('is the nominal length that lands as gutterPx on screen once the cellPx/UNIT_PX scale is applied', () => {
+    // The handheld canvas renders the nominal UNIT_PX grid then scales it by cellPx/UNIT_PX. To show a 24 px
+    // gap between cells, the NOMINAL gutter must be 24 * UNIT_PX / cellPx so it scales back down to 24 px.
+    expect(nominalGutter(24, 48)).toBe(48); // half scale -> the nominal gutter is double the screen gutter
+    expect(nominalGutter(24, UNIT_PX)).toBe(24); // no fit scale -> nominal == screen
+    expect(nominalGutter(24, 192)).toBe(12); // a bigger cell (bigger device) -> a smaller nominal gutter
+  });
+
+  it('round-trips: scaled by cellPx/UNIT_PX, the nominal gutter is exactly gutterPx on screen', () => {
+    const cellPx = 132;
+    const gutterPx = 24;
+    expect(nominalGutter(gutterPx, cellPx) * (cellPx / UNIT_PX)).toBeCloseTo(gutterPx);
+  });
+
+  it('is 0 (edge-to-edge, byte-identical) when there is no gutter, and defaults cellPx to UNIT_PX', () => {
+    expect(nominalGutter(0, 48)).toBe(0); // the wall + any no-gutter caller stays edge-to-edge
+    expect(nominalGutter(0)).toBe(0);
+    expect(nominalGutter(24)).toBe(24); // default cellPx = UNIT_PX (no fit scale)
+    expect(nominalGutter(-5, 48)).toBe(0); // guards a nonsensical negative gutter
   });
 });
 

@@ -2,11 +2,12 @@
 // AOD-10 §7.3 rule: the widget's own renderer is reached ONLY on data-bearing states (testing-
 // strategy §9). Uses the test-only stub widget definition (its StubCard renderer) as the leaf.
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { render, screen, within } from '@testing-library/react-native';
 import { WidgetHostView } from '../WidgetHostView';
 import { stubService } from '../../registry/__tests__/stubRegistry';
 import type { WidgetDefinition, WidgetRenderProps } from '../../registry/types';
+import { UNIT_PX } from '../../layout/geometry';
 
 const def = stubService.widgets[0];
 const base = { def, size: 'W' as const, config: {}, serviceName: 'Stub' }; // AOD-122 slot id
@@ -88,6 +89,25 @@ describe('WidgetHostView lifecycle rendering (AOD-10 §7.3, AOD-125 six states, 
     expect(screen.getByTestId('widget-disconnected')).toBeTruthy();
     expect(screen.getByText(/Connect Stub to use this/)).toBeTruthy();
     expect(screen.queryByText(/stub payload/i)).toBeNull();
+  });
+});
+
+// AOD-203: the card frame carries NO minWidth floor. A w=1 footprint is UNIT_PX (96 DP) wide, so the old 160
+// DP floor forced a w=1 card 1.67x past its column and overflowed its neighbour (on the handheld canvas AND
+// the wall). Since AOD-123 the leaf fits its own content to the host-passed box, so no width floor is needed:
+// the card fills its footprint and never exceeds it. Lock the removal so the overflow cannot regress.
+describe('WidgetHostView card carries no width floor (AOD-203)', () => {
+  it('the card sets no minWidth, so a w=1 (96 DP) footprint is never overflowed', () => {
+    render(<WidgetHostView {...base} size="S" state={{ phase: 'live', data: {}, fetchedAt: 1 }} />);
+    const style = StyleSheet.flatten(screen.getByTestId('widget-card').props.style);
+    expect(style.minWidth).toBeUndefined();
+  });
+
+  it('any width floor present would have to stay within the w=1 footprint (<= UNIT_PX)', () => {
+    // Defense in depth: even if a future backstop re-adds a minWidth, it must never exceed a w=1 cell.
+    render(<WidgetHostView {...base} size="S" state={{ phase: 'live', data: {}, fetchedAt: 1 }} />);
+    const style = StyleSheet.flatten(screen.getByTestId('widget-card').props.style);
+    if (style.minWidth != null) expect(style.minWidth).toBeLessThanOrEqual(UNIT_PX);
   });
 });
 

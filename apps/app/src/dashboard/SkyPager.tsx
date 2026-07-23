@@ -55,6 +55,10 @@ export interface SkyPagerProps {
    *  scale Arrange uses (WYSIWYG, design §7). Absent = the nominal grid (the pre-S4 fallback, tests). */
   cellPx?: number;
   columns?: number;
+  /** AOD-198: the outer margin (item 1) + inter-cell gutter (item 2) in SCREEN px, from Dashboard. Threaded
+   *  to each page's LayoutCanvas so Glance gaps + insets IDENTICALLY to Arrange (WYSIWYG). Absent = 0. */
+  gridInsetPx?: number;
+  gutterPx?: number;
   /** Enter Arrange on a sky (Dashboard: setActive + arranging). Reached from the quick-actions menu's "Edit
    *  Screen" (AOD-195) and from a long-press on an EMPTY page (no card to hold). */
   onEnterArrange(skyId: string): void;
@@ -88,6 +92,8 @@ export function SkyPager({
   orientation = 'landscape',
   cellPx,
   columns,
+  gridInsetPx,
+  gutterPx,
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
@@ -204,6 +210,8 @@ export function SkyPager({
               width={pageWidth}
               cellPx={cellPx}
               columns={columns}
+              gridInsetPx={gridInsetPx}
+              gutterPx={gutterPx}
               onEnterArrange={() => onEnterArrange(item.id)}
               // AOD-195: bind this page's sky id so the menu's actions target it; the card supplies the
               // instance + anchor. Undefined (tests) keeps the card's long-press falling back to onEnterArrange.
@@ -220,6 +228,8 @@ export function SkyPager({
               orientation={orientation}
               cellPx={cellPx}
               columns={columns}
+              gridInsetPx={gridInsetPx}
+              gutterPx={gutterPx}
               onEnterArrange={() => onEnterArrange(item.id)}
               onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
               confirmingRemoveId={confirmingRemoveId}
@@ -276,6 +286,8 @@ function SkyPage({
   orientation,
   cellPx,
   columns,
+  gridInsetPx,
+  gutterPx,
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
@@ -288,6 +300,8 @@ function SkyPage({
   orientation: Orientation;
   cellPx?: number;
   columns?: number;
+  gridInsetPx?: number;
+  gutterPx?: number;
   onEnterArrange(): void;
   onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   confirmingRemoveId?: string | null;
@@ -310,6 +324,8 @@ function SkyPage({
           instances={instances}
           cellPx={cellPx}
           columns={columns}
+          gridInsetPx={gridInsetPx}
+          gutterPx={gutterPx}
           onEnterArrange={onEnterArrange}
           onLongPressCard={onLongPressCard}
           confirmingRemoveId={confirmingRemoveId}
@@ -335,6 +351,8 @@ function ActiveSkyPage({
   width,
   cellPx,
   columns,
+  gridInsetPx,
+  gutterPx,
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
@@ -347,6 +365,8 @@ function ActiveSkyPage({
   width: number;
   cellPx?: number;
   columns?: number;
+  gridInsetPx?: number;
+  gutterPx?: number;
   onEnterArrange(): void;
   onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   confirmingRemoveId?: string | null;
@@ -361,6 +381,8 @@ function ActiveSkyPage({
         instances={instances}
         cellPx={cellPx}
         columns={columns}
+        gridInsetPx={gridInsetPx}
+        gutterPx={gutterPx}
         onEnterArrange={onEnterArrange}
         onLongPressCard={onLongPressCard}
         confirmingRemoveId={confirmingRemoveId}
@@ -381,6 +403,8 @@ function SkyPageContent({
   instances,
   cellPx,
   columns,
+  gridInsetPx,
+  gutterPx,
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
@@ -392,6 +416,8 @@ function SkyPageContent({
   instances: WidgetInstance[];
   cellPx?: number;
   columns?: number;
+  gridInsetPx?: number;
+  gutterPx?: number;
   onEnterArrange(): void;
   onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   confirmingRemoveId?: string | null;
@@ -435,6 +461,9 @@ function SkyPageContent({
       // AOD-197 (S4): Glance fills the screen width with the same fit-to-width scale Arrange uses (design §7).
       cellPx={cellPx}
       columns={columns}
+      // AOD-198: Glance gaps + insets identically to Arrange (WYSIWYG).
+      gridInsetPx={gridInsetPx}
+      gutterPx={gutterPx}
     />
   );
 }

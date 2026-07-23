@@ -23,7 +23,7 @@ import { WidgetHost } from '../host/WidgetHost';
 import { useRegistry } from '../registry/RegistryProvider';
 import { GRID_COLUMNS, MAX_SLOT_H, MAX_SLOT_W, SIZE_CATALOGUE } from '../widgets/sizes';
 import type { LayoutRect, WidgetInstance } from '../registry/types';
-import { snapDrag, UNIT_PX } from './geometry';
+import { nominalGutter, snapDrag, UNIT_PX } from './geometry';
 import type { GridRect } from './grid';
 
 // Motion timings (ms). The gesture FEEL — lift depth, reflow smoothness, live-snap latency on the low-DPI
@@ -79,12 +79,16 @@ export interface PlacedInstanceProps {
    *  neighbour sky (the dwell disambiguates it from a normal near-edge reposition). Optional: this card stays
    *  sky-agnostic (AOD-8 §10 seam) and the wall / read-only callers never arrange, so they never wire it. */
   onCarryEdge?(instanceId: string, edge: 'left' | 'right' | null): void;
-  /** AOD-197 (S4): the ON-SCREEN pixels per grid cell under the LayoutCanvas fit-to-width scale. The drag/
-   *  resize worklets convert finger px -> slot units by dividing by THIS (not the nominal UNIT_PX), because
-   *  one on-screen cell is cellPx wide once the parent scales the nominal canvas. The RENDER still uses
-   *  UNIT_PX (the parent scale sizes the card on screen). Defaults to UNIT_PX so the wall — which never
-   *  arranges and passes no cellPx — is byte-identical. */
+  /** AOD-197 (S4): the ON-SCREEN pixels per grid cell (the card's w=1 width) under the LayoutCanvas
+   *  fit-to-width scale. The RENDER lays the card on the nominal UNIT_PX grid (the parent scale sizes it on
+   *  screen). Defaults to UNIT_PX so the wall — which never arranges and passes no cellPx — is byte-identical. */
   cellPx?: number;
+  /** AOD-198 (item 2): the inter-cell gutter in SCREEN px. The card renders a gutter apart from its
+   *  neighbours (its nominal position + size are augmented by nominalGutter so the fit-to-width scale lands
+   *  the gap at exactly gutterPx), and the drag/resize worklets convert finger px -> slot units by dividing
+   *  by the cell PITCH (cellPx + gutterPx), since one on-screen slot step is now a cell plus its gutter.
+   *  Defaults to 0 so the wall (no gutter) stays edge-to-edge and byte-identical. */
+  gutterPx?: number;
   /** AOD-197 (S4): the active orientation's column count (landscape 6 / portrait 4). Clamps a dragged or
    *  resized footprint on-grid (x + w <= columns). Defaults to the landscape GRID_COLUMNS. */
   columns?: number;
@@ -109,10 +113,17 @@ export function PlacedInstance({
   onCancelMenuRemove,
   onCarryEdge,
   cellPx = UNIT_PX,
+  gutterPx = 0,
   columns = GRID_COLUMNS,
   scrollRef,
 }: PlacedInstanceProps) {
   const registry = useRegistry();
+  // AOD-198 (item 2): the handheld gutter. `pitch` is the on-screen distance between adjacent slot origins
+  // (a cell plus its gutter), the divisor the gesture worklets use to turn finger px into slot units; `ng`
+  // is the nominal gutter the RENDER adds so cells sit a gutter apart under the fit-to-width scale. Both are
+  // 0 on the wall (gutterPx 0), so the wall's gesture math + render stay byte-identical.
+  const pitch = cellPx + gutterPx;
+  const ng = nominalGutter(gutterPx, cellPx);
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
   // Every widget declares 1-4 sizes, but an empty supportedSizes is type-possible; guard it so
   // supportedSlotFor's supportedW[0]/supportedH[0] can never be undefined -> a NaN slot. Fall back to the
@@ -200,7 +211,7 @@ export function PlacedInstance({
   const reportMove = (sx: number, sy: number, sw: number, sh: number) =>
     onArrangeMove(instance.instanceId, { x: sx, y: sy, w: sw, h: sh });
   const finishDrag = (dxPx: number, dyPx: number) => {
-    const s = snapDrag(instance.rect, dxPx, dyPx, cellPx, columns);
+    const s = snapDrag(instance.rect, dxPx, dyPx, pitch, columns);
     const landing = onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
     // AOD-190 (C2): settle DIRECTLY onto the authoritative nearest-free landing (design §8), unconditionally.
     // A free drop lands where the finger is (landing == the raw snapDrag slot, feel unchanged); an occupied
@@ -292,10 +303,11 @@ export function PlacedInstance({
     })
     .onUpdate((e) => {
       'worklet';
-      // The held card follows the finger (continuous, lifted); the hairline snaps. AOD-197: finger px ->
-      // slot units divides by the ON-SCREEN cell (cellPx), and the column clamp uses the active count.
-      const contX = Math.max(0, startX.value + e.translationX / cellPx);
-      const contY = Math.max(0, startY.value + e.translationY / cellPx);
+      // The held card follows the finger (continuous, lifted); the hairline snaps. AOD-197/198: finger px ->
+      // slot units divides by the on-screen slot PITCH (cellPx + gutterPx), and the column clamp uses the
+      // active count. (Wall: pitch = cellPx, byte-identical.)
+      const contX = Math.max(0, startX.value + e.translationX / pitch);
+      const contY = Math.max(0, startY.value + e.translationY / pitch);
       x.value = contX;
       y.value = contY;
       const tw = w.value; // footprint is unchanged during a move
@@ -358,8 +370,8 @@ export function PlacedInstance({
       // Only inline number math on the UI thread: grow the extents and round to a RAW slot ({1,2}). The
       // supported-footprint choice + the visible flip happen in applyResizeSlot (JS), fired only when the
       // raw slot changes — so what you drag flips discretely and never lands on an unsupported size.
-      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / cellPx)));
-      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / cellPx)));
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / pitch)));
+      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / pitch)));
       if (rw !== lastRw.value || rh !== lastRh.value) {
         lastRw.value = rw;
         lastRh.value = rh;
@@ -370,8 +382,8 @@ export function PlacedInstance({
       'worklet';
       // Re-derive the raw slot from the total translation and commit it (finishResize maps raw -> supported
       // deterministically), so the drop is correct even if the final onUpdate frame was coalesced.
-      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / cellPx)));
-      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / cellPx)));
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / pitch)));
+      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / pitch)));
       runOnJS(finishResize)(rw, rh);
     })
     .onFinalize((_e, success) => {
@@ -396,10 +408,15 @@ export function PlacedInstance({
   }
 
   const animatedStyle = useAnimatedStyle(() => ({
-    left: x.value * UNIT_PX,
-    top: y.value * UNIT_PX,
-    width: w.value * UNIT_PX,
-    height: h.value * UNIT_PX,
+    // AOD-198 (item 2): the card sits on the nominal UNIT_PX grid PLUS the nominal gutter `ng`, so under the
+    // parent fit-to-width scale each slot origin lands a gutter apart (origin = slot * (UNIT_PX + ng)) and a
+    // w/h-wide card spans its footprint AND its (w-1)/(h-1) internal gutters (it is contiguous across them).
+    // ng is 0 on the wall (gutterPx 0), so left/top/width/height collapse to the pre-AOD-198 nominal grid —
+    // byte-identical.
+    left: x.value * (UNIT_PX + ng),
+    top: y.value * (UNIT_PX + ng),
+    width: w.value * UNIT_PX + (w.value - 1) * ng,
+    height: h.value * UNIT_PX + (h.value - 1) * ng,
     // The "held" lift: a small scale up + raise above the neighbours. The design's elevation model is
     // surface-STEP (a drop shadow reads as glare on the emissive night panel), so the shadow is kept
     // restrained and exists only while lifted (0 at rest, and the wall never lifts). AOD-190 tunes it.
@@ -416,7 +433,7 @@ export function PlacedInstance({
   // it carries a 44pt hit target so it is reliably grabbable.
   return (
     <GestureDetector gesture={longPress}>
-      <Animated.View style={[styles.positioned, animatedStyle]}>
+      <Animated.View style={[styles.positioned, animatedStyle]} testID={`placed-${instance.instanceId}`}>
         <GestureDetector gesture={drag}>
           <View
             testID={`card-face-${instance.instanceId}`}

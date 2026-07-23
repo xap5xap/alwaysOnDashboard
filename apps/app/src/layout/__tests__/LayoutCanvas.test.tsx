@@ -90,6 +90,21 @@ describe('LayoutCanvas fit-to-width scale layer (AOD-197 S4)', () => {
     expect(screen.getByTestId('layout-scale-layer')).toBeTruthy();
     expect(screen.queryByTestId('arrange-hairline-slot')).toBeNull();
   });
+
+  // AOD-198 (item 1): an outer margin insets the scale layer by gridInsetPx on BOTH axes (translate is
+  // OUTERMOST, so it shifts the whole scaled grid by gridInsetPx SCREEN px), balancing the margin cellPx
+  // already reserves off both sides — the grid no longer hugs the left with all the slack on the right.
+  it('translates the scale layer by gridInsetPx on both axes when a margin is given (AOD-198 item 1)', () => {
+    renderCanvas({ cellPx: 48, columns: 6, gridInsetPx: 24 });
+    const style = StyleSheet.flatten(screen.getByTestId('layout-scale-layer').props.style);
+    expect(style.transform).toEqual([{ translateX: 24 }, { translateY: 24 }, { scale: 48 / UNIT_PX }]);
+  });
+
+  it('keeps the bare scale (no translate) when no margin is given (byte-identical to pre-AOD-198)', () => {
+    renderCanvas({ cellPx: 48, columns: 6 }); // no gridInsetPx
+    const style = StyleSheet.flatten(screen.getByTestId('layout-scale-layer').props.style);
+    expect(style.transform).toEqual([{ scale: 48 / UNIT_PX }]);
+  });
 });
 
 // AOD-195 (sub-decision 6b): the calm menu-driven delete threads confirmingRemoveId down to the matching card,
@@ -148,6 +163,22 @@ describe('LayoutCanvas vertical scroll container (AOD-196 S5)', () => {
     renderCanvas({ instances: [inst('a', { x: 0, y: 0, w: 1, h: 1, z: 0 })], cellPx: 50, columns: 6 });
     const style = StyleSheet.flatten(screen.getByTestId('layout-scroll-content').props.style);
     expect(style.height).toBe(1 * 50 + 48); // contentRows x cellPx + insets.bottom
+  });
+
+  // AOD-198: with gutters each unit-row occupies a cell PLUS its gutter (the pitch cellPx + gutterPx), and the
+  // grid is inset from the top by gridInsetPx (item 1). The scroll height reserves both (+ the bottom inset)
+  // so the deepest GAPPED row still clears the nav bar; the wall never scrolls, so it never takes this path.
+  it('reserves the vertical gutter (pitch) + the top inset in the scroll height (AOD-198)', () => {
+    // A card at row 3 spanning 2 rows -> contentRows = 5; pitch = 50 + 24 = 74; top inset 24; bottom 0.
+    renderCanvas({
+      instances: [inst('a', { x: 0, y: 3, w: 1, h: 2, z: 0 })],
+      cellPx: 50,
+      gutterPx: 24,
+      gridInsetPx: 24,
+      columns: 6,
+    });
+    const style = StyleSheet.flatten(screen.getByTestId('layout-scroll-content').props.style);
+    expect(style.height).toBe(5 * (50 + 24) + 24); // contentRows x pitch + gridInsetPx
   });
 
   it('renders NO scroll container on the wall (cellPx absent) — the wall never scrolls (byte-identical)', () => {

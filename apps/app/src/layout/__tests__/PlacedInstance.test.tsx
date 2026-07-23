@@ -127,14 +127,56 @@ describe('PlacedInstance arrange affordances (AOD-141 preserved through the AOD-
 
   it('accepts the AOD-197 (S4) cellPx + columns (portrait) and keeps its arrange chrome', () => {
     // The fit-to-width scale lives on the LayoutCanvas PARENT; the card takes cellPx + columns only to feed
-    // its gesture worklets (finger px / cellPx, clamp x by columns) — that math is asserted purely in
+    // its gesture worklets (finger px / pitch, clamp x by columns) — that math is asserted purely in
     // geometry.test (snapDrag), since the worklets never fire under jest. Here we prove the props
-    // are wired and every affordance survives in a portrait (4-col, smaller cellPx) mount; the RENDER stays on
-    // the nominal UNIT_PX (unchanged), so the card is orientation-independent and the parent scale sizes it.
+    // are wired and every affordance survives in a portrait (4-col, smaller cellPx) mount; the parent scale
+    // sizes the card on screen.
     renderCard({ cellPx: 48, columns: 4 });
     expect(screen.getByTestId('configure-card-1')).toBeTruthy();
     expect(screen.getByTestId('remove-card-1')).toBeTruthy();
     expect(screen.getByLabelText('Resize widget')).toBeTruthy();
+  });
+});
+
+// AOD-198 (item 2): the card renders a gutter apart from its neighbours. Its nominal box is the UNIT_PX grid
+// PLUS the nominal gutter `ng` (nominalGutter(gutterPx, cellPx)), so once the LayoutCanvas parent applies the
+// cellPx/UNIT_PX scale each slot origin lands gutterPx apart on screen, and a w/h-wide card absorbs its
+// (w-1)/(h-1) INTERNAL gutters (it is contiguous across them). The reanimated mock runs useAnimatedStyle, so
+// the computed box is inspectable via the positioned Animated.View (the card-face's parent).
+describe('gutter-augmented card box (AOD-198 item 2)', () => {
+  const at = (rect: WidgetInstance['rect']): WidgetInstance => ({ ...instance, rect });
+  // The positioned Animated.View carries the computed left/top/width/height (the reanimated mock runs
+  // useAnimatedStyle with x.value = rect.x etc.); query it by its own testID.
+  const boxOf = (id: string) => StyleSheet.flatten(screen.getByTestId(`placed-${id}`).props.style);
+
+  it('offsets each slot origin by the nominal gutter and grows a wide card to span its internal gutter', () => {
+    // cellPx 48, gutterPx 24 -> ng = 24 * 96 / 48 = 48. A W (2x1) at (1,1):
+    //   left = 1*(96+48) = 144, top = 1*(96+48) = 144,
+    //   width = 2*96 + (2-1)*48 = 240 (absorbs its one internal gutter), height = 1*96 + 0 = 96.
+    renderCard({ instance: at({ x: 1, y: 1, w: 2, h: 1, z: 0 }), cellPx: 48, gutterPx: 24, columns: 6 });
+    const box = boxOf('card-1');
+    expect(box.left).toBe(144);
+    expect(box.top).toBe(144);
+    expect(box.width).toBe(240);
+    expect(box.height).toBe(96);
+  });
+
+  it('grows a tall card by its internal vertical gutter too (M 1x2)', () => {
+    // cellPx 48, gutterPx 24 -> ng 48. An M (1x2) at (0,0): height = 2*96 + (2-1)*48 = 240, width = 96.
+    renderCard({ instance: at({ x: 0, y: 0, w: 1, h: 2, z: 0 }), cellPx: 48, gutterPx: 24, columns: 6 });
+    const box = boxOf('card-1');
+    expect(box.width).toBe(96);
+    expect(box.height).toBe(240);
+  });
+
+  it('renders on the bare nominal grid when there is no gutter (the wall / pre-AOD-198, byte-identical)', () => {
+    // gutterPx absent -> ng 0 -> left = x*96, width = w*96, exactly as before AOD-198.
+    renderCard({ instance: at({ x: 1, y: 1, w: 2, h: 1, z: 0 }), cellPx: 48, columns: 6 });
+    const box = boxOf('card-1');
+    expect(box.left).toBe(96);
+    expect(box.top).toBe(96);
+    expect(box.width).toBe(192);
+    expect(box.height).toBe(96);
   });
 });
 

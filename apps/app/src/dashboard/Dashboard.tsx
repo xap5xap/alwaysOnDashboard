@@ -34,7 +34,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAuth } from '../auth/AuthProvider';
 import { AddGallery } from '../layout/AddGallery';
 import { ConfigureInstanceModal } from '../layout/ConfigureInstanceModal';
-import { cellPxFor, GRID_MARGIN } from '../layout/geometry';
+import { cellPxFor, GRID_GUTTER, GRID_MARGIN } from '../layout/geometry';
 import { nearestFreeSlot } from '../layout/grid';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
@@ -79,11 +79,16 @@ export function Dashboard() {
   const orientation = useOrientation();
   // AOD-197 (S4): the fit-to-width placement scale for THIS device + orientation. The handheld canvas renders
   // the nominal UNIT_PX grid scaled by cellPx/UNIT_PX so cells fill the screen width; the wall keeps UNIT_PX.
-  // gutter 0 so cells fill the width and touch (card border-radius separates them); the inter-cell gutter is a
-  // tunable deferral (design §4/§13). GRID_MARGIN keeps the grid off the screen edge.
+  // AOD-198: cellPx reserves the outer margin (GRID_MARGIN, both sides) AND the inter-cell gutters
+  // (GRID_GUTTER, C-1 of them) off the width (design §4: cellPx = (viewportW - 2*margin - (C-1)*gutter)/C), so
+  // the grid sits inside a balanced margin (gridInsetPx, item 1) with real gaps between cells (gutterPx, item
+  // 2). Both are handheld-only screen-px tunables threaded to the canvas; the wall passes none and stays
+  // edge-to-edge / byte-identical.
   const { width: viewportW } = useWindowDimensions();
   const columns = columnsFor(orientation);
-  const cellPx = cellPxFor(columns, viewportW, GRID_MARGIN, 0);
+  const cellPx = cellPxFor(columns, viewportW, GRID_MARGIN, GRID_GUTTER);
+  const gridInsetPx = GRID_MARGIN;
+  const gutterPx = GRID_GUTTER;
   const {
     instances,
     isLoading,
@@ -381,6 +386,9 @@ export function Dashboard() {
                   // AOD-197 (S4): the arrange canvas fills the screen width in the active orientation.
                   cellPx={cellPx}
                   columns={columns}
+                  // AOD-198: balanced outer margin (item 1) + real inter-cell gutters (item 2).
+                  gridInsetPx={gridInsetPx}
+                  gutterPx={gutterPx}
                 />
                 {/* AOD-145: the grown page-dots capsule, floating at the bottom over the canvas and riding the
                     chrome-awake state (box-none so only the capsule captures; the canvas keeps the rest). Press
@@ -408,6 +416,9 @@ export function Dashboard() {
                 // AOD-197 (S4): Glance fits to width with the SAME cellPx as Arrange (WYSIWYG, design §7).
                 cellPx={cellPx}
                 columns={columns}
+                // AOD-198: Glance gaps + insets identically to Arrange (WYSIWYG).
+                gridInsetPx={gridInsetPx}
+                gutterPx={gutterPx}
                 onEnterArrange={enterArrange}
                 // AOD-195: a card long-press opens the quick-actions menu; delete confirms on the calm card.
                 onLongPressCard={openCardMenu}

@@ -30,7 +30,7 @@ import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { WidgetInstance } from '../registry/types';
 import type { LayoutPatch } from './mapper';
-import { UNIT_PX } from './geometry';
+import { nominalGutter, UNIT_PX } from './geometry';
 import { slotToPixels } from './grid';
 import { PlacedInstance } from './PlacedInstance';
 import { useArrangeReflow } from './useArrangeReflow';
@@ -68,6 +68,15 @@ export interface LayoutCanvasProps {
    *  as pre-AOD-197 — no wrapper, no scale — and the wall applies its own wallFitScale layer around it, so the
    *  kiosk path stays byte-identical. */
   cellPx?: number;
+  /** AOD-198 (item 1): the outer margin in SCREEN px applied as a translate on the fit-to-width scale layer
+   *  (translateX + a matching translateY), so the grid is inset from the screen edges and the margin balances
+   *  both sides instead of all falling to the right (cellPx already reserves 2*margin of width). Absent (the
+   *  wall, which renders no scale layer) leaves the canvas byte-identical. Handheld only. */
+  gridInsetPx?: number;
+  /** AOD-198 (item 2): the inter-cell gutter in SCREEN px. Threaded to every card (its position + size are
+   *  gutter-augmented) and used for the landing hairline, so the whole arrange grid gaps consistently. Absent
+   *  (the wall) is 0 = edge-to-edge, byte-identical. Handheld only. */
+  gutterPx?: number;
   /** AOD-197 (S4): the active orientation's column count (landscape 6 / portrait 4), threaded to the arrange
    *  session + every card so a drag/resize clamps against the grid the user is touching. Defaults (absent)
    *  to the landscape GRID_COLUMNS via the hook/card, which is the wall's orientation. */
@@ -87,9 +96,14 @@ export function LayoutCanvas({
   onCancelRemove,
   onCarryEdge,
   cellPx,
+  gridInsetPx = 0,
+  gutterPx = 0,
   columns,
 }: LayoutCanvasProps) {
   const { theme, rt } = useUnistyles();
+  // AOD-198 (item 2): the nominal gutter for THIS handheld scale (0 on the wall / when there is no gutter),
+  // so the landing hairline sits a gutter apart exactly like the gutter-augmented cards (PlacedInstance).
+  const ng = nominalGutter(gutterPx, cellPx ?? UNIT_PX);
   // The live arrange session: the active target (for the nearest-free hairline) + the gesture reporters
   // PlacedInstance drives. Inert (target: null) until a gesture fires, so on the wall / in Glance it costs a
   // useState + a noop and changes nothing (see the header note). `columns` scopes nearest-free to the active
@@ -119,7 +133,7 @@ export function LayoutCanvas({
           testID="arrange-hairline-slot"
           style={[
             styles.hairlineSlot,
-            pxStyle(reflow.activeSlot),
+            pxStyle(reflow.activeSlot, ng),
             { borderColor: theme.colors.accent, backgroundColor: theme.colors.accentMuted, borderRadius: theme.radius.md },
           ]}
         />
@@ -147,6 +161,7 @@ export function LayoutCanvas({
           onRemove={onRemove}
           onCarryEdge={onCarryEdge}
           cellPx={cellPx}
+          gutterPx={gutterPx}
           columns={columns}
           // AOD-196: only the handheld (scrollable) canvas hands its cards the scroll ref so a card drag/resize
           // blocks the vertical scroll (place-on-card wins). The wall renders no ScrollView, so it passes none
@@ -161,10 +176,18 @@ export function LayoutCanvas({
   // (the grid grows from the corner). box-none so this layer is NEVER a touch target: a card subview still
   // receives its drag/long-press, and a tap on empty space falls THROUGH to the exitCatcher behind (the "tap
   // empty to exit arrange" affordance). The wall never takes this branch.
+  // AOD-197: the fit-to-width scale (cellPx / UNIT_PX) grows the nominal grid from the top-left. AOD-198
+  // (item 1): when an outer margin is given, translate by it on BOTH axes FIRST so it is OUTERMOST — it then
+  // shifts the whole scaled grid by gridInsetPx SCREEN px, balancing the margin cellPx already reserved off
+  // both sides (was all falling right). No inset -> the bare scale (byte-identical to pre-AOD-198).
+  const scale = (cellPx ?? UNIT_PX) / UNIT_PX;
+  const scaleTransform = gridInsetPx
+    ? [{ translateX: gridInsetPx }, { translateY: gridInsetPx }, { scale }]
+    : [{ scale }];
   const scaleLayer = (
     <View
       pointerEvents="box-none"
-      style={[styles.scaleLayer, { transform: [{ scale: (cellPx ?? UNIT_PX) / UNIT_PX }] }]}
+      style={[styles.scaleLayer, { transform: scaleTransform }]}
       testID="layout-scale-layer"
     >
       {grid}
@@ -186,7 +209,11 @@ export function LayoutCanvas({
     // vertical pan on a card drags and a pan on empty space scrolls. Horizontal sky paging stays the SkyPager
     // FlatList above this (AOD-144). The wall never takes this branch (design §7: the wall does not scroll).
     const contentRows = Math.max(1, ...instances.map((i) => i.rect.y + i.rect.h));
-    const contentHeight = Math.max(viewportH, contentRows * cellPx + rt.insets.bottom);
+    // AOD-198: each unit-row occupies a cell PLUS its gutter (the pitch cellPx + gutterPx), and the grid is
+    // inset from the top by gridInsetPx (item 1). Reserve both, plus the bottom safe-area inset, so the
+    // deepest gapped row still clears the Android nav bar. Both insets default to 0, so a no-gutter / no-inset
+    // caller keeps the pre-AOD-198 contentRows x cellPx (+ bottom inset) extent.
+    const contentHeight = Math.max(viewportH, contentRows * (cellPx + gutterPx) + gridInsetPx + rt.insets.bottom);
     return (
       <GestureScrollView
         ref={scrollRef}
@@ -213,11 +240,18 @@ export function LayoutCanvas({
   );
 }
 
-/** The absolute box (px) for a landing slot, from the shared slot<->pixel mapping (grid.slotToPixels,
- *  byte-consistent with the cards' geometry.toPixels). */
-function pxStyle(slot: Parameters<typeof slotToPixels>[0]) {
+/** The absolute box (px) for a landing slot on the handheld gutter-augmented grid: the shared nominal
+ *  slot<->pixel mapping (grid.slotToPixels, byte-consistent with the cards' geometry.toPixels) PLUS the
+ *  nominal gutter `ng`, matching PlacedInstance's gutter-augmented card box so the hairline lands where the
+ *  card will. ng is 0 on the wall / when there is no gutter, so this reduces to the bare slotToPixels. */
+function pxStyle(slot: Parameters<typeof slotToPixels>[0], ng: number) {
   const p = slotToPixels(slot);
-  return { left: p.left, top: p.top, width: p.width, height: p.height };
+  return {
+    left: slot.x * ng + p.left,
+    top: slot.y * ng + p.top,
+    width: p.width + (slot.w - 1) * ng,
+    height: p.height + (slot.h - 1) * ng,
+  };
 }
 
 const styles = StyleSheet.create(() => ({

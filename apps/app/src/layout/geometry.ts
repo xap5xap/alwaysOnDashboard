@@ -45,6 +45,18 @@ export function cellPxFor(
   return (viewportW - 2 * margin - (columns - 1) * gutter) / columns;
 }
 
+/** The nominal-unit gutter that renders as `gutterPx` SCREEN px between adjacent cells once the handheld
+ *  fit-to-width scale (cellPx / UNIT_PX) is applied over the nominal UNIT_PX grid (AOD-198 item 2). Because
+ *  the scale multiplies every nominal length by cellPx / UNIT_PX, a nominal gutter of gutterPx * UNIT_PX /
+ *  cellPx lands as exactly gutterPx on screen. The card + hairline positions add x/y * this so cells sit a
+ *  gutter apart, and a w/h-wide card absorbs its (w-1)/(h-1) INTERNAL gutters (it spans contiguous cells).
+ *  Pure + additive: 0 when there is no gutter (the wall renders edge-to-edge, UNIT_PX untouched). cellPx
+ *  defaults to UNIT_PX so a nominal-grid caller (no fit-to-width) also gets 0. */
+export function nominalGutter(gutterPx: number, cellPx: number = UNIT_PX): number {
+  if (gutterPx <= 0 || cellPx <= 0) return 0;
+  return (gutterPx * UNIT_PX) / cellPx;
+}
+
 // Hundredths of a unit (~0.96px at UNIT_PX): kills floating-point drift in persisted geometry.
 export function snapUnit(n: number): number {
   return Math.round(n * 100) / 100;
