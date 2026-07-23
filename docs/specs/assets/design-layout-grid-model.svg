@@ -1,0 +1,69 @@
+<svg width="100%" viewBox="0 0 860 486" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>The recommended model: a canonical landscape grid, free with gaps, auto-reflowed to portrait (the iPad model)</title>
+  <desc>Left: a landscape frame with a six-column grid holding four widgets placed freely with gaps and generous margins, A small top-left, B large in the top centre, C small lower-left, D small lower-right. A rotate arrow labelled auto-reflow, order-preserving repack. Right: a portrait frame with a four-column grid where the same widgets are repacked at the top, one next to the other, gaps collapsed. The landscape layout is the canonical one, remembered exactly and hung on the wall; portrait is a deterministic reflow of it. Below: landscape is six columns and canonical, portrait is four columns and derived, cell pixels scale per orientation, one stored layout means no schema change.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+    .h{font-size:16px;font-weight:700;fill:#F4F4F8;}
+    .sub{font-size:11.5px;fill:#9B9BA8;}
+    .cap{font-size:9px;font-weight:700;fill:#9B9BA8;letter-spacing:1px;}
+    .lbl{font-size:11px;fill:#C9C9D4;}
+    .meta{font-size:10px;fill:#9B9BA8;}
+    .acc{fill:#6E8BFF;font-weight:700;}
+    .tok{font-size:10px;fill:#8A8A97;font-family:ui-monospace,Menlo,monospace;}
+    .cardlbl{font-size:12px;font-weight:700;fill:#C9D4E8;}
+    .cardsz{font-size:8px;font-weight:700;fill:#6E8BFF;letter-spacing:1px;}
+  </style>
+  <defs>
+    <marker id="ar2" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto"><path d="M0,1 L7,5 L0,9 Z" fill="#6E8BFF"/></marker>
+    <linearGradient id="sf2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0A0A0E" stop-opacity="0"/><stop offset="1" stop-color="#0A0A0E" stop-opacity="0.9"/></linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="859" height="485" rx="12" fill="#0B0B0F" stroke="#1E1E26"/>
+  <text x="32" y="40" class="h">Recommended · per-orientation memory with auto-reflow (the iPad model)</text>
+  <text x="32" y="60" class="sub">Each orientation you design is remembered. One you have not designed auto-reflows from one you have, "one next to the other".</text>
+
+  <!-- ===== LANDSCAPE (canonical) ===== -->
+  <text x="32" y="92" class="cap">LANDSCAPE · 6 COLS · DESIGNED (remembered exactly)</text>
+  <rect x="32" y="104" width="470" height="266" rx="16" fill="#0C0C11" stroke="#2A2A36"/>
+  <rect x="46" y="118" width="442" height="238" rx="8" fill="#0A0A0E" stroke="#20202A"/>
+  <!-- generous margin, 6-col faint grid -->
+  <g fill="#0F0F16" stroke="#20202A" stroke-dasharray="2 3">
+    <rect x="60" y="130" width="62" height="48" rx="6"/><rect x="128" y="130" width="62" height="48" rx="6"/><rect x="196" y="130" width="62" height="48" rx="6"/><rect x="264" y="130" width="62" height="48" rx="6"/><rect x="332" y="130" width="62" height="48" rx="6"/><rect x="400" y="130" width="62" height="48" rx="6"/>
+    <rect x="60" y="184" width="62" height="48" rx="6"/><rect x="128" y="184" width="62" height="48" rx="6"/><rect x="196" y="184" width="62" height="48" rx="6"/><rect x="264" y="184" width="62" height="48" rx="6"/><rect x="332" y="184" width="62" height="48" rx="6"/><rect x="400" y="184" width="62" height="48" rx="6"/>
+    <rect x="60" y="238" width="62" height="48" rx="6"/><rect x="128" y="238" width="62" height="48" rx="6"/><rect x="196" y="238" width="62" height="48" rx="6"/><rect x="264" y="238" width="62" height="48" rx="6"/><rect x="332" y="238" width="62" height="48" rx="6"/><rect x="400" y="238" width="62" height="48" rx="6"/>
+  </g>
+  <!-- placed with gaps -->
+  <rect x="60" y="130" width="62" height="48" rx="6" fill="#1B2233" stroke="#39507F"/><text x="66" y="150" class="cardlbl">A</text><text x="66" y="162" class="cardsz">S</text>
+  <rect x="196" y="130" width="130" height="102" rx="6" fill="#1B2233" stroke="#39507F"/><text x="204" y="152" class="cardlbl" font-size="14">B</text><text x="204" y="166" class="cardsz">L · 2×2</text>
+  <rect x="60" y="238" width="62" height="48" rx="6" fill="#1B2233" stroke="#39507F"/><text x="66" y="258" class="cardlbl">C</text><text x="66" y="270" class="cardsz">S</text>
+  <rect x="400" y="238" width="62" height="48" rx="6" fill="#1B2233" stroke="#39507F"/><text x="406" y="258" class="cardlbl">D</text><text x="406" y="270" class="cardsz">S</text>
+  <text x="60" y="330" class="tok" font-size="8.5">gaps + wide edge margins, hand-placed</text>
+
+  <!-- rotate / reflow arrow -->
+  <path d="M512 232 H556" stroke="#6E8BFF" stroke-width="1.6" marker-end="url(#ar2)"/>
+  <text x="534" y="212" text-anchor="middle" class="meta" fill="#6E8BFF">rotate</text>
+  <text x="534" y="225" text-anchor="middle" class="meta" fill="#6E8BFF" font-size="8.5">auto-reflow</text>
+
+  <!-- ===== PORTRAIT (derived) ===== -->
+  <text x="576" y="92" class="cap">PORTRAIT · 4 COLS · DERIVED (until designed)</text>
+  <rect x="576" y="104" width="200" height="316" rx="18" fill="#0C0C11" stroke="#2A2A36"/>
+  <rect x="588" y="118" width="176" height="288" rx="8" fill="#0A0A0E" stroke="#20202A"/>
+  <!-- 4-col faint grid -->
+  <g fill="#0F0F16" stroke="#20202A" stroke-dasharray="2 3">
+    <rect x="600" y="130" width="37" height="37" rx="5"/><rect x="641" y="130" width="37" height="37" rx="5"/><rect x="682" y="130" width="37" height="37" rx="5"/><rect x="723" y="130" width="37" height="37" rx="5"/>
+    <rect x="600" y="171" width="37" height="37" rx="5"/><rect x="641" y="171" width="37" height="37" rx="5"/><rect x="682" y="171" width="37" height="37" rx="5"/><rect x="723" y="171" width="37" height="37" rx="5"/>
+    <rect x="600" y="212" width="37" height="37" rx="5"/><rect x="641" y="212" width="37" height="37" rx="5"/><rect x="682" y="212" width="37" height="37" rx="5"/><rect x="723" y="212" width="37" height="37" rx="5"/>
+  </g>
+  <!-- packed top: A, C beside it, B (2x2) to the right, D below -->
+  <rect x="600" y="130" width="37" height="37" rx="5" fill="#1B2233" stroke="#39507F"/><text x="606" y="151" class="cardlbl">A</text>
+  <rect x="641" y="130" width="37" height="37" rx="5" fill="#1B2233" stroke="#39507F"/><text x="647" y="151" class="cardlbl">C</text>
+  <rect x="682" y="130" width="78" height="78" rx="5" fill="#1B2233" stroke="#39507F"/><text x="688" y="151" class="cardlbl">B</text><text x="688" y="163" class="cardsz">L</text>
+  <rect x="600" y="171" width="37" height="37" rx="5" fill="#1B2233" stroke="#39507F"/><text x="606" y="192" class="cardlbl">D</text>
+  <text x="600" y="238" class="tok" font-size="8.5">one next to the other</text>
+
+  <!-- ===== BOTTOM CALLOUT ===== -->
+  <rect x="32" y="392" width="796" height="80" rx="8" fill="#12121A" stroke="#3A3A57"/>
+  <text x="46" y="413" class="lbl"><tspan class="acc">Per-orientation memory</tspan> · each orientation you design is remembered independently; the wall hangs the landscape one.</text>
+  <text x="46" y="433" class="meta"><tspan class="acc" style="font-size:10px">Responsive columns</tspan> · 6 landscape / 4 portrait (tunable). <tspan class="acc" style="font-size:10px">Footprint shared</tspan> · same size both orientations, only position reflows.</text>
+  <text x="46" y="452" class="meta"><tspan class="acc" style="font-size:10px">Storage</tspan> · a position per orientation inside the existing rect jsonb — client-only, no DB migration; a legacy bare rect reads as landscape.</text>
+  <text x="46" y="467" class="meta"><tspan class="acc" style="font-size:10px">Both orientations first-class on every device</tspan> — Vela scrolls, so nothing is cut off (unlike iPhone's portrait-lock).</text>
+</svg>

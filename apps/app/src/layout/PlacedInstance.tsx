@@ -1,28 +1,63 @@
-// One placed widget instance: it positions an AOD-8 WidgetInstance in free-form space and, in arrange
-// mode, makes it draggable and resizable. Live geometry runs on the UI thread via reanimated shared
-// values (no React re-render while dragging, which the always-on hot path wants, AOD-25); on gesture
-// end it converts the total pixel translation back to nominal units through the pure, tested geometry
-// helpers and commits. Resize recomputes the size class via reconcileSize (AOD-10 §5.2, rect is
-// authoritative). It renders the instance through the generic WidgetHost and imports no service: the
-// AOD-8 §10 seam holds (it knows WidgetInstance/LayoutRect, not which service this is).
-import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+// One placed widget instance: it positions an AOD-8 WidgetInstance in slot space and, in arrange mode,
+// makes it draggable and resizable with LIVE snapping (AOD-140, resolves AOD-98). Live geometry runs on
+// the UI thread via reanimated shared values (no React re-render while dragging, the always-on hot path
+// wants that, AOD-25). The felt "snap on release" is gone:
+//   - DRAG: the held card lifts one step and follows the finger; on every grid boundary it crosses it
+//     reports its snapped TARGET slot up (runOnJS at slot-change granularity, not per frame), so the
+//     LayoutCanvas hairline + the neighbour reflow track it live. On drop it settles into that slot and
+//     commits via the pure snapDrag (AOD-138 commit math).
+//   - RESIZE: the footprint flips DISCRETELY under the finger to the nearest SUPPORTED slot (S/M/W/L
+//     constrained to the widget's declared sizes), so what you drag is what you get and what commits.
+// A neighbour (a card whose sibling is being dragged) animates toward the reflowed rect LayoutCanvas hands
+// it via `previewRect`, and back to its committed rect when the gesture ends or cancels. The multi-card
+// commit is owned by LayoutCanvas/useArrangeReflow (it holds every instance); this card only reports its
+// own gesture. It still imports no service: the AOD-8 §10 seam holds (it knows WidgetInstance/LayoutRect,
+// not which service this is), and every AOD-141 affordance (Configure/Remove pills, the 44pt resize
+// handle, the two-step "Remove?" confirm face) is preserved.
+import React, { useEffect, useMemo, useState } from 'react';
+import { Dimensions, Pressable, Text, View } from 'react-native';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { WidgetHost } from '../host/WidgetHost';
 import { useRegistry } from '../registry/RegistryProvider';
-import { reconcileSize } from '../widgets/sizes';
+import { GRID_COLUMNS, MAX_SLOT_H, MAX_SLOT_W, SIZE_CATALOGUE } from '../widgets/sizes';
 import type { LayoutRect, WidgetInstance } from '../registry/types';
-import { applyDrag, applyResize, MIN_H, MIN_W, UNIT_PX } from './geometry';
-import type { LayoutPatch } from './mapper';
+import { nominalGutter, snapDrag, UNIT_PX } from './geometry';
+import type { GridRect } from './grid';
+
+// Motion timings (ms). The gesture FEEL — lift depth, reflow smoothness, live-snap latency on the low-DPI
+// Fire HD 8 — is a device concern (AOD-190); these are the tunable seeds.
+const LIFT = { duration: 140 } as const; // the held card raising / settling back
+const REFLOW = { duration: 190 } as const; // a neighbour easing into its reflowed slot
+const SETTLE = { duration: 160 } as const; // the dropped card settling onto its snapped slot
+const LIFT_SCALE = 0.03; // the "one step up" scale while held (surface-step model, not a heavy shadow)
+// AOD-146 (Many Skies §1d): how near the screen edge (px) the finger must carry a held card before the
+// dashboard arms the cross-sky "hold" dwell. Screen-space, not slot-space — the true edge of the display.
+// A device-tuned seed (AOD-190), like the motion timings above.
+const EDGE_BAND_PX = 28;
 
 export interface PlacedInstanceProps {
   instance: WidgetInstance;
   arranging: boolean;
-  /** Long-press anywhere on the card enters arrange mode (the iOS-style "jiggle" affordance). */
-  onLongPress(): void;
-  onCommit(instanceId: string, patch: LayoutPatch): void;
+  /** AOD-195: long-press anywhere on the calm card reports the instance + an on-screen anchor (the touch
+   *  point, from the gesture's absoluteX/absoluteY) so the dashboard can open the iPad-style quick-actions
+   *  menu near this card. Enabled only OUTSIDE arrange (inside Arrange the card is draggable). The wall's
+   *  LayoutCanvas passes a nullary fallback (its onEnterArrange noop) so a wall long-press stays inert. */
+  onLongPress(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  /** The reflowed (uncommitted) rect this card should animate to while a SIBLING is being dragged/resized
+   *  (AOD-140). Null = rest at the committed rect (this is the active card, or nothing is being dragged).
+   *  LayoutCanvas/useArrangeReflow computes it; this card just eases toward it. */
+  previewRect: LayoutRect | null;
+  /** The live gesture crossed a grid boundary (drag) or flipped size (resize): report the new target slot
+   *  so LayoutCanvas can move the hairline and reflow the neighbours. Slot-change granularity. */
+  onArrangeMove(instanceId: string, slot: GridRect): void;
+  /** The gesture ended: LayoutCanvas commits this card at its nearest-free landing and RETURNS that landing
+   *  (design §8) so this card settles exactly where the hairline showed — never resting on the neighbour it
+   *  was dropped onto, and animating back to its own origin on a no-op drop. */
+  onArrangeEnd(instanceId: string, slot: GridRect): GridRect;
+  /** The gesture was cancelled (not completed): LayoutCanvas drops the preview and commits nothing. */
+  onArrangeCancel(): void;
   /** Open the per-instance config form (AOD-10 §4). Generic over the registry; the dashboard owns the
    *  modal. Reached two ways: the arrange-mode "Configure" affordance and the host's needs_config
    *  "Reconfigure" prompt (the previously unwired WidgetHost onReconfigure seam). */
@@ -31,19 +66,84 @@ export interface PlacedInstanceProps {
    *  dashboard owns the mutation (useRemoveWidget: client-direct RLS delete + optimistic cache update).
    *  Connections survive — removing a card never disconnects its service. */
   onRemove(instanceId: string): void;
+  /** AOD-195 (sub-decision 6b): a MENU-driven delete from the calm long-press menu shows the AOD-141
+   *  "Remove?" tile-face confirm WITHOUT entering Arrange. When the dashboard is confirming THIS card's
+   *  removal (confirmingRemoveId === instanceId), it passes true and the same confirm face renders in calm
+   *  mode; Confirm fires onRemove, Keep fires onCancelMenuRemove. Absent (the wall, and the in-arrange
+   *  Remove-pill path, which uses the card's OWN local confirm state) leaves the render byte-identical. */
+  menuConfirmingRemove?: boolean;
+  /** AOD-195: Keep on the menu-driven confirm clears the dashboard-owned confirmingRemoveId. */
+  onCancelMenuRemove?(): void;
+  /** AOD-146 (Many Skies §1d): while dragging in arrange, the finger reached a SCREEN edge ('left'/'right')
+   *  or left it (null). The dashboard arms a short "hold" dwell on a non-null edge to carry THIS card to the
+   *  neighbour sky (the dwell disambiguates it from a normal near-edge reposition). Optional: this card stays
+   *  sky-agnostic (AOD-8 §10 seam) and the wall / read-only callers never arrange, so they never wire it. */
+  onCarryEdge?(instanceId: string, edge: 'left' | 'right' | null): void;
+  /** AOD-197 (S4): the ON-SCREEN pixels per grid cell (the card's w=1 width) under the LayoutCanvas
+   *  fit-to-width scale. The RENDER lays the card on the nominal UNIT_PX grid (the parent scale sizes it on
+   *  screen). Defaults to UNIT_PX so the wall — which never arranges and passes no cellPx — is byte-identical. */
+  cellPx?: number;
+  /** AOD-198 (item 2): the inter-cell gutter in SCREEN px. The card renders a gutter apart from its
+   *  neighbours (its nominal position + size are augmented by nominalGutter so the fit-to-width scale lands
+   *  the gap at exactly gutterPx), and the drag/resize worklets convert finger px -> slot units by dividing
+   *  by the cell PITCH (cellPx + gutterPx), since one on-screen slot step is now a cell plus its gutter.
+   *  Defaults to 0 so the wall (no gutter) stays edge-to-edge and byte-identical. */
+  gutterPx?: number;
+  /** AOD-197 (S4): the active orientation's column count (landscape 6 / portrait 4). Clamps a dragged or
+   *  resized footprint on-grid (x + w <= columns). Defaults to the landscape GRID_COLUMNS. */
+  columns?: number;
+  /** AOD-196: the handheld canvas's vertical ScrollView (react-native-gesture-handler). When present the
+   *  drag + resize Pans BLOCK it (blocksExternalGesture), so a vertical pan that STARTS on this card drags/
+   *  resizes it while a pan on empty space scrolls the canvas. Absent (the wall, which renders no ScrollView
+   *  and never scrolls) leaves the gesture config byte-identical to pre-AOD-196. */
+  scrollRef?: React.RefObject<React.ComponentType | undefined | null>;
 }
 
 export function PlacedInstance({
   instance,
   arranging,
   onLongPress,
-  onCommit,
+  previewRect,
+  onArrangeMove,
+  onArrangeEnd,
+  onArrangeCancel,
   onRequestConfigure,
   onRemove,
+  menuConfirmingRemove = false,
+  onCancelMenuRemove,
+  onCarryEdge,
+  cellPx = UNIT_PX,
+  gutterPx = 0,
+  columns = GRID_COLUMNS,
+  scrollRef,
 }: PlacedInstanceProps) {
   const registry = useRegistry();
+  // AOD-198 (item 2): the handheld gutter. `pitch` is the on-screen distance between adjacent slot origins
+  // (a cell plus its gutter), the divisor the gesture worklets use to turn finger px into slot units; `ng`
+  // is the nominal gutter the RENDER adds so cells sit a gutter apart under the fit-to-width scale. Both are
+  // 0 on the wall (gutterPx 0), so the wall's gesture math + render stay byte-identical.
+  const pitch = cellPx + gutterPx;
+  const ng = nominalGutter(gutterPx, cellPx);
   const def = registry.getWidgetDef(instance.serviceId, instance.widgetType);
-  const supportedSizes = def?.supportedSizes ?? [instance.size];
+  // Every widget declares 1-4 sizes, but an empty supportedSizes is type-possible; guard it so
+  // supportedSlotFor's supportedW[0]/supportedH[0] can never be undefined -> a NaN slot. Fall back to the
+  // instance's own size (AOD-192 hardening; no behaviour change for the normal, non-empty case).
+  const declaredSizes = def?.supportedSizes ?? [instance.size];
+  const supportedSizes = declaredSizes.length > 0 ? declaredSizes : [instance.size];
+
+  // The widget's declared footprints as parallel number arrays, so the resize worklet can snap to the
+  // nearest SUPPORTED slot on the UI thread (a captured array is workletizable; SIZE_CATALOGUE maps each
+  // slot id to its nominal w/h). This is what keeps a restricted widget (e.g. Calendar ['S','W']) from
+  // ever showing — or committing — a size it does not support.
+  const { supportedW, supportedH } = useMemo(() => {
+    const ws: number[] = [];
+    const hs: number[] = [];
+    for (const s of supportedSizes) {
+      ws.push(SIZE_CATALOGUE[s].nominalW);
+      hs.push(SIZE_CATALOGUE[s].nominalH);
+    }
+    return { supportedW: ws, supportedH: hs };
+  }, [supportedSizes]);
 
   // Resolve the AOD-27 §10 `arrange` role-name aliases at the call site (the AOD-67 pattern for token
   // groups): the Unistyles babel plugin does not trace a computed `theme.colors[role]` through
@@ -60,7 +160,14 @@ export function PlacedInstance({
     if (!arranging) setConfirmingRemove(false);
   }, [arranging]);
 
-  // Live geometry (nominal units) owned by the UI thread.
+  // AOD-195 (sub-decision 6b): the confirm face shows for EITHER the in-arrange Remove pill (local
+  // confirmingRemove) OR a menu-driven delete on the calm surface (menuConfirmingRemove, dashboard-owned).
+  // In the menu case Keep clears the dashboard's confirmingRemoveId; the in-arrange case keeps its local
+  // reset. (menuConfirmingRemove only arrives in calm mode, so it never collides with the arrange pills.)
+  const showConfirm = menuConfirmingRemove || (arranging && confirmingRemove);
+  const onKeep = menuConfirmingRemove ? onCancelMenuRemove ?? (() => {}) : () => setConfirmingRemove(false);
+
+  // Live geometry (nominal slot units) owned by the UI thread.
   const x = useSharedValue(instance.rect.x);
   const y = useSharedValue(instance.rect.y);
   const w = useSharedValue(instance.rect.w);
@@ -69,35 +176,112 @@ export function PlacedInstance({
   const startY = useSharedValue(0);
   const startW = useSharedValue(0);
   const startH = useSharedValue(0);
+  const startRx = useSharedValue(0); // the committed origin a resize re-clamps from as the footprint grows
+  const lift = useSharedValue(0); // 0..1: the "held" elevation (drives scale + z + a restrained shadow)
+  // Slot-change throttles so the worklets cross to JS only when the SNAPPED target actually changes, not
+  // every frame. Drag tracks its snapped ORIGIN; resize tracks its RAW slot (JS then maps that to the
+  // nearest SUPPORTED footprint — see applyResizeSlot). Both keep runOnJS at slot granularity.
+  const lastDx = useSharedValue(instance.rect.x);
+  const lastDy = useSharedValue(instance.rect.y);
+  const lastRw = useSharedValue(instance.rect.w);
+  const lastRh = useSharedValue(instance.rect.h);
+  // AOD-146: the last reported screen-edge state (-1 left / 0 none / 1 right), so the drag worklet crosses to
+  // JS only when the edge actually changes — the same throttle discipline as the slot reporters above.
+  const edgeState = useSharedValue(0);
+  // The display width (px) captured for the edge test in the drag worklet (a plain number, workletizable like
+  // the module constants the gestures already close over). Arrange is portrait; AOD-190 device-tunes the band.
+  const screenWidth = Dimensions.get('window').width;
 
-  // Re-sync the shared values when the committed rect changes (e.g., the optimistic cache update
-  // re-renders us, or a reload restores a persisted layout). Commits fire at gesture end, so this
-  // never fights an in-progress gesture.
+  // The rect this card should be showing: the reflow PREVIEW while a sibling gesture is active, else its
+  // committed rect. Driving the shared values here (short timing) is how a neighbour eases into its
+  // reflowed slot during a drag/resize and eases back if the gesture cancels. The ACTIVE card gets a null
+  // previewRect and a stable committed rect through its own gesture, so these deps do not change mid-drag
+  // and this effect never fights the finger. On mount / cold reload the target equals the current value,
+  // so withTiming is a no-op (no spurious animation).
+  const target = previewRect ?? instance.rect;
   useEffect(() => {
-    x.value = instance.rect.x;
-    y.value = instance.rect.y;
-    w.value = instance.rect.w;
-    h.value = instance.rect.h;
-  }, [instance.rect.x, instance.rect.y, instance.rect.w, instance.rect.h, x, y, w, h]);
+    x.value = withTiming(target.x, REFLOW);
+    y.value = withTiming(target.y, REFLOW);
+    w.value = withTiming(target.w, REFLOW);
+    h.value = withTiming(target.h, REFLOW);
+  }, [target.x, target.y, target.w, target.h, x, y, w, h]);
 
-  // JS-thread commit helpers use the pure geometry functions, so the gesture math is the tested math.
+  // JS-thread reporters. Defined in render so they close over the latest props; the gestures are recreated
+  // each render (below), so the worklets always capture the current reporters.
+  const reportMove = (sx: number, sy: number, sw: number, sh: number) =>
+    onArrangeMove(instance.instanceId, { x: sx, y: sy, w: sw, h: sh });
   const finishDrag = (dxPx: number, dyPx: number) => {
-    commitRect(applyDrag(instance.rect, dxPx, dyPx));
+    const s = snapDrag(instance.rect, dxPx, dyPx, pitch, columns);
+    const landing = onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
+    // AOD-190 (C2): settle DIRECTLY onto the authoritative nearest-free landing (design §8), unconditionally.
+    // A free drop lands where the finger is (landing == the raw snapDrag slot, feel unchanged); an occupied
+    // drop lands at the nearest free slot with NO transient overlap on the card it was dropped onto (the tall-M
+    // "landed overlapping" retune). The committed move self-corrects via the instance.rect effect, which targets
+    // the same landing, so the two never fight; a no-op drop settles back to its own origin.
+    x.value = withTiming(landing.x, SETTLE);
+    y.value = withTiming(landing.y, SETTLE);
   };
-  const finishResize = (dwPx: number, dhPx: number) => {
-    commitRect(applyResize(instance.rect, dwPx, dhPx));
+  // AOD-146: forward a screen-edge crossing to the dashboard's carry-to-neighbour dwell. Maps the worklet's
+  // numeric edge (-1/0/1) to the direction the dashboard reasons about; null clears any armed dwell.
+  const reportEdge = (edge: number) =>
+    onCarryEdge?.(instance.instanceId, edge < 0 ? 'left' : edge > 0 ? 'right' : null);
+  // Resize is snapped on the JS thread (not the worklet) so the "nearest supported footprint" search never
+  // has to run over a captured array on the UI thread: the worklet only does inline number math (the RAW
+  // round-to-slot, like drag) and hands the raw slot here at footprint-change granularity. supportedSlotFor
+  // maps a raw {1,2} slot to the nearest footprint the widget actually declares (so a restricted widget —
+  // e.g. Calendar ['S','W'] — never shows or commits an unsupported size) and re-clamps the origin column.
+  const supportedSlotFor = (rw: number, rh: number): GridRect => {
+    let bw = supportedW[0];
+    let bh = supportedH[0];
+    let bd = Infinity;
+    for (let i = 0; i < supportedW.length; i++) {
+      const dw = rw - supportedW[i];
+      const dh = rh - supportedH[i];
+      const d = dw * dw + dh * dh; // squared distance over the declared footprints
+      if (d < bd) {
+        bd = d;
+        bw = supportedW[i];
+        bh = supportedH[i];
+      }
+    }
+    const tx = Math.min(columns - bw, Math.max(0, startRx.value)); // shift left at the right edge when full-width
+    return { x: tx, y: instance.rect.y, w: bw, h: bh };
   };
-  const commitRect = (rect: LayoutRect) => {
-    const size = reconcileSize({ w: rect.w, h: rect.h }, supportedSizes);
-    onCommit(instance.instanceId, { rect, size });
+  // Live resize step: snap the raw slot to a supported footprint, flip the VISIBLE size to it (setting the
+  // shared values from JS marshals to the UI thread — a ~1-frame lag is imperceptible for a discrete flip),
+  // and report the target so the hairline + neighbours reflow. What flips is what commits (WYSIWYG).
+  const applyResizeSlot = (rw: number, rh: number) => {
+    const s = supportedSlotFor(rw, rh);
+    w.value = s.w;
+    h.value = s.h;
+    x.value = s.x;
+    onArrangeMove(instance.instanceId, s);
   };
+  const finishResize = (rw: number, rh: number) => {
+    // Re-derive the supported slot deterministically (independent of whether the last live step landed), so
+    // the committed footprint equals the visible one even if a frame was dropped; settle the visible size.
+    const s = supportedSlotFor(rw, rh);
+    w.value = s.w;
+    h.value = s.h;
+    x.value = s.x;
+    // Unlike a drag, resize does not redirect its settle to onArrangeEnd's returned landing: a resize only ever
+    // changes the FOOTPRINT (its origin stays put, right-edge-clamped), so if the grown footprint had to nudge
+    // off a neighbour the size changed too — activeCommit fires and the instance.rect effect corrects the
+    // origin. A same-size, same-place resize is a true no-op whose landing IS this origin, so nothing strands.
+    onArrangeEnd(instance.instanceId, s);
+  };
+  const cancelGesture = () => onArrangeCancel();
 
+  // AOD-195: report the long-press UP with the touch point (absoluteX/absoluteY, window coords) so the
+  // dashboard can anchor the quick-actions menu near this card. Enabled only in calm mode (inside Arrange
+  // the card is dragged, not menued) and never while its own menu-confirm face is showing.
+  const reportLongPress = (ax: number, ay: number) => onLongPress(instance, { x: ax, y: ay });
   const longPress = Gesture.LongPress()
-    .enabled(!arranging)
+    .enabled(!arranging && !menuConfirmingRemove)
     .minDuration(350)
-    .onStart(() => {
+    .onStart((e) => {
       'worklet';
-      runOnJS(onLongPress)();
+      runOnJS(reportLongPress)(e.absoluteX, e.absoluteY);
     });
 
   const drag = Gesture.Pan()
@@ -108,15 +292,64 @@ export function PlacedInstance({
       'worklet';
       startX.value = x.value;
       startY.value = y.value;
+      lift.value = withTiming(1, LIFT);
+      // Open the hairline at the current slot immediately (a "slot opens where it will land").
+      const tw = w.value;
+      const tx = Math.min(columns - tw, Math.max(0, Math.round(x.value)));
+      const ty = Math.max(0, Math.round(y.value));
+      lastDx.value = tx;
+      lastDy.value = ty;
+      runOnJS(reportMove)(tx, ty, tw, h.value);
     })
     .onUpdate((e) => {
       'worklet';
-      x.value = Math.max(0, startX.value + e.translationX / UNIT_PX);
-      y.value = Math.max(0, startY.value + e.translationY / UNIT_PX);
+      // The held card follows the finger (continuous, lifted); the hairline snaps. AOD-197/198: finger px ->
+      // slot units divides by the on-screen slot PITCH (cellPx + gutterPx), and the column clamp uses the
+      // active count. (Wall: pitch = cellPx, byte-identical.)
+      const contX = Math.max(0, startX.value + e.translationX / pitch);
+      const contY = Math.max(0, startY.value + e.translationY / pitch);
+      x.value = contX;
+      y.value = contY;
+      const tw = w.value; // footprint is unchanged during a move
+      const tx = Math.min(columns - tw, Math.max(0, Math.round(contX)));
+      const ty = Math.max(0, Math.round(contY));
+      if (tx !== lastDx.value || ty !== lastDy.value) {
+        lastDx.value = tx;
+        lastDy.value = ty;
+        runOnJS(reportMove)(tx, ty, tw, h.value);
+      }
+      // AOD-146 (Many Skies §1d): additively report when the FINGER is carried to a screen edge, so the
+      // dashboard can arm the hold dwell that carries this card to the neighbour sky. Screen-space
+      // (absoluteX), independent of the slot snap above; edge-change granularity, like the slot report.
+      const edge = e.absoluteX <= EDGE_BAND_PX ? -1 : e.absoluteX >= screenWidth - EDGE_BAND_PX ? 1 : 0;
+      if (edge !== edgeState.value) {
+        edgeState.value = edge;
+        runOnJS(reportEdge)(edge);
+      }
     })
     .onEnd((e) => {
       'worklet';
+      // AOD-190 (C2): do NOT snap to the raw finger slot here — it can sit ON an occupied neighbour (e.g. a
+      // tall M's lower cell), a visible transient overlap before finishDrag redirects. Hold the lifted finger
+      // position; finishDrag settles DIRECTLY onto the authoritative nearest-free landing (design §8), which
+      // equals the card's own origin on a true drop-in-place, so nothing strands.
       runOnJS(finishDrag)(e.translationX, e.translationY);
+    })
+    .onFinalize((_e, success) => {
+      'worklet';
+      lift.value = withTiming(0, LIFT);
+      // AOD-146: the finger is lifting (or the gesture cancelled) — clear any armed edge-hold so a pending
+      // carry never fires after the drag ends. A no-op report unless an edge was actually held.
+      if (edgeState.value !== 0) {
+        edgeState.value = 0;
+        runOnJS(reportEdge)(0);
+      }
+      if (!success) {
+        // Cancelled (not completed): restore to the committed rect, drop the preview, commit nothing.
+        x.value = withTiming(instance.rect.x, SETTLE);
+        y.value = withTiming(instance.rect.y, SETTLE);
+        runOnJS(cancelGesture)();
+      }
     });
 
   const resize = Gesture.Pan()
@@ -125,22 +358,74 @@ export function PlacedInstance({
       'worklet';
       startW.value = w.value;
       startH.value = h.value;
+      startRx.value = x.value;
+      lift.value = withTiming(1, LIFT);
+      lastRw.value = Math.round(w.value);
+      lastRh.value = Math.round(h.value);
+      // Open the hairline at the current slot; applyResizeSlot snaps it to the widget's own footprint.
+      runOnJS(applyResizeSlot)(w.value, h.value);
     })
     .onUpdate((e) => {
       'worklet';
-      w.value = Math.max(MIN_W, startW.value + e.translationX / UNIT_PX);
-      h.value = Math.max(MIN_H, startH.value + e.translationY / UNIT_PX);
+      // Only inline number math on the UI thread: grow the extents and round to a RAW slot ({1,2}). The
+      // supported-footprint choice + the visible flip happen in applyResizeSlot (JS), fired only when the
+      // raw slot changes — so what you drag flips discretely and never lands on an unsupported size.
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / pitch)));
+      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / pitch)));
+      if (rw !== lastRw.value || rh !== lastRh.value) {
+        lastRw.value = rw;
+        lastRh.value = rh;
+        runOnJS(applyResizeSlot)(rw, rh);
+      }
     })
     .onEnd((e) => {
       'worklet';
-      runOnJS(finishResize)(e.translationX, e.translationY);
+      // Re-derive the raw slot from the total translation and commit it (finishResize maps raw -> supported
+      // deterministically), so the drop is correct even if the final onUpdate frame was coalesced.
+      const rw = Math.min(MAX_SLOT_W, Math.max(1, Math.round(startW.value + e.translationX / pitch)));
+      const rh = Math.min(MAX_SLOT_H, Math.max(1, Math.round(startH.value + e.translationY / pitch)));
+      runOnJS(finishResize)(rw, rh);
+    })
+    .onFinalize((_e, success) => {
+      'worklet';
+      lift.value = withTiming(0, LIFT);
+      if (!success) {
+        w.value = withTiming(instance.rect.w, SETTLE);
+        h.value = withTiming(instance.rect.h, SETTLE);
+        x.value = withTiming(instance.rect.x, SETTLE);
+        runOnJS(cancelGesture)();
+      }
     });
 
+  // AOD-196: on the handheld canvas (a vertical ScrollView is present) the drag + resize BLOCK the scroll, so a
+  // vertical pan that starts on this card drags/resizes it instead of scrolling; a pan on empty space still
+  // scrolls (no card gesture blocks it there). The wall renders no ScrollView and passes no scrollRef, so this
+  // is skipped and the gesture config stays byte-identical (blocksExternalGesture mutates + returns the gesture,
+  // so calling it in place needs no reassignment).
+  if (scrollRef) {
+    drag.blocksExternalGesture(scrollRef);
+    resize.blocksExternalGesture(scrollRef);
+  }
+
   const animatedStyle = useAnimatedStyle(() => ({
-    left: x.value * UNIT_PX,
-    top: y.value * UNIT_PX,
-    width: w.value * UNIT_PX,
-    height: h.value * UNIT_PX,
+    // AOD-198 (item 2): the card sits on the nominal UNIT_PX grid PLUS the nominal gutter `ng`, so under the
+    // parent fit-to-width scale each slot origin lands a gutter apart (origin = slot * (UNIT_PX + ng)) and a
+    // w/h-wide card spans its footprint AND its (w-1)/(h-1) internal gutters (it is contiguous across them).
+    // ng is 0 on the wall (gutterPx 0), so left/top/width/height collapse to the pre-AOD-198 nominal grid —
+    // byte-identical.
+    left: x.value * (UNIT_PX + ng),
+    top: y.value * (UNIT_PX + ng),
+    width: w.value * UNIT_PX + (w.value - 1) * ng,
+    height: h.value * UNIT_PX + (h.value - 1) * ng,
+    // The "held" lift: a small scale up + raise above the neighbours. The design's elevation model is
+    // surface-STEP (a drop shadow reads as glare on the emissive night panel), so the shadow is kept
+    // restrained and exists only while lifted (0 at rest, and the wall never lifts). AOD-190 tunes it.
+    transform: [{ scale: 1 + lift.value * LIFT_SCALE }],
+    zIndex: lift.value > 0 ? 50 : 0,
+    shadowOpacity: lift.value * 0.18,
+    shadowRadius: lift.value * 12,
+    shadowOffset: { width: 0, height: lift.value * 4 },
+    elevation: lift.value * 6,
   }));
 
   // Long-press (enter arrange) wraps the whole card; drag is a nested detector on the body. The resize
@@ -148,9 +433,10 @@ export function PlacedInstance({
   // it carries a 44pt hit target so it is reliably grabbable.
   return (
     <GestureDetector gesture={longPress}>
-      <Animated.View style={[styles.positioned, animatedStyle]}>
+      <Animated.View style={[styles.positioned, animatedStyle]} testID={`placed-${instance.instanceId}`}>
         <GestureDetector gesture={drag}>
           <View
+            testID={`card-face-${instance.instanceId}`}
             style={[
               styles.body,
               arranging && { borderColor: arrangeColor(a.selectBorder), backgroundColor: arrangeColor(a.selectFill) },
@@ -201,10 +487,11 @@ export function PlacedInstance({
             </GestureDetector>
           </>
         ) : null}
-        {arranging && confirmingRemove ? (
+        {showConfirm ? (
           // AOD-141 (resolves AOD-104): the tile's OWN face becomes the question — a scrim over the dimmed
           // card, no modal. A sibling of the drag detector (which is frozen while confirming), so its
-          // buttons never start a drag. Confirm fires onRemove; Keep reverts to the arrange affordances.
+          // buttons never start a drag. Confirm fires onRemove; Keep reverts (to the arrange affordances in
+          // arrange, or clears the dashboard's menu-confirm on the calm surface — onKeep, AOD-195).
           <View
             style={[styles.confirmFace, { backgroundColor: arrangeColor(a.confirm.scrim), borderRadius: theme.radius.md }]}
             testID={`remove-confirm-face-${instance.instanceId}`}
@@ -221,7 +508,7 @@ export function PlacedInstance({
                 <Text style={[styles.confirmButtonText, { color: arrangeColor(a.removePill.label) }]}>Remove</Text>
               </Pressable>
               <Pressable
-                onPress={() => setConfirmingRemove(false)}
+                onPress={onKeep}
                 style={styles.keepButton}
                 accessibilityRole="button"
                 accessibilityLabel="Keep widget"
@@ -245,12 +532,23 @@ export function PlacedInstance({
 const styles = StyleSheet.create((theme) => ({
   positioned: {
     position: 'absolute',
+    // The lift shadow colour (opacity/radius/offset ride the animated `lift`, 0 at rest so this is inert
+    // until a card is held). iOS reads shadowColor; Android reads the animated `elevation`.
+    shadowColor: '#000',
   },
   body: {
     flex: 1,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: 'transparent',
+    // AOD-195 (C3, from the AOD-190 device pass round 2): a near-invisible but HITTABLE fill so the whole calm
+    // card face is one long-press target.
+    // On Android a fully transparent container is not a touch target, so the outer Gesture.LongPress only
+    // fired on the opaque leaf views (the card's text/glyphs) — empty card space did not open the menu. A
+    // 1%-alpha fill is imperceptible over the card surface AND over a transparent ghost tile (so ghost stays
+    // transparent) and the wall (pointerEvents:'none') is unaffected. In Arrange the inline selectFill
+    // overrides this; the render is otherwise unchanged.
+    backgroundColor: 'rgba(0,0,0,0.01)',
   },
   // §4 the Configure affordance, top-left so it never overlaps the bottom-right resize dot (bg is inline).
   configurePill: {

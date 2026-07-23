@@ -274,11 +274,11 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.radius.md,
     padding: theme.spacing(3),
     gap: theme.spacing(2),
-    minWidth: 160,
-    // AOD-123: with the shared FitBody, this is now a BACKSTOP, not the primary fit. A migrated leaf fits
-    // its own content to the host-passed box (value held, detail truncate-then-drop), so it no longer
-    // relies on this clip; it stays to defend not-yet-migrated leaves, the prompts, and the dim overlay's
-    // rounded corners. The bare-clip-as-fit that AOD-95/97 complained about is gone for migrated cards.
+    // AOD-203: no minWidth floor. A w=1 footprint is UNIT_PX (96 DP) wide, so a 160 DP floor forced the
+    // card 1.67x past its column and overflowed the neighbour (on the handheld canvas AND the wall). Since
+    // AOD-123 the leaf fits its own content to the host-passed box (value held, detail truncate-then-drop),
+    // so no width floor is needed: the card fills its footprint and never exceeds it. overflow:hidden stays
+    // to defend the prompts and clip the dim overlay's rounded corners.
     overflow: 'hidden',
   },
   cardNight: {

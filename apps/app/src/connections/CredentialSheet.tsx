@@ -2,7 +2,7 @@
 // in-screen sheet that carries a live ServiceDefinition + authClass, so it stays OFF the router (it is
 // parameterized by a live object, not serializable route params). The presentation is the AOD-67 `Sheet`
 // (scrim + elevation.overlay surfaceAlt + grabber + safe-area bottom inset), composed exactly as AOD-69
-// composed the widget picker / config sheets (WidgetPicker.tsx, ConfigFormModal.tsx). The interior is the
+// composed the widget picker / config sheets (now AddGallery.tsx after AOD-147, ConfigFormModal.tsx). The interior is the
 // pure CredentialForm, which dispatches on the MECHANISM ('key' | 'location'), never the service.
 //
 // AOD-70 canonicalization (§10 drift 1): this REPLACES the shipped inline CredentialForm that rendered
