@@ -16,8 +16,8 @@ jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../layout/useSkyInstances', () => ({ useSkyInstances: jest.fn() }));
 // The read-only page body is stubbed to a marker + triggers (its real render is LayoutCanvas's concern). Each
 // page's canvas carries the sky id it was mounted for so the per-sky wiring is assertable: canvas-longpress
-// fires the AOD-195 quick-actions callback (onLongPressCard) with a stub instance + anchor; canvas-confirming
-// echoes the threaded confirmingRemoveId (sub-decision 6b).
+// fires the AOD-195 quick-actions callback (onLongPressCard) with a stub instance + anchor + (AOD-211) the
+// measured card frame; canvas-confirming echoes the threaded confirmingRemoveId (sub-decision 6b).
 jest.mock('../../layout/LayoutCanvas', () => {
   const React = require('react');
   const { View, Text, Pressable } = require('react-native');
@@ -28,7 +28,11 @@ jest.mock('../../layout/LayoutCanvas', () => {
       confirmingRemoveId,
     }: {
       instances: { instanceId: string }[];
-      onLongPressCard?: (instance: { instanceId: string }, anchor: { x: number; y: number }) => void;
+      onLongPressCard?: (
+        instance: { instanceId: string },
+        anchor: { x: number; y: number },
+        frame?: { x: number; y: number; width: number; height: number },
+      ) => void;
       confirmingRemoveId?: string | null;
     }) =>
       React.createElement(
@@ -38,7 +42,7 @@ jest.mock('../../layout/LayoutCanvas', () => {
         React.createElement(Text, { testID: 'canvas-confirming' }, confirmingRemoveId ?? 'none'),
         React.createElement(
           Pressable,
-          { testID: 'canvas-longpress', onPress: () => onLongPressCard && onLongPressCard({ instanceId: 'i1' }, { x: 5, y: 5 }) },
+          { testID: 'canvas-longpress', onPress: () => onLongPressCard && onLongPressCard({ instanceId: 'i1' }, { x: 5, y: 5 }, { x: 1, y: 2, width: 3, height: 4 }) },
           React.createElement(Text, null, 'lp'),
         ),
       ),
@@ -245,7 +249,8 @@ describe('SkyPager — per-page states', () => {
     // The second page's canvas -> sky d2. SkyPager binds the sky id, so the menu callback carries ('d2',
     // instance, anchor) — the entry point that replaces the old long-press-into-Arrange.
     fireEvent.press(screen.getAllByTestId('canvas-longpress')[1]);
-    expect(onLongPressCard).toHaveBeenCalledWith('d2', { instanceId: 'i1' }, { x: 5, y: 5 });
+    // AOD-211: the sky id + the instance + the anchor AND the measured card frame all forward to the dashboard.
+    expect(onLongPressCard).toHaveBeenCalledWith('d2', { instanceId: 'i1' }, { x: 5, y: 5 }, { x: 1, y: 2, width: 3, height: 4 });
   });
 
   it('a long-press on an EMPTY sky enters Edit Screen directly (no card to hold, AOD-195)', () => {

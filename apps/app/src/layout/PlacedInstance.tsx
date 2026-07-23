@@ -14,7 +14,7 @@
 // own gesture. It still imports no service: the AOD-8 §10 seam holds (it knows WidgetInstance/LayoutRect,
 // not which service this is), and every AOD-141 affordance (Configure/Remove pills, the 44pt resize
 // handle, the two-step "Remove?" confirm face) is preserved.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Pressable, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -37,14 +37,28 @@ const LIFT_SCALE = 0.03; // the "one step up" scale while held (surface-step mod
 // A device-tuned seed (AOD-190), like the motion timings above.
 const EDGE_BAND_PX = 28;
 
+// AOD-211: the long-pressed card's on-screen rect (window coords, from measureInWindow), threaded up
+// alongside the anchor so the quick-actions overlay can keep it lit above the local focus dim + draw the
+// brightened lift hairline (design-quick-actions-menu.md §4, the iOS context-menu stack). Optional
+// everywhere: absent (a device without measure, or a test) degrades to a uniform dim — never a behaviour
+// change. Produced here (the only place a card knows its own screen frame); consumed by CardQuickActions.
+export interface CardFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface PlacedInstanceProps {
   instance: WidgetInstance;
   arranging: boolean;
   /** AOD-195: long-press anywhere on the calm card reports the instance + an on-screen anchor (the touch
    *  point, from the gesture's absoluteX/absoluteY) so the dashboard can open the iPad-style quick-actions
    *  menu near this card. Enabled only OUTSIDE arrange (inside Arrange the card is draggable). The wall's
-   *  LayoutCanvas passes a nullary fallback (its onEnterArrange noop) so a wall long-press stays inert. */
-  onLongPress(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+   *  LayoutCanvas passes a nullary fallback (its onEnterArrange noop) so a wall long-press stays inert.
+   *  AOD-211: additionally reports the card's measured screen `frame` (when available) so the overlay can
+   *  keep it lit above the local focus dim; absent degrades to a uniform dim (no behaviour change). */
+  onLongPress(instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame): void;
   /** The reflowed (uncommitted) rect this card should animate to while a SIBLING is being dragged/resized
    *  (AOD-140). Null = rest at the committed rect (this is the active card, or nothing is being dragged).
    *  LayoutCanvas/useArrangeReflow computes it; this card just eases toward it. */
@@ -275,7 +289,22 @@ export function PlacedInstance({
   // AOD-195: report the long-press UP with the touch point (absoluteX/absoluteY, window coords) so the
   // dashboard can anchor the quick-actions menu near this card. Enabled only in calm mode (inside Arrange
   // the card is dragged, not menued) and never while its own menu-confirm face is showing.
-  const reportLongPress = (ax: number, ay: number) => onLongPress(instance, { x: ax, y: ay });
+  // AOD-211: additionally measure the card's window frame so the overlay keeps it lit above the focus dim.
+  // measureInWindow is async, so onLongPress fires from its callback (one frame later — imperceptible, and
+  // it matches the iOS "menu appears once the press lands" feel); if the ref/method is missing (a test, or a
+  // renderer without measure) onLongPress still fires with NO frame, so the menu opens unchanged.
+  const cardRef = useRef<View>(null);
+  const reportLongPress = (ax: number, ay: number) => {
+    const node = cardRef.current;
+    if (node && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((fx, fy, fw, fh) => {
+        const frame = fw > 0 && fh > 0 ? { x: fx, y: fy, width: fw, height: fh } : undefined;
+        onLongPress(instance, { x: ax, y: ay }, frame);
+      });
+    } else {
+      onLongPress(instance, { x: ax, y: ay });
+    }
+  };
   const longPress = Gesture.LongPress()
     .enabled(!arranging && !menuConfirmingRemove)
     .minDuration(350)
@@ -436,6 +465,7 @@ export function PlacedInstance({
       <Animated.View style={[styles.positioned, animatedStyle]} testID={`placed-${instance.instanceId}`}>
         <GestureDetector gesture={drag}>
           <View
+            ref={cardRef}
             testID={`card-face-${instance.instanceId}`}
             style={[
               styles.body,

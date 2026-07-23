@@ -40,6 +40,7 @@ import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
 import { useMoveInstance } from '../layout/useMoveInstance';
 import { useOrientation } from '../layout/useOrientation';
+import type { CardFrame } from '../layout/PlacedInstance';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
 import { columnsFor, SIZE_CATALOGUE } from '../widgets/sizes';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
@@ -64,6 +65,9 @@ interface CardMenu {
   skyId: string;
   instance: WidgetInstance;
   anchor: { x: number; y: number };
+  // AOD-211: the long-pressed card's measured screen rect, so CardQuickActions keeps it lit above the local
+  // focus dim + draws the lift hairline. Optional — a device/renderer without measure degrades to a uniform dim.
+  frame?: CardFrame;
 }
 
 export function Dashboard() {
@@ -195,13 +199,13 @@ export function Dashboard() {
   // go through the ACTIVE-sky commit / removeWidget, and Edit Screen enters Arrange on it. The `!== activeId`
   // guard no-ops on the active sky (the common single-sky case), so a menu on the sky you're already on never
   // reloads; on a non-active page this makes the viewed sky active, exactly as the pre-AOD-195 long-press did.
-  const openCardMenu = (skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }) => {
+  const openCardMenu = (skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame) => {
     if (skyId !== activeId) {
       seedActiveFromSky(queryClient, userId, skyId, orientation);
       setActive(skyId);
     }
     setConfirmingRemoveId(null); // a fresh menu clears any stale calm confirm
-    setMenu({ skyId, instance, anchor });
+    setMenu({ skyId, instance, anchor, frame });
   };
   const closeMenu = () => setMenu(null);
 
@@ -446,6 +450,7 @@ export function Dashboard() {
         <CardQuickActions
           instance={menuInstance}
           anchor={menu.anchor}
+          frame={menu.frame}
           onEditWidget={menuEditWidget}
           onEditScreen={menuEditScreen}
           onDeleteWidget={menuDeleteWidget}

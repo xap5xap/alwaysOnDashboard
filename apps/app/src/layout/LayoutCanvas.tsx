@@ -32,7 +32,7 @@ import type { WidgetInstance } from '../registry/types';
 import type { LayoutPatch } from './mapper';
 import { nominalGutter, UNIT_PX } from './geometry';
 import { slotToPixels } from './grid';
-import { PlacedInstance } from './PlacedInstance';
+import { PlacedInstance, type CardFrame } from './PlacedInstance';
 import { useArrangeReflow } from './useArrangeReflow';
 
 export interface LayoutCanvasProps {
@@ -51,7 +51,7 @@ export interface LayoutCanvasProps {
    *  open the quick-actions menu. When present (the calm handheld surface) it REPLACES the long-press's
    *  enter-arrange role. Absent (the wall / the arrange surface, where long-press is disabled) the card
    *  falls back to onEnterArrange, which the wall passes as a noop — so the wall stays inert + byte-identical. */
-  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame): void;
   /** AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed (dashboard-owned),
    *  so the matching calm card shows the AOD-141 tile-face confirm WITHOUT entering Arrange. */
   confirmingRemoveId?: string | null;

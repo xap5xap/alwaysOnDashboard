@@ -27,6 +27,7 @@ import { router } from 'expo-router';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useEntitlements } from '../entitlements/useEntitlements';
 import { LayoutCanvas } from '../layout/LayoutCanvas';
+import type { CardFrame } from '../layout/PlacedInstance';
 import type { DashboardSummary } from '../layout/dashboardRepo';
 import { useSkyInstances } from '../layout/useSkyInstances';
 import type { WidgetInstance } from '../registry/types';
@@ -65,7 +66,7 @@ export interface SkyPagerProps {
   /** AOD-195: long-press a CARD on a page -> open the quick-actions menu for it (Dashboard anchors it near
    *  the card). Carries the sky id so the menu's actions target the right sky. Absent (tests) leaves the
    *  card's long-press falling back to onEnterArrange. */
-  onLongPressCard?(skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  onLongPressCard?(skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame): void;
   /** AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed (Dashboard-owned),
    *  threaded to each page's canvas so the matching calm card shows the AOD-141 tile-face confirm. */
   confirmingRemoveId?: string | null;
@@ -215,7 +216,7 @@ export function SkyPager({
               onEnterArrange={() => onEnterArrange(item.id)}
               // AOD-195: bind this page's sky id so the menu's actions target it; the card supplies the
               // instance + anchor. Undefined (tests) keeps the card's long-press falling back to onEnterArrange.
-              onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
+              onLongPressCard={onLongPressCard ? (instance, anchor, frame) => onLongPressCard(item.id, instance, anchor, frame) : undefined}
               confirmingRemoveId={confirmingRemoveId}
               onRemove={onRemove}
               onCancelRemove={onCancelRemove}
@@ -231,7 +232,7 @@ export function SkyPager({
               gridInsetPx={gridInsetPx}
               gutterPx={gutterPx}
               onEnterArrange={() => onEnterArrange(item.id)}
-              onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
+              onLongPressCard={onLongPressCard ? (instance, anchor, frame) => onLongPressCard(item.id, instance, anchor, frame) : undefined}
               confirmingRemoveId={confirmingRemoveId}
               onRemove={onRemove}
               onCancelRemove={onCancelRemove}
@@ -303,7 +304,7 @@ function SkyPage({
   gridInsetPx?: number;
   gutterPx?: number;
   onEnterArrange(): void;
-  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame): void;
   confirmingRemoveId?: string | null;
   onRemove?(instanceId: string): void;
   onCancelRemove?(): void;
@@ -368,7 +369,7 @@ function ActiveSkyPage({
   gridInsetPx?: number;
   gutterPx?: number;
   onEnterArrange(): void;
-  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame): void;
   confirmingRemoveId?: string | null;
   onRemove?(instanceId: string): void;
   onCancelRemove?(): void;
@@ -419,7 +420,7 @@ function SkyPageContent({
   gridInsetPx?: number;
   gutterPx?: number;
   onEnterArrange(): void;
-  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame): void;
   confirmingRemoveId?: string | null;
   onRemove?(instanceId: string): void;
   onCancelRemove?(): void;

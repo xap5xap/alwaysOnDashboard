@@ -22,7 +22,7 @@ export type { StatusKind } from './Badge';
 export { LockRow, LockedTile } from './LockRow';
 export type { LockRowProps, LockedTileProps } from './LockRow';
 export { FocusRing } from './FocusRing';
-export { LockGlyph, ChevronGlyph, CloseGlyph, CheckGlyph } from './glyphs';
+export { LockGlyph, ChevronGlyph, CloseGlyph, CheckGlyph, AdjustGlyph, LayoutGlyph, MinusCircleGlyph } from './glyphs';
 export type { GlyphProps } from './glyphs';
 export { roleColor, roleRadius, elevationStyle } from './theme';
 export type { Theme } from './theme';

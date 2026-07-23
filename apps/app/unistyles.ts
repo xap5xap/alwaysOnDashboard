@@ -515,6 +515,51 @@ const wall = {
   pinKey: 64, // spacing(16): the PIN-pad key diameter on the exit surface
 } as const;
 
+// --- AOD-211 §10 quick-actions-menu-scoped token group (design-quick-actions-menu.md §10) ------------
+// The long-press quick-actions menu's geometry, the AOD-20 §12 / AOD-68 §11 / AOD-27 §10 / AOD-39 §10
+// analog for the menu (AOD-200 design → AOD-211 build). GEOMETRY (numbers) plus ROLE-NAME ALIASES (a
+// semantic colour role / radius key, as plain strings), never a raw hex — the consumer (CardQuickActions /
+// the restyled Popover + MenuItem / FootprintSizePicker) resolves theme.colors[role] / theme.radius[key] at
+// the draw site, so a theme swap re-aliases underneath. Theme-independent by design. Unistyles-safe: plain
+// data only; the footprint letter aliases `type.caption` BY ROLE at the call site (§10 typing note), it does
+// NOT embed a TextStyle here, so the aod-unistyles-style-token-gotcha deep-style flood stays away. Two
+// literal rgba strings (`dim`, the §9 recorded revision) are values the menu consumes directly, not
+// theme.colors roles — the same shape `scrim`/`accentMuted` take. Test-locked in quick-menu-tokens.test.ts.
+const quickMenu = {
+  minWidth: 220, // §4: wider than the 180 Popover default (the icon rows + the 4-cell footprint row want room)
+  rowMinHeight: 48, // §5: comfortable touch on the low-DPI Fire HD 8
+  rowPaddingX: 16, // spacing(4): the item row inset
+  // §5 leading icons: a thin-stroke line glyph, tone textMuted (a destructive row overrides to error below).
+  icon: { size: 20, gap: 12, tone: 'textMuted' }, // gap = spacing(3) icon -> label
+  // §5 the destructive Delete row: icon + label take `error` (red INK); the pressed fill stays the neutral
+  // ~12% step (never a red fill — red is a reading, not decoration, per the color law).
+  destructive: { tone: 'error' },
+  // §4 the hairline beak on the edge facing the touch: filled elevation.overlay.surface (= surfaceAlt) with
+  // the 1px `border` continued along its two outer edges, so the menu reads as pinned to the card.
+  beak: { w: 16, h: 8, fill: 'surfaceAlt', edge: 'border' },
+  // §4 / §9 the local focus dim (the recorded no-scrim-rule revision): a flat black wash over the field,
+  // LIGHTER than the modal scrim (0.60). Value to tune 0.35–0.50 on device (§12). A literal rgba, consumed
+  // directly (not a colors role), the same shape scrim/accentMuted take.
+  dim: 'rgba(0, 0, 0, 0.40)',
+  liftScale: 1.02, // §4 the pressed-card lift (scale + brightness only, no shadow — the emissive rule)
+  liftBorder: 'textMuted', // §4 the lifted card's brightened hairline (border toward textMuted)
+  // §6 / §10 row 2 the footprint size picker: outline rounded-rects proportioned to the real S/M/W/L slots
+  // (W is a WIDE rounded-rect, not a pill), a shared corner, the selected accentMuted wash + accent outline +
+  // accent letter, and a >= 44 touch cell. The letter aliases type.caption BY ROLE at the draw site.
+  footprint: {
+    glyph: { S: { w: 14, h: 14 }, M: { w: 14, h: 22 }, W: { w: 24, h: 14 }, L: { w: 22, h: 22 } }, // per-size box
+    corner: 3, // the shared glyph corner radius
+    stroke: 1.5, // the unselected glyph outline weight
+    strokeRole: 'textMuted', // the unselected glyph outline + letter tone
+    selectedFill: 'accentMuted', // the selected cell wash behind glyph + letter
+    selectedOutline: 'accent', // the selected glyph outline
+    selectedLetter: 'accent', // the selected letter
+    letter: 'caption', // the letter aliases the type.caption STEP by name (§10 typing note: no embedded TextStyle)
+    cellTouch: 44, // the per-cell minimum touch target
+    selectedRadius: 'sm', // the selected cell container radius
+  },
+} as const;
+
 const sharedTokens = {
   spacing: (v: number) => v * 4,
   radius: { sm: 8, md: 14, lg: 22, full: 9999 }, // §7.2: `full` (9999) added for pills / fully-rounded ends
@@ -557,6 +602,8 @@ const sharedTokens = {
   arrange,
   // AOD-39 §10 kiosk-wall-scoped group
   wall,
+  // AOD-211 §10 quick-actions-menu-scoped group
+  quickMenu,
 } as const;
 
 // --- §3.1 colour: semantic roles as primitive aliases (AOD-66, §4.2 / §4.3) -------------------------
