@@ -200,21 +200,15 @@ export function PlacedInstance({
   const reportMove = (sx: number, sy: number, sw: number, sh: number) =>
     onArrangeMove(instance.instanceId, { x: sx, y: sy, w: sw, h: sh });
   const finishDrag = (dxPx: number, dyPx: number) => {
-    // snapDrag (AOD-138) is the RAW finger slot — the same slot the onEnd worklet optimistically settled onto
-    // (byte-for-byte: same round + clamp). AOD-197: finger px / cellPx, clamped to the active columns.
     const s = snapDrag(instance.rect, dxPx, dyPx, cellPx, columns);
-    // The arrange session returns the AUTHORITATIVE nearest-free landing (design §8: place, don't pack). When
-    // the raw finger slot is FREE the two agree and the worklet's settle already stands (feel unchanged). When
-    // the drop lands on an OCCUPIED neighbour they differ: redirect the settle to the landing so the card never
-    // rests overlapping a neighbour, and on a no-op drop (landing == this card's own origin) it animates back
-    // to its origin instead of stranding on the card it was dropped onto. This is the raw-vs-nearest-free
-    // reconcile the review flagged; the move that DOES commit still self-corrects via the instance.rect effect,
-    // which targets the same landing, so the two never fight.
     const landing = onArrangeEnd(instance.instanceId, { x: s.x, y: s.y, w: s.w, h: s.h });
-    if (landing.x !== s.x || landing.y !== s.y) {
-      x.value = withTiming(landing.x, SETTLE);
-      y.value = withTiming(landing.y, SETTLE);
-    }
+    // AOD-190 (C2): settle DIRECTLY onto the authoritative nearest-free landing (design §8), unconditionally.
+    // A free drop lands where the finger is (landing == the raw snapDrag slot, feel unchanged); an occupied
+    // drop lands at the nearest free slot with NO transient overlap on the card it was dropped onto (the tall-M
+    // "landed overlapping" retune). The committed move self-corrects via the instance.rect effect, which targets
+    // the same landing, so the two never fight; a no-op drop settles back to its own origin.
+    x.value = withTiming(landing.x, SETTLE);
+    y.value = withTiming(landing.y, SETTLE);
   };
   // AOD-146: forward a screen-edge crossing to the dashboard's carry-to-neighbour dwell. Maps the worklet's
   // numeric edge (-1/0/1) to the direction the dashboard reasons about; null clears any armed dwell.
@@ -323,11 +317,10 @@ export function PlacedInstance({
     })
     .onEnd((e) => {
       'worklet';
-      // Settle onto the snapped slot (covers drop-in-place, where no commit fires and the reflow effect
-      // would not re-run). This slot equals snapDrag's, so the settle target IS the committed rect.
-      const w0 = w.value;
-      x.value = withTiming(Math.min(columns - w0, Math.max(0, Math.round(x.value))), SETTLE);
-      y.value = withTiming(Math.max(0, Math.round(y.value)), SETTLE);
+      // AOD-190 (C2): do NOT snap to the raw finger slot here — it can sit ON an occupied neighbour (e.g. a
+      // tall M's lower cell), a visible transient overlap before finishDrag redirects. Hold the lifted finger
+      // position; finishDrag settles DIRECTLY onto the authoritative nearest-free landing (design §8), which
+      // equals the card's own origin on a true drop-in-place, so nothing strands.
       runOnJS(finishDrag)(e.translationX, e.translationY);
     })
     .onFinalize((_e, success) => {
