@@ -19,7 +19,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useRegistry } from '../registry/RegistryProvider';
 import type { CardFrame } from '../layout/PlacedInstance';
 import type { WidgetInstance, WidgetSize } from '../registry/types';
-import { AdjustGlyph, LayoutGlyph, MenuItem, MinusCircleGlyph, Popover, roleColor } from '../ui';
+import { AdjustGlyph, LayoutGlyph, MenuItem, MinusCircleGlyph, Popover } from '../ui';
 import { FootprintSizePicker } from './FootprintSizePicker';
 
 // The size selector's canonical S -> M -> W -> L order, filtered to what the widget supports (mirrors the
@@ -104,26 +104,21 @@ export function CardQuickActions({
   // no shadow). Without a frame (a renderer without measure, or a test), fall back to a uniform dim. The dim
   // is pointerEvents:none and sits BEHIND the full-screen dismiss catcher, so an outside tap still dismisses.
   const dimColor = q.dim;
-  const liftBorder = roleColor(theme, q.liftBorder);
   let focusDim: React.ReactNode;
   if (frame) {
-    const gx = (frame.width * (q.liftScale - 1)) / 2;
-    const gy = (frame.height * (q.liftScale - 1)) / 2;
-    const fx = Math.max(0, frame.x - gx);
-    const fy = Math.max(0, frame.y - gy);
-    const fw = frame.width * q.liftScale;
-    const fh = frame.height * q.liftScale;
+    // §4 / §9 the local focus dim + pressed-card lift, done as a CUTOUT: four dim bands leave the pressed
+    // card's slot un-dimmed, so the real card shows through fully lit while the rest of the field recedes.
+    // No drawn hairline ring: a card sizes to its CONTENT, not its slot, so a ring anchored to the measured
+    // slot frame can't reliably hug the visible widget border — it reads as a border floating outside the
+    // card. The lift therefore reads purely as "this card stays lit, everything else dims" (the liftScale /
+    // liftBorder tokens stay in the §10 contract for a future in-card border, which the overlay can't own).
+    const { x: fx, y: fy, width: fw, height: fh } = frame;
     focusDim = (
       <>
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: fy, backgroundColor: dimColor }} />
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: fy + fh, bottom: 0, backgroundColor: dimColor }} />
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: fy, width: fx, height: fh, backgroundColor: dimColor }} />
         <View pointerEvents="none" style={{ position: 'absolute', left: fx + fw, right: 0, top: fy, height: fh, backgroundColor: dimColor }} />
-        <View
-          pointerEvents="none"
-          testID={`${testID}-lift`}
-          style={{ position: 'absolute', left: fx, top: fy, width: fw, height: fh, borderRadius: rMd, borderWidth: 1, borderColor: liftBorder }}
-        />
       </>
     );
   } else {
