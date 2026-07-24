@@ -33,6 +33,10 @@ export interface WidgetHostViewProps {
   refresh?: { state: RefreshControlState; onPress: () => void };
   /** For the "updated Nm ago" staleness caption (§5). Defaults to Date.now. */
   now?: () => number;
+  /** AOD-211: this card is the long-press quick-actions menu's target. When true the card BRIGHTENS ITS OWN
+   *  border (quickMenu.liftBorder → textMuted), the aligned-by-construction "this is the one you grabbed"
+   *  highlight — on the card's real border, not an overlay ring around its slot (design-quick-actions-menu §4). */
+  focused?: boolean;
 }
 
 function dataOf(state: WidgetViewState): unknown {
@@ -94,6 +98,7 @@ export function WidgetHostView({
   onRetry,
   refresh,
   now = Date.now,
+  focused = false,
 }: WidgetHostViewProps) {
   const { theme } = useUnistyles();
   const ambient = useAmbient();
@@ -149,7 +154,7 @@ export function WidgetHostView({
 
   return (
     <View
-      style={[styles.card, state.phase === 'ghost' && styles.cardGhost, nightFrame && styles.cardNight]}
+      style={[styles.card, state.phase === 'ghost' && styles.cardGhost, nightFrame && styles.cardNight, focused && styles.cardFocused]}
       testID="widget-card"
     >
       {!suppressHeader && (
@@ -284,6 +289,11 @@ const styles = StyleSheet.create((theme) => ({
   cardNight: {
     backgroundColor: theme.night.surface,
     borderColor: theme.night.border,
+  },
+  // AOD-211: the quick-actions menu target brightens its OWN border to quickMenu.liftBorder (textMuted) — the
+  // aligned "this is the one you grabbed" highlight. Applied last so it wins over the resting / night border.
+  cardFocused: {
+    borderColor: theme.colors.textMuted,
   },
   // AOD-125 the ghost frame (Many Skies §1c): "transparent — an invitation, not a card pretending to be
   // lit". No surface fill and a dashed hairline read as an empty, not-yet-lit slot; the whole tile sits at

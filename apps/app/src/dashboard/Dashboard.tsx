@@ -423,6 +423,8 @@ export function Dashboard() {
                 // AOD-195: a card long-press opens the quick-actions menu; delete confirms on the calm card.
                 onLongPressCard={openCardMenu}
                 confirmingRemoveId={confirmingRemoveId}
+                // AOD-211: the open-menu target card brightens its own border (the aligned focus highlight).
+                menuTargetId={menu?.instance.instanceId ?? null}
                 onRemove={confirmRemoveFromMenu}
                 onCancelRemove={cancelRemoveFromMenu}
                 onAddCard={onAddCard}

@@ -45,6 +45,10 @@ export interface PlacedInstanceProps {
    *  menu near this card. Enabled only OUTSIDE arrange (inside Arrange the card is draggable). The wall's
    *  LayoutCanvas passes a nullary fallback (its onEnterArrange noop) so a wall long-press stays inert. */
   onLongPress(instance: WidgetInstance, anchor: { x: number; y: number }): void;
+  /** AOD-211: this card is the open quick-actions menu's target (the long-pressed card). Threaded through
+   *  to WidgetHost so the card brightens its OWN border — the aligned "this is the one you grabbed"
+   *  highlight, on the real widget border rather than an overlay ring around its slot. */
+  focused?: boolean;
   /** The reflowed (uncommitted) rect this card should animate to while a SIBLING is being dragged/resized
    *  (AOD-140). Null = rest at the committed rect (this is the active card, or nothing is being dragged).
    *  LayoutCanvas/useArrangeReflow computes it; this card just eases toward it. */
@@ -103,6 +107,7 @@ export function PlacedInstance({
   instance,
   arranging,
   onLongPress,
+  focused = false,
   previewRect,
   onArrangeMove,
   onArrangeEnd,
@@ -442,8 +447,9 @@ export function PlacedInstance({
               arranging && { borderColor: arrangeColor(a.selectBorder), backgroundColor: arrangeColor(a.selectFill) },
             ]}
           >
-            {/* Wire the previously-unwired host onReconfigure seam to the dashboard's config form. */}
-            <WidgetHost instance={instance} onReconfigure={() => onRequestConfigure(instance)} />
+            {/* Wire the previously-unwired host onReconfigure seam to the dashboard's config form. AOD-211:
+                pass `focused` so the menu target brightens its own border. */}
+            <WidgetHost instance={instance} onReconfigure={() => onRequestConfigure(instance)} focused={focused} />
           </View>
         </GestureDetector>
         {arranging && !confirmingRemove ? (

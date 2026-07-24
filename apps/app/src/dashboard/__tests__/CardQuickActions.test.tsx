@@ -2,7 +2,9 @@
 // VARIES BY WIDGET — Edit Widget only when the def declares config fields (the iPad Notes-yes / Music-no
 // rule), the S/M/W/L row only when it supports more than one size — and that each item fires its callback and
 // an outside tap dismisses. The registry is stubbed to control the def; the menu names no service (it reads
-// configSchema.fields.length + supportedSizes, never a service id). Segmented is the AOD-148 selector reused.
+// configSchema.fields.length + supportedSizes, never a service id). AOD-211 restyle: the size row is now the
+// trackless FootprintSizePicker (a NEW control, not the AOD-148 Segmented — design §9); its per-size cells are
+// `<testID>-size-<S|M|W|L>`, so the behaviour contract (report the chosen size, mark the current one) holds.
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import type { WidgetDefinition, WidgetInstance } from '../../registry/types';
@@ -76,16 +78,25 @@ describe('CardQuickActions — item visibility by widget (AOD-195)', () => {
     expect(h.onDismiss).toHaveBeenCalled();
   });
 
-  it('the size row reuses the AOD-148 Segmented and reports the chosen size', () => {
+  it('the size row is the trackless FootprintSizePicker (AOD-211) and reports the chosen size', () => {
     const h = renderMenu(CONFIGURABLE_MULTISIZE);
-    // The Segmented renders one segment per supported size (S, W, L here); pressing L reports it.
-    fireEvent.press(screen.getByTestId('segmented-L'));
+    // The picker renders one footprint cell per supported size (S, W, L here); pressing L reports it.
+    fireEvent.press(screen.getByTestId('card-quick-actions-size-L'));
     expect(h.onSelectSize).toHaveBeenCalledWith('L');
   });
 
-  it('the size row marks the current size (the live instance drives the segmented value)', () => {
+  it('the size row marks the current size (the live instance drives the picker value)', () => {
     renderMenu(CONFIGURABLE_MULTISIZE, instance('L'));
-    expect(screen.getByTestId('segmented-L').props.accessibilityState).toMatchObject({ selected: true });
-    expect(screen.getByTestId('segmented-W').props.accessibilityState).toMatchObject({ selected: false });
+    expect(screen.getByTestId('card-quick-actions-size-L').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('card-quick-actions-size-W').props.accessibilityState).toMatchObject({ selected: false });
+  });
+
+  it('the footprint picker shows only the SUPPORTED sizes, in S->M->W->L order (Clock-like subset)', () => {
+    // CONFIGURABLE_MULTISIZE supports S/W/L (no M): the picker shows those three cells and omits M entirely.
+    renderMenu(CONFIGURABLE_MULTISIZE);
+    expect(screen.getByTestId('card-quick-actions-size-S')).toBeTruthy();
+    expect(screen.getByTestId('card-quick-actions-size-W')).toBeTruthy();
+    expect(screen.getByTestId('card-quick-actions-size-L')).toBeTruthy();
+    expect(screen.queryByTestId('card-quick-actions-size-M')).toBeNull();
   });
 });

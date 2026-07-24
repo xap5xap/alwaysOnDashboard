@@ -55,6 +55,9 @@ export interface LayoutCanvasProps {
   /** AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed (dashboard-owned),
    *  so the matching calm card shows the AOD-141 tile-face confirm WITHOUT entering Arrange. */
   confirmingRemoveId?: string | null;
+  /** AOD-211: the instance whose quick-actions menu is open (dashboard-owned). The matching calm card
+   *  brightens its own border (the aligned focus highlight). Absent (the wall / arrange) = no highlight. */
+  menuTargetId?: string | null;
   /** AOD-195: Keep on the calm menu-confirm clears the dashboard's confirmingRemoveId. */
   onCancelRemove?(): void;
   /** AOD-146 (Many Skies §1d): a held card was carried to a screen edge ('left'/'right') or off it (null)
@@ -93,6 +96,7 @@ export function LayoutCanvas({
   onRemove,
   onLongPressCard,
   confirmingRemoveId,
+  menuTargetId,
   onCancelRemove,
   onCarryEdge,
   cellPx,
@@ -150,6 +154,8 @@ export function LayoutCanvas({
           // AOD-195: the dashboard-driven menu-confirm shows the AOD-141 tile face on this card without
           // entering Arrange. Only the matching id (calm surface) confirms; the wall passes neither.
           menuConfirmingRemove={confirmingRemoveId != null && confirmingRemoveId === instance.instanceId}
+          // AOD-211: the open-menu target brightens its own border (the aligned focus highlight).
+          focused={menuTargetId != null && menuTargetId === instance.instanceId}
           onCancelMenuRemove={onCancelRemove}
           // Place-don't-pack (AOD-197 S4): previewFor is always null (neighbours never move), so a card only
           // ever rests at its committed rect. Kept gated on `arranging` for symmetry with the hairline above.

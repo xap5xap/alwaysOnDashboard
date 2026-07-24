@@ -69,6 +69,7 @@ export interface SkyPagerProps {
   /** AOD-195 (sub-decision 6b): the instance whose menu-driven delete is being confirmed (Dashboard-owned),
    *  threaded to each page's canvas so the matching calm card shows the AOD-141 tile-face confirm. */
   confirmingRemoveId?: string | null;
+  menuTargetId?: string | null;
   /** AOD-195: remove one instance — the calm menu-confirm's Confirm (Dashboard clears the id + deletes). */
   onRemove?(instanceId: string): void;
   /** AOD-195: the calm menu-confirm's Keep clears the Dashboard's confirmingRemoveId. */
@@ -97,6 +98,7 @@ export function SkyPager({
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
+  menuTargetId,
   onRemove,
   onCancelRemove,
   onAddCard,
@@ -216,7 +218,7 @@ export function SkyPager({
               // AOD-195: bind this page's sky id so the menu's actions target it; the card supplies the
               // instance + anchor. Undefined (tests) keeps the card's long-press falling back to onEnterArrange.
               onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
-              confirmingRemoveId={confirmingRemoveId}
+              confirmingRemoveId={confirmingRemoveId} menuTargetId={menuTargetId}
               onRemove={onRemove}
               onCancelRemove={onCancelRemove}
               onAddCard={() => onAddCard(item.id)}
@@ -232,7 +234,7 @@ export function SkyPager({
               gutterPx={gutterPx}
               onEnterArrange={() => onEnterArrange(item.id)}
               onLongPressCard={onLongPressCard ? (instance, anchor) => onLongPressCard(item.id, instance, anchor) : undefined}
-              confirmingRemoveId={confirmingRemoveId}
+              confirmingRemoveId={confirmingRemoveId} menuTargetId={menuTargetId}
               onRemove={onRemove}
               onCancelRemove={onCancelRemove}
               onAddCard={() => onAddCard(item.id)}
@@ -291,6 +293,7 @@ function SkyPage({
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
+  menuTargetId,
   onRemove,
   onCancelRemove,
   onAddCard,
@@ -305,6 +308,7 @@ function SkyPage({
   onEnterArrange(): void;
   onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   confirmingRemoveId?: string | null;
+  menuTargetId?: string | null;
   onRemove?(instanceId: string): void;
   onCancelRemove?(): void;
   onAddCard(): void;
@@ -328,7 +332,7 @@ function SkyPage({
           gutterPx={gutterPx}
           onEnterArrange={onEnterArrange}
           onLongPressCard={onLongPressCard}
-          confirmingRemoveId={confirmingRemoveId}
+          confirmingRemoveId={confirmingRemoveId} menuTargetId={menuTargetId}
           onRemove={onRemove}
           onCancelRemove={onCancelRemove}
           onAddCard={onAddCard}
@@ -356,6 +360,7 @@ function ActiveSkyPage({
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
+  menuTargetId,
   onRemove,
   onCancelRemove,
   onAddCard,
@@ -370,6 +375,7 @@ function ActiveSkyPage({
   onEnterArrange(): void;
   onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   confirmingRemoveId?: string | null;
+  menuTargetId?: string | null;
   onRemove?(instanceId: string): void;
   onCancelRemove?(): void;
   onAddCard(): void;
@@ -385,7 +391,7 @@ function ActiveSkyPage({
         gutterPx={gutterPx}
         onEnterArrange={onEnterArrange}
         onLongPressCard={onLongPressCard}
-        confirmingRemoveId={confirmingRemoveId}
+        confirmingRemoveId={confirmingRemoveId} menuTargetId={menuTargetId}
         onRemove={onRemove}
         onCancelRemove={onCancelRemove}
         onAddCard={onAddCard}
@@ -408,6 +414,7 @@ function SkyPageContent({
   onEnterArrange,
   onLongPressCard,
   confirmingRemoveId,
+  menuTargetId,
   onRemove,
   onCancelRemove,
   onAddCard,
@@ -421,6 +428,7 @@ function SkyPageContent({
   onEnterArrange(): void;
   onLongPressCard?(instance: WidgetInstance, anchor: { x: number; y: number }): void;
   confirmingRemoveId?: string | null;
+  menuTargetId?: string | null;
   onRemove?(instanceId: string): void;
   onCancelRemove?(): void;
   onAddCard(): void;
@@ -456,7 +464,7 @@ function SkyPageContent({
       // AOD-195: the calm menu-driven delete removes through Dashboard (onRemove); absent (tests) noops.
       onRemove={onRemove ?? noop}
       onLongPressCard={onLongPressCard}
-      confirmingRemoveId={confirmingRemoveId}
+      confirmingRemoveId={confirmingRemoveId} menuTargetId={menuTargetId}
       onCancelRemove={onCancelRemove}
       // AOD-197 (S4): Glance fills the screen width with the same fit-to-width scale Arrange uses (design §7).
       cellPx={cellPx}
