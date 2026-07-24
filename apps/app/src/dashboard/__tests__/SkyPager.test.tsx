@@ -16,8 +16,9 @@ jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 jest.mock('../../layout/useSkyInstances', () => ({ useSkyInstances: jest.fn() }));
 // The read-only page body is stubbed to a marker + triggers (its real render is LayoutCanvas's concern). Each
 // page's canvas carries the sky id it was mounted for so the per-sky wiring is assertable: canvas-longpress
-// fires the AOD-195 quick-actions callback (onLongPressCard) with a stub instance + anchor + (AOD-211) the
-// measured card frame; canvas-confirming echoes the threaded confirmingRemoveId (sub-decision 6b).
+// fires the AOD-195 quick-actions callback (onLongPressCard) with a stub instance + anchor; canvas-confirming
+// echoes the threaded confirmingRemoveId (sub-decision 6b); canvas-menutarget echoes the AOD-211 menuTargetId
+// (the focus-highlight target).
 jest.mock('../../layout/LayoutCanvas', () => {
   const React = require('react');
   const { View, Text, Pressable } = require('react-native');
@@ -26,23 +27,22 @@ jest.mock('../../layout/LayoutCanvas', () => {
       instances,
       onLongPressCard,
       confirmingRemoveId,
+      menuTargetId,
     }: {
       instances: { instanceId: string }[];
-      onLongPressCard?: (
-        instance: { instanceId: string },
-        anchor: { x: number; y: number },
-        frame?: { x: number; y: number; width: number; height: number },
-      ) => void;
+      onLongPressCard?: (instance: { instanceId: string }, anchor: { x: number; y: number }) => void;
       confirmingRemoveId?: string | null;
+      menuTargetId?: string | null;
     }) =>
       React.createElement(
         View,
         { testID: 'layout-canvas' },
         React.createElement(Text, { testID: 'canvas-count' }, String(instances.length)),
         React.createElement(Text, { testID: 'canvas-confirming' }, confirmingRemoveId ?? 'none'),
+        React.createElement(Text, { testID: 'canvas-menutarget' }, menuTargetId ?? 'none'),
         React.createElement(
           Pressable,
-          { testID: 'canvas-longpress', onPress: () => onLongPressCard && onLongPressCard({ instanceId: 'i1' }, { x: 5, y: 5 }, { x: 1, y: 2, width: 3, height: 4 }) },
+          { testID: 'canvas-longpress', onPress: () => onLongPressCard && onLongPressCard({ instanceId: 'i1' }, { x: 5, y: 5 }) },
           React.createElement(Text, null, 'lp'),
         ),
       ),
@@ -249,8 +249,7 @@ describe('SkyPager — per-page states', () => {
     // The second page's canvas -> sky d2. SkyPager binds the sky id, so the menu callback carries ('d2',
     // instance, anchor) — the entry point that replaces the old long-press-into-Arrange.
     fireEvent.press(screen.getAllByTestId('canvas-longpress')[1]);
-    // AOD-211: the sky id + the instance + the anchor AND the measured card frame all forward to the dashboard.
-    expect(onLongPressCard).toHaveBeenCalledWith('d2', { instanceId: 'i1' }, { x: 5, y: 5 }, { x: 1, y: 2, width: 3, height: 4 });
+    expect(onLongPressCard).toHaveBeenCalledWith('d2', { instanceId: 'i1' }, { x: 5, y: 5 });
   });
 
   it('a long-press on an EMPTY sky enters Edit Screen directly (no card to hold, AOD-195)', () => {
@@ -267,6 +266,13 @@ describe('SkyPager — per-page states', () => {
     // Every page's canvas receives confirmingRemoveId; the matching card (in LayoutCanvas' real render) shows
     // the tile-face confirm. Here the stub echoes it so the thread is assertable.
     expect(screen.getAllByTestId('canvas-confirming')[0].props.children).toBe('i1');
+  });
+
+  it('threads the AOD-211 menuTargetId (focus highlight) down to the pages', () => {
+    renderPager([], { menuTargetId: 'i1' });
+    // Every page's canvas receives menuTargetId; the matching card (in LayoutCanvas' real render) brightens its
+    // own border. The stub echoes it so the thread is assertable.
+    expect(screen.getAllByTestId('canvas-menutarget')[0].props.children).toBe('i1');
   });
 
   it("a NON-active page still shows its own ['sky'] loading state; the active page never does", () => {

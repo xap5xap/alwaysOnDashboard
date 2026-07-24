@@ -40,7 +40,6 @@ import { LayoutCanvas } from '../layout/LayoutCanvas';
 import { useDashboards } from '../layout/useDashboards';
 import { useMoveInstance } from '../layout/useMoveInstance';
 import { useOrientation } from '../layout/useOrientation';
-import type { CardFrame } from '../layout/PlacedInstance';
 import { useRemoveWidget } from '../layout/useRemoveWidget';
 import { columnsFor, SIZE_CATALOGUE } from '../widgets/sizes';
 import { seedActiveFromSky, seedSkyFromActive } from '../layout/useSkyInstances';
@@ -65,9 +64,6 @@ interface CardMenu {
   skyId: string;
   instance: WidgetInstance;
   anchor: { x: number; y: number };
-  // AOD-211: the long-pressed card's measured screen rect, so CardQuickActions keeps it lit above the local
-  // focus dim + draws the lift hairline. Optional — a device/renderer without measure degrades to a uniform dim.
-  frame?: CardFrame;
 }
 
 export function Dashboard() {
@@ -199,13 +195,13 @@ export function Dashboard() {
   // go through the ACTIVE-sky commit / removeWidget, and Edit Screen enters Arrange on it. The `!== activeId`
   // guard no-ops on the active sky (the common single-sky case), so a menu on the sky you're already on never
   // reloads; on a non-active page this makes the viewed sky active, exactly as the pre-AOD-195 long-press did.
-  const openCardMenu = (skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }, frame?: CardFrame) => {
+  const openCardMenu = (skyId: string, instance: WidgetInstance, anchor: { x: number; y: number }) => {
     if (skyId !== activeId) {
       seedActiveFromSky(queryClient, userId, skyId, orientation);
       setActive(skyId);
     }
     setConfirmingRemoveId(null); // a fresh menu clears any stale calm confirm
-    setMenu({ skyId, instance, anchor, frame });
+    setMenu({ skyId, instance, anchor });
   };
   const closeMenu = () => setMenu(null);
 
@@ -427,6 +423,8 @@ export function Dashboard() {
                 // AOD-195: a card long-press opens the quick-actions menu; delete confirms on the calm card.
                 onLongPressCard={openCardMenu}
                 confirmingRemoveId={confirmingRemoveId}
+                // AOD-211: the open-menu target card brightens its own border (the aligned focus highlight).
+                menuTargetId={menu?.instance.instanceId ?? null}
                 onRemove={confirmRemoveFromMenu}
                 onCancelRemove={cancelRemoveFromMenu}
                 onAddCard={onAddCard}
@@ -450,7 +448,6 @@ export function Dashboard() {
         <CardQuickActions
           instance={menuInstance}
           anchor={menu.anchor}
-          frame={menu.frame}
           onEditWidget={menuEditWidget}
           onEditScreen={menuEditScreen}
           onDeleteWidget={menuDeleteWidget}

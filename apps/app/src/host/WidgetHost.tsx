@@ -34,6 +34,9 @@ export interface WidgetHostProps {
   maxRetries?: number;
   onReconnect?: () => void;
   onReconfigure?: () => void;
+  /** AOD-211: this card is the long-press quick-actions menu's target (passed straight to WidgetHostView so
+   *  the card brightens its own border). Purely presentational; it does not affect the data lifecycle. */
+  focused?: boolean;
 }
 
 export function WidgetHost({
@@ -43,6 +46,7 @@ export function WidgetHost({
   maxRetries = 3,
   onReconnect,
   onReconfigure,
+  focused = false,
 }: WidgetHostProps) {
   const registry = useRegistry();
   const dataSource = useWidgetDataSource();
@@ -185,6 +189,7 @@ export function WidgetHost({
       }}
       refresh={isLocal ? undefined : manualRefresh}
       now={now}
+      focused={focused}
     />
   );
 }
